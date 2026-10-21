@@ -49,12 +49,12 @@ npm run startapp
 
 The app is available at:
 
-- Games library: http://127.0.0.1:8000/library
-- Upcoming releases: http://127.0.0.1:8000/library/releases
-- Administrator dashboard: http://127.0.0.1:8000/admin
-- Interactive API docs (Swagger UI): http://127.0.0.1:8000/docs
-- ReDoc API docs: http://127.0.0.1:8000/redocs
-- Health check: http://127.0.0.1:8000/health
+- Games library: <http://127.0.0.1:8000/library>
+- Upcoming releases: <http://127.0.0.1:8000/library/releases>
+- Administrator dashboard: <http://127.0.0.1:8000/admin>
+- Interactive API docs (Swagger UI): <http://127.0.0.1:8000/docs>
+- ReDoc API docs: <http://127.0.0.1:8000/redocs>
+- Health check: <http://127.0.0.1:8000/health>
 
 The database is created at `backend/database/mydb.db`. Pending migrations are applied automatically when the app starts.
 After initializing the database, seed the default games and achievements with:
