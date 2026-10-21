@@ -1,0 +1,115 @@
+@use "base" as *;
+
+@import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
+
+$retro-yellow: #ffdf4f;
+$retro-cyan: #3dfcd9;
+$retro-magenta: #ff4fd8;
+$retro-pixel-font: "Press Start 2P", "Consolas", monospace;
+
+body[data-theme="cyber-retro"] {
+  --swagger-ink: #e6fff5;
+  --swagger-muted: #9cd5c0;
+  --swagger-paper: #10151a;
+  --swagger-panel: #18242a;
+  --swagger-accent: #{$retro-yellow};
+  --swagger-accent-dark: #e3b900;
+  --swagger-line: #2f6b64;
+  --swagger-code: #080d10;
+  --swagger-shadow: rgba(0, 0, 0, 0.4);
+  --swagger-header: #080d10;
+  --swagger-header-text: #fff7a8;
+  --swagger-section: #0f1b1f;
+  --swagger-link: #{$retro-cyan};
+  --swagger-type: #{$retro-magenta};
+  color-scheme: dark;
+
+  // CRT scanlines over the whole page.
+  &::after {
+    background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.18) 0 1px, transparent 1px 3px);
+    content: "";
+    inset: 0;
+    pointer-events: none;
+    position: fixed;
+    z-index: 9999;
+  }
+
+  .api-docs-header {
+    border-bottom: 2px solid $retro-yellow;
+    box-shadow: 0 0 14px rgba($retro-yellow, 0.35);
+
+    .h5 {
+      font-family: $retro-pixel-font;
+      font-size: 0.9rem;
+      text-shadow: 0 0 6px rgba($retro-yellow, 0.8);
+    }
+  }
+
+  .swagger-ui .info .title {
+    color: $retro-yellow;
+    font-family: $retro-pixel-font;
+    font-size: 1.35rem;
+    line-height: 1.6;
+
+    small {
+      font-family: "Segoe UI", sans-serif;
+      margin-left: 8px;
+      text-shadow: none;
+    }
+    text-shadow: 3px 3px 0 $retro-magenta, 0 0 12px rgba($retro-yellow, 0.6);
+  }
+
+  .swagger-ui .opblock-tag {
+    border-bottom: 2px dashed var(--swagger-line);
+    color: $retro-cyan;
+    font-family: $retro-pixel-font;
+    font-size: 0.8rem;
+    text-shadow: 0 0 6px rgba($retro-cyan, 0.7);
+  }
+
+  .swagger-ui .opblock {
+    border-radius: 0;
+    border-width: 2px;
+    box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.6);
+    transition: transform 0.1s, box-shadow 0.1s;
+
+    &:hover {
+      box-shadow: 6px 6px 0 rgba($retro-yellow, 0.35);
+      transform: translate(-2px, -2px);
+    }
+
+    .opblock-summary-method {
+      border-radius: 0;
+      box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.6);
+    }
+  }
+
+  .swagger-ui .btn,
+  .swagger-ui .filter .operation-filter-input,
+  .swagger-ui input,
+  .swagger-ui textarea,
+  .swagger-ui select {
+    border-radius: 0;
+  }
+
+  .swagger-ui .btn.execute {
+    box-shadow: 4px 4px 0 $retro-magenta;
+    color: #10151a;
+    font-family: $retro-pixel-font;
+    font-size: 0.75rem;
+  }
+
+  .swagger-ui .filter .operation-filter-input:focus {
+    border-color: $retro-cyan;
+    box-shadow: 0 0 8px rgba($retro-cyan, 0.6);
+    outline: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .swagger-ui .opblock,
+    .swagger-ui .opblock:hover {
+      transform: none;
+      transition: none;
+    }
+  }
+}

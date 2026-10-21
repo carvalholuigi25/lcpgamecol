@@ -1,0 +1,142 @@
+@use "swagger_themes/base" as *;
+@use "swagger_themes/dark" as *;
+@use "swagger_themes/white" as *;
+@use "swagger_themes/sunsetvibes" as *;
+@use "swagger_themes/cyber-retro" as *;
+@use "swagger_themes/rgb" as *;
+
+body {
+  background: var(--swagger-paper);
+  color: var(--swagger-ink);
+  font-family: "Segoe UI", sans-serif;
+}
+
+.api-docs-header {
+  background: var(--swagger-header) !important;
+  color: var(--swagger-header-text) !important;
+  // The header is dark in every theme, so Bootstrap's badge and select need dark colours.
+  color-scheme: dark;
+}
+
+.api-docs-tools {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+
+  .form-select {
+    background-color: var(--swagger-panel);
+    border-color: var(--swagger-line);
+    color: var(--swagger-ink);
+    min-width: 156px;
+  }
+}
+
+.swagger-ui {
+  background: var(--swagger-paper);
+  color: var(--swagger-ink);
+  min-height: calc(100vh - 80px);
+
+  input,
+  textarea,
+  select {
+    background: var(--swagger-panel);
+    border-color: var(--swagger-line);
+    color: var(--swagger-ink);
+  }
+
+  .info,
+  .scheme-container {
+    background: var(--swagger-paper);
+  }
+
+  .opblock-description-wrapper,
+  .opblock-external-docs-wrapper,
+  .opblock-title_normal {
+    color: var(--swagger-ink);
+  }
+
+  .opblock-summary-description,
+  .opblock-summary-path,
+  .opblock-summary-path__deprecated,
+  .opblock-summary-control svg,
+  .authorization__btn svg,
+  .expand-operation svg {
+    color: var(--swagger-ink) !important;
+    fill: var(--swagger-ink) !important;
+    opacity: 1;
+  }
+
+  .topbar {
+    background: var(--swagger-code);
+    border-bottom: 4px solid var(--swagger-accent);
+    padding: 18px 0;
+
+    .link {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+
+      span {
+        color: var(--swagger-header-text);
+        font-size: 1.15rem;
+        font-weight: 700;
+      }
+    }
+  }
+
+  .wrapper {
+    max-width: 1200px;
+  }
+
+  .info {
+    margin: 34px 0 24px;
+
+    .title {
+      color: var(--swagger-ink);
+      font-size: 2.2rem;
+    }
+
+    .base-url {
+      color: var(--swagger-muted);
+    }
+  }
+
+  .opblock-tag {
+    border-bottom: 2px solid var(--swagger-line);
+    color: var(--swagger-ink);
+    font-size: 1.05rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .opblock {
+    background: var(--swagger-panel);
+    border-color: var(--swagger-line);
+    box-shadow: 0 5px 18px var(--swagger-shadow);
+
+    .opblock-summary {
+      border-color: var(--swagger-line);
+    }
+  }
+
+  .btn.execute {
+    background: var(--swagger-accent);
+    border-color: var(--swagger-accent);
+    color: white;
+
+    &:hover {
+      background: var(--swagger-accent-dark);
+    }
+  }
+
+  .model-box,
+  .highlight-code {
+    background: var(--swagger-code);
+  }
+
+  .model,
+  table thead tr th,
+  table thead tr td {
+    color: var(--swagger-ink);
+  }
+}

@@ -1,0 +1,61 @@
+@use "base" as *;
+
+body[data-theme="sunsetvibes"] {
+  --swagger-ink: #{$sunset-text};
+  --swagger-muted: #{$sunset-muted};
+  --swagger-paper: transparent;
+  --swagger-panel: rgba(45, 16, 38, 0.64);
+  --swagger-accent: #{$sunset-orange};
+  --swagger-accent-dark: #e85d2a;
+  --swagger-line: rgba(255, 209, 102, 0.35);
+  --swagger-code: rgba(18, 8, 18, 0.7);
+  --swagger-shadow: rgba(255, 122, 89, 0.2);
+  --swagger-header: rgba(29, 11, 29, 0.85);
+  --swagger-header-text: #{$sunset-text};
+  --swagger-section: rgba(29, 11, 29, 0.55);
+  --swagger-link: #{$sunset-gold};
+  --swagger-type: #{$sunset-cyan};
+  color-scheme: dark;
+
+  background: radial-gradient(circle at top, rgba($sunset-gold, 0.18), transparent 28%),
+    linear-gradient(180deg, $sunset-bg-top 0%, $sunset-bg-mid 36%, $sunset-bg-low 72%, $sunset-sky 100%) fixed;
+
+  .api-docs-header {
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--swagger-line);
+  }
+
+  .swagger-ui .info .title {
+    @include sunset-glow;
+  }
+
+  .swagger-ui .opblock-tag {
+    color: $sunset-gold;
+  }
+
+  .swagger-ui .opblock,
+  .swagger-ui section.models {
+    @include sunset-panel;
+  }
+
+  .swagger-ui section.models {
+    background: rgba(29, 11, 29, 0.78) !important;
+  }
+
+  .swagger-ui .filter .operation-filter-input,
+  .swagger-ui input,
+  .swagger-ui textarea,
+  .swagger-ui select {
+    background: rgba(29, 11, 29, 0.6);
+  }
+
+  .swagger-ui .btn.execute {
+    background: linear-gradient(90deg, $sunset-rose, $sunset-orange);
+    border-color: $sunset-orange;
+  }
+
+  .swagger-ui .dialog-ux .modal-ux {
+    background: #2d1026;
+  }
+}

@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f4f5ef" />
+    <title>Admin / Games Library</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" />
+    <link rel="stylesheet" href="/public/styles/css/admin.css" />
+  </head>
+  <body>
+    <div id="page-loader" class="page-loader" role="status" aria-live="polite">
+      <span class="loading-spinner" aria-hidden="true"></span>
+      <span>Loading page...</span>
+    </div>
+    <main class="admin-shell">
+      <header class="topbar">
+        <a class="wordmark" href="/admin" aria-label="Games Library admin home">
+          <span class="wordmark-mark" aria-hidden="true">G</span>
+          <span>LCPGAMELIB <small>LIBRARY ADMIN</small></span>
+        </a>
+        <nav class="main-nav" aria-label="Main navigation">
+          <a class="active" href="/admin">Overview</a>
+          <a href="/library">Games</a>
+          <a href="/library/releases">Releases</a>
+          <a href="#settings-panel">Settings</a>
+          <a href="/docs">API</a>
+        </nav>
+        <div class="account-area">
+          <label class="language-control" for="language-selector">Language
+            <select id="language-selector" aria-label="Language">
+              <option value="en">English</option><option value="pt">Português</option>
+              <option value="de">Deutsch</option><option value="fr">Français</option>
+            </select>
+          </label>
+          <span id="account-name" class="account-name"></span>
+          <button id="logout-button" class="icon-button" type="button" aria-label="Log out" title="Log out" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3m9-8h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6" /></svg>
+          </button>
+        </div>
+      </header>
+
+      <section id="login-view" class="login-view" aria-labelledby="login-title" hidden>
+        <p class="kicker">PRIVATE COLLECTION / ADMIN ACCESS</p>
+        <h1 id="login-title">Your library,<br />at a glance.</h1>
+        <p class="login-copy">Sign in with an administrator account to continue.</p>
+        <form id="login-form">
+          <label for="username">Username</label>
+          <input id="username" name="username" autocomplete="username" value="admin" required />
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" required />
+          <button class="primary-button" type="submit">Open dashboard <span aria-hidden="true">↗</span></button>
+        </form>
+        <p id="login-status" class="feedback" role="status" aria-live="polite"></p>
+        <div class="login-lockout" data-lockout hidden>
+          <p data-lockout-message></p>
+          <progress max="60" value="60" aria-label="Login unlock countdown"></progress>
+          <p data-lockout-countdown aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section id="dashboard-view" hidden>
+        <div class="page-heading">
+          <div>
+            <p class="kicker">COLLECTION INTELLIGENCE / <span id="updated-label">LIVE SNAPSHOT</span></p>
+            <h1>Good to see you<span class="heading-period">.</span></h1>
+            <p class="heading-copy">A clear view of what is in your library.</p>
+          </div>
+          <div class="heading-tools">
+            <time id="live-clock" class="live-clock"></time>
+            <label class="theme-control" for="theme-selector">Theme
+              <select id="theme-selector">
+                <option value="auto">Auto</option><option value="dark">Dark</option>
+                <option value="white">White</option><option value="glassmorphism">Glassmorphism</option>
+                <option value="liquid-glass">Liquid glass</option>
+                <option value="sunsetvibes">Sunset Vibes</option><option value="cyber-retro">Cyber Retro Gaming</option>
+                <option value="rgb">RGB</option>
+              </select>
+            </label>
+            <button id="refresh-button" class="refresh-button" type="button">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5m10-1a7 7 0 0 0-12-4L4 12m16 0-3 5a7 7 0 0 1-12-4" /></svg>
+              Refresh data
+            </button>
+          </div>
+        </div>
+
+        <p id="dashboard-status" class="dashboard-status" role="status" aria-live="polite"></p>
+
+        <section class="metrics" aria-label="Collection summary">
+          <article class="metric metric-games">
+            <div class="metric-top"><span>GAMES IN LIBRARY</span><span class="metric-mark" aria-hidden="true">01</span></div>
+            <strong id="metric-games">--</strong>
+            <p>Titles in your collection</p>
+          </article>
+          <article class="metric metric-hours">
+            <div class="metric-top"><span>TIME PLAYED</span><span class="metric-mark" aria-hidden="true">02</span></div>
+            <strong><span id="metric-hours">--</span><small> hrs</small></strong>
+            <p>Across all saved games</p>
+          </article>
+          <article class="metric metric-rating">
+            <div class="metric-top"><span>PLAYER RATING</span><span class="metric-mark" aria-hidden="true">03</span></div>
+            <strong><span id="metric-rating">--</span><small> / 100</small></strong>
+            <p id="critic-rating">Critic average -- / 100</p>
+          </article>
+          <article class="metric metric-wishlist">
+            <div class="metric-top"><span>WISHLIST</span><span class="metric-mark" aria-hidden="true">04</span></div>
+            <strong id="metric-wishlist">--</strong>
+            <p>Games on your radar</p>
+          </article>
+        </section>
+
+        <section id="records-panel" class="records-panel" aria-labelledby="records-title">
+          <div class="panel-heading">
+            <div><p class="kicker">COLLECTION RECORDS</p><h2 id="records-title">Manage games and achievements</h2></div>
+            <div class="records-heading-actions">
+              <div class="record-tabs" role="tablist" aria-label="Record type">
+                <button id="games-tab" class="record-tab active" type="button" role="tab" aria-selected="true" aria-controls="games-records">Games</button>
+                <button id="achievements-tab" class="record-tab" type="button" role="tab" aria-selected="false" aria-controls="achievements-records">Achievements</button>
+              </div>
+              <button id="toggle-records-button" class="secondary-button" type="button" aria-expanded="true" aria-controls="records-content">Hide records</button>
+            </div>
+          </div>
+
+          <div id="records-content">
+          <p id="records-status" class="records-status" role="status" aria-live="polite"></p>
+          <div id="games-records" class="record-workspace" role="tabpanel" aria-labelledby="games-tab">
+            <div class="record-list">
+              <label for="game-record-select">Game records</label>
+              <select id="game-record-select" size="8" aria-label="Select a game to read or edit"></select>
+              <button id="new-game-button" class="secondary-button" type="button">New game</button>
+            </div>
+            <form id="game-record-form" class="record-form">
+              <div class="record-form-heading">
+                <h3 id="game-form-title">Create game</h3>
+                <div class="record-actions">
+                  <button id="edit-game-button" class="secondary-button" type="button" hidden>Edit game</button>
+                  <button id="delete-game-button" class="danger-button" type="button" hidden>Delete game</button>
+                </div>
+              </div>
+              <div class="record-fields">
+                <label>Title<input name="title" required maxlength="200" /></label>
+                <label>Genre<input name="genre" required maxlength="200" /></label>
+                <label>Release year<input name="release_year" type="number" min="1950" max="2200" required /></label>
+                <label>Release date<input name="release_date" type="date" /></label>
+                <label class="field-wide">Description<textarea name="description" rows="5"></textarea></label>
+                <label>Platforms<input name="platforms" placeholder="PC, PlayStation 5" /></label>
+                <label>Game modes<input name="gamemodes" placeholder="Single Player, Online" /></label>
+                <label>Editions<input name="editions" placeholder="Standard, Deluxe" /></label>
+                <label>ESRB rating<input name="esrb" list="esrb-options" placeholder="e, e10, t, m" /></label>
+                <label>Player rating<input name="user_rating" type="number" min="0" max="100" step="0.1" /></label>
+                <label>Critic rating<input name="critic_rating" type="number" min="0" max="100" step="0.1" /></label>
+                <label>Hours played<input name="hoursplayed" type="number" min="0" step="0.1" /></label>
+                <label>Cover image URL<input name="cover_image_url" type="url" /></label>
+                <label>Image URL<input name="image_url" type="url" /></label>
+                <label>Screenshot URL<input name="screenshot_url" type="url" /></label>
+                <label>Developer name<input name="developer_name" maxlength="200" /></label>
+                <label>Publisher name<input name="publisher_name" maxlength="200" /></label>
+                <label>Website URL<input name="website_url" type="url" /></label>
+                <label>Trailer URL<input name="trailer_url" type="url" /></label>
+                <label class="field-wide">Screenshot gallery<textarea name="screenshots" rows="5" placeholder="Add one screenshot URL per line"></textarea></label>
+                <div class="field-wide rich-text-field"><span id="minimum-requirements-label">Minimum PC system requirements</span><textarea name="minimum_system_requirements" data-rich-text aria-labelledby="minimum-requirements-label" hidden></textarea></div>
+                <div class="field-wide rich-text-field"><span id="recommended-requirements-label">Recommended PC system requirements</span><textarea name="recommended_system_requirements" data-rich-text aria-labelledby="recommended-requirements-label" hidden></textarea></div>
+                <label class="setting-option record-checkbox"><input name="wishlisted" type="checkbox" /><span>On wishlist</span></label>
+              </div>
+              <datalist id="esrb-options"><option value="e"></option><option value="e10"></option><option value="t"></option><option value="m"></option><option value="ao"></option><option value="rp"></option></datalist>
+              <button class="primary-button" type="submit">Save game</button>
+            </form>
+          </div>
+
+          <div id="achievements-records" class="record-workspace" role="tabpanel" aria-labelledby="achievements-tab" hidden>
+            <div class="record-list">
+              <label for="achievement-game-select">Game</label>
+              <select id="achievement-game-select"></select>
+              <label for="achievement-record-select">Achievement records</label>
+              <select id="achievement-record-select" size="8" aria-label="Select an achievement to read or edit"></select>
+              <button id="new-achievement-button" class="secondary-button" type="button">New achievement</button>
+            </div>
+            <form id="achievement-record-form" class="record-form">
+              <div class="record-form-heading">
+                <h3 id="achievement-form-title">Create achievement</h3>
+                <div class="record-actions">
+                  <button id="edit-achievement-button" class="secondary-button" type="button" hidden>Edit achievement</button>
+                  <button id="delete-achievement-button" class="danger-button" type="button" hidden>Delete achievement</button>
+                </div>
+              </div>
+              <div class="record-fields">
+                <label>Title<input name="title" required maxlength="200" /></label>
+                <label>Points<input name="points" type="number" min="0" step="1" /></label>
+                <label class="field-wide">Description<textarea name="description" rows="5"></textarea></label>
+                <label>Image URL<input name="image_url" type="url" /></label>
+                <label>Status<select name="status"><option value="Locked">Locked</option><option value="Unlocked">Unlocked</option></select></label>
+                <label>Type<select name="achievement_type"><option value="Bronze">Bronze</option><option value="Silver">Silver</option><option value="Gold">Gold</option><option value="Platinum">Platinum</option></select></label>
+                <label>Unlocked date<input name="date_unlocked" type="date" /></label>
+                <label class="setting-option record-checkbox"><input name="unlocked" type="checkbox" /><span>Unlocked</span></label>
+              </div>
+              <button class="primary-button" type="submit">Save achievement</button>
+            </form>
+          </div>
+          </div>
+        </section>
+
+        <section id="settings-panel" class="settings-panel" aria-labelledby="settings-title">
+          <div class="panel-heading">
+            <div><p class="kicker">PAGE SETTINGS</p><h2 id="settings-title">Page settings</h2></div>
+            <span class="chart-note">LOCAL PREFS</span>
+          </div>
+          <form id="settings-form" class="settings-form">
+            <div class="settings-grid">
+              <label class="setting-option" for="setting-show-recent">
+                <input id="setting-show-recent" name="showRecentGames" type="checkbox" checked />
+                <span>Show recent additions</span>
+              </label>
+              <label class="setting-option" for="setting-show-release-chart">
+                <input id="setting-show-release-chart" name="showReleaseChart" type="checkbox" checked />
+                <span>Show release timeline</span>
+              </label>
+              <label class="setting-option" for="setting-compact-view">
+                <input id="setting-compact-view" name="compactView" type="checkbox" />
+                <span>Compact dashboard view</span>
+              </label>
+            </div>
+            <label class="setting-field" for="setting-refresh-interval">
+              <span>Auto refresh</span>
+              <select id="setting-refresh-interval" name="autoRefreshSeconds">
+                <option value="0">Manual only</option>
+                <option value="30">Every 30 seconds</option>
+                <option value="60">Every minute</option>
+                <option value="300">Every 5 minutes</option>
+              </select>
+            </label>
+          </form>
+        </section>
+
+        <section class="chart-layout" aria-label="Library charts">
+          <article class="chart-panel release-panel">
+            <div class="panel-heading">
+              <div><p class="kicker">THE COLLECTION</p><h2>Release timeline</h2></div>
+              <span class="chart-note">TITLES / YEAR</span>
+            </div>
+            <div class="release-chart-wrap">
+              <svg id="release-chart" class="release-chart" role="img" aria-label="Games in the library by release year" viewBox="0 0 720 220" preserveAspectRatio="none"></svg>
+            </div>
+            <div id="release-empty" class="empty-note" hidden>No release years to chart yet.</div>
+          </article>
+
+          <article class="chart-panel completion-panel">
+            <div class="panel-heading">
+              <div><p class="kicker">ACHIEVEMENTS</p><h2>Completion</h2></div>
+              <span id="achievement-count" class="chart-note">0 TOTAL</span>
+            </div>
+            <div class="completion-content">
+              <div class="completion-ring" id="completion-ring" role="img" aria-label="Achievement completion rate">
+                <div><strong id="completion-value">0%</strong><span>UNLOCKED</span></div>
+              </div>
+              <div class="completion-stats">
+                <p><span class="legend-dot unlocked-dot"></span><span>Unlocked</span><strong id="unlocked-count">0</strong></p>
+                <p><span class="legend-dot locked-dot"></span><span>Still locked</span><strong id="locked-count">0</strong></p>
+                <a href="/library" class="text-link">Manage achievements <span aria-hidden="true">↗</span></a>
+              </div>
+            </div>
+          </article>
+
+          <article class="chart-panel">
+            <div class="panel-heading">
+              <div><p class="kicker">ACHIEVEMENTS</p><h2>By type</h2></div>
+              <span class="chart-note">ALL GAMES</span>
+            </div>
+            <div id="achievement-type-chart" class="bar-chart" aria-label="Achievements by type"></div>
+          </article>
+
+          <article class="chart-panel">
+            <div class="panel-heading">
+              <div><p class="kicker">BY CATEGORY</p><h2>Top genres</h2></div>
+              <span class="chart-note">MOST GAMES</span>
+            </div>
+            <div id="genre-chart" class="bar-chart" aria-label="Games by genre"></div>
+          </article>
+        </section>
+
+        <section class="chart-layout-full" aria-label="Library charts">
+          <article class="chart-panel">
+            <div class="panel-heading">
+              <div><p class="kicker">BY PLATFORM</p><h2>Games by platform</h2></div>
+              <span class="chart-note">MOST GAMES</span>
+            </div>
+            <div id="platform-chart" class="bar-chart" aria-label="Games by platform"></div>
+          </article>
+        </section>
+
+        <section class="recent-section">
+          <div class="recent-heading">
+            <div><p class="kicker">RECENTLY CATALOGUED</p><h2>Latest in the library</h2></div>
+            <a href="/library" class="text-link">Open game shelf <span aria-hidden="true">↗</span></a>
+          </div>
+          <div class="recent-table-wrap">
+            <table>
+              <thead><tr><th scope="col t-left">TITLE</th><th scope="col t-center">RELEASE YEAR</th><th scope="col t-right">RECORD</th></tr></thead>
+              <tbody id="recent-games"></tbody>
+            </table>
+            <p id="recent-empty" class="empty-note" hidden>Your library is ready for its first game.</p>
+          </div>
+        </section>
+
+        <footer class="page-footer"><span>LCPGAMELIB / GAMES LIBRARY</span><span id="footer-summary">LOCAL COLLECTION DATA</span></footer>
+      </section>
+      <div id="toast-region" class="toast-region" role="status" aria-live="polite" aria-atomic="true"></div>
+    </main>
+    <script src="/public/scripts/loading.js"></script>
+    <script src="/public/scripts/i18n.js"></script>
+    <script src="/public/scripts/preferences.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
+    <script src="/public/scripts/admin.js"></script>
+  </body>
+</html>

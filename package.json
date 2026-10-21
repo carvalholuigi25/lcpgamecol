@@ -1,0 +1,48 @@
+{
+  "name": "lcpgamelib",
+  "version": "1.0.0",
+  "description": "A FastAPI application for managing and exploring a game collection.",
+  "private": true,
+  "scripts": {
+    "build-css": "sass public/styles/scss:public/styles/css --no-source-map --style=compressed",
+    "build-css-w": "sass --watch public/styles/scss:public/styles/css --style=compressed",
+    "start": "npm run build-css && python -m uvicorn main:app --reload --env-file config.env",
+    "startapp": "python -m uvicorn main:app --reload --env-file config.env",
+    "startw": "conc \"npm:build-css-w\" \"npm:startapp\"",
+    "test": "python -m pytest",
+    "db:make": "python -m backend.database.migrate make",
+    "db:migrate": "python -m backend.database.migrate migrate",
+    "db:check": "python -m backend.database.migrate check",
+    "db:status": "python -m backend.database.migrate status",
+    "coverage": "python -m pytest --cov=. --cov-report=html:mycoverage/htmlcov --cov-report=term-missing",
+    "coverage2": "python -m pytest --cov --cov-report=html:mycoverage/htmlcov --cov-report=term-missing",
+    "coverage3": "python -m coverage json -o mycoverage/coverage.json",
+    "coverage-pretty": "python mycoverage/coverage_report.py --html",
+    "coverage-json": "python -m pytest --cov=. --cov-report=term-missing --cov-report=json",
+    "coverage-xml": "python -m pytest --cov=. --cov-report=term-missing --cov-report=xml",
+    "gen-coverage": "bash mycoverage/coverage-report.sh",
+    "gen-coverage-pretty": "bash mycoverage/run-coverage-report-ht.sh",
+    "view-coverage": "live-server ./mycoverage/htmlcov index.html",
+    "view-coverage2": "live-server mycoverage/coverage-report.html",
+    "view-coverage3": "python scripts/opencov.py",
+    "lint": "flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics",
+    "lint-fix": "black .",
+    "format": "black .",
+    "format-check": "black --check .",
+    "type-check": "mypy .",
+    "docs": "mkdocs serve",
+    "docs-build": "mkdocs build"
+  },
+  "devDependencies": {
+    "sass": "^1.77.8"
+  },
+  "dependencies": {
+    "bootstrap": "6.0.0-alpha.1",
+    "bootstrap-icons": "^1.13.1",
+    "concurrently": "^10.0.5",
+    "js-cookie": "^3.0.8",
+    "lightgallery": "^2.8.3",
+    "video.js": "^8.24.2",
+    "videojs-youtube": "^3.0.1"
+  }
+}

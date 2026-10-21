@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <base href="">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Game Shelf</title>
+    <link href="/nmodules/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="/nmodules/bootstrap-icons/font/bootstrap-icons.min.css" rel="stylesheet" />
+    <link href="/nmodules/video.js/dist/video-js.min.css" rel="stylesheet" />
+    <link href="/nmodules/lightgallery/css/lightgallery-bundle.min.css" rel="stylesheet" />
+    <link href="/public/styles/css/games.css" rel="stylesheet" />
+  </head>
+  <body>
+    <div id="page-loader" class="page-loader" role="status" aria-live="polite">
+      <span class="loading-spinner" aria-hidden="true"></span>
+      <span>Loading page...</span>
+    </div>
+    <main>
+      <header>
+        <div>
+          <p class="eyebrow">Games API / personal library</p>
+          <h1>Game Shelf</h1>
+        </div>
+        <div class="page-tools">
+          <div class="time-control">
+            <time id="live-clock" class="live-clock"></time>
+          </div>
+
+          <div class="row">
+            <div class="col-6">
+              <div class="language-control">
+                <label class="lbl-language-control" for="language-selector">Language
+                  <select id="language-selector" aria-label="Language">
+                    <option value="en">English</option>
+                    <option value="pt">Português</option>
+                    <option value="de">Deutsch</option>
+                    <option value="fr">Français</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="theme-control">
+                <label class="lbl-theme-control" for="theme-selector">Theme
+                  <select id="theme-selector">
+                    <option value="auto">Auto</option>
+                    <option value="dark">Dark</option>
+                    <option value="white">White</option>
+                    <option value="glassmorphism">Glassmorphism</option>
+                    <option value="liquid-glass">Liquid glass</option>
+                    <option value="sunsetvibes">Sunset Vibes</option>
+                    <option value="cyber-retro">Cyber Retro Gaming</option>
+                    <option value="rgb">RGB</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <section class="mheader-actions">
+        <div class="header-actions">
+          <div id="user-menu" class="user-menu" hidden>
+            <div class="user-info">
+              <span id="user-avatar" class="user-avatar hidden" aria-hidden="true"></span>
+              <span id="username-display" class="username-display"></span>
+            </div>
+            <div class="user-actions">
+              <button id="logout-button" class="logout-button" type="button" aria-label="Log out">
+                <span aria-hidden="true">&#x21AA;</span> Log out
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="mlogin-panel" class="mlogin-panel">
+      <section id="login-panel" class="panel">
+        <p class="eyebrow">Sign in</p>
+        <form id="login-form">
+          <label
+            >Username
+            <input
+              id="username"
+              name="username"
+              value="admin"
+              autocomplete="username"
+              required
+          /></label>
+          <label
+            >Password
+            <input
+              id="password"
+              name="password"
+              type="password"
+              autocomplete="current-password"
+              required
+          /></label>
+          <button type="submit">Open shelf</button>
+        </form>
+        <p id="login-status" class="status hidden" role="status"></p>
+        <div class="login-lockout" data-lockout hidden>
+          <p data-lockout-message></p>
+          <progress max="60" value="60" aria-label="Login unlock countdown"></progress>
+          <p data-lockout-countdown aria-live="polite"></p>
+        </div>
+      </section>
+      </section>
+
+      <section id="app-panel">
+        <div class="toolbar">
+          <div>
+            <p class="eyebrow">Your collection</p>
+            <p id="count" class="subtle"></p>
+          </div>
+          <div class="toolbar-filters">
+            <details id="platform-switch" class="platform-switch">
+              <summary aria-label="Filter by platform">
+                <span class="platform-switch-label">All platforms</span>
+              </summary>
+              <div class="platform-switch-menu" role="group" aria-label="Platforms"></div>
+            </details>
+            <input
+              id="search"
+              type="search"
+              placeholder="Search titles or genres"
+              aria-label="Search games"
+            />
+          </div>
+        </div>
+        <div id="mgames">
+          <div id="games" class="grid"></div>
+        </div>
+        <nav class="pagination" aria-label="Game pages">
+          <button id="first-page" type="button" disabled>First</button>
+          <button id="previous-page" type="button" disabled>Previous</button>
+          <span id="page-number" class="subtle" aria-live="polite">
+            <span id="page-prefix">Page</span>
+            <select id="page-selector" aria-label="Current page">
+              <option value="1">1</option>
+            </select>
+            <span id="page-total">of 1</span>
+          </span>
+          <button id="next-page" type="button" disabled>Next</button>
+          <button id="last-page" type="button" disabled>Last</button>
+        </nav>
+        <p id="app-status" class="status" role="status"></p>
+      </section>
+
+      <dialog id="game-details" class="game-details" aria-labelledby="details-title">
+        <div class="details">
+          <div class="details-header">
+            <div>
+              <p class="eyebrow">Game details</p>
+              <h2 id="details-title"></h2>
+            </div>
+            <button
+              class="close-button"
+              id="close-details"
+              type="button"
+              aria-label="Close details"
+            >
+              &times;
+            </button>
+          </div>
+          <div class="details-images-wrapper">
+            <div class="details-images-container">
+              <img class="details-screenshot" id="details-screenshot" alt="" />
+              <div
+                class="details-screenshot game-screenshot-fallback"
+                id="details-screenshot-fallback"
+                hidden
+              >
+                No screenshot image
+              </div>
+              <img class="details-image" id="details-image" alt="" />
+              <div
+                class="details-image game-cover-fallback"
+                id="details-image-fallback"
+                hidden
+              >
+                No cover image
+              </div>
+            </div>
+          </div>
+          <p class="details-description" id="details-description"></p>
+          <dl class="details-grid" id="details-grid"></dl>
+          <dl class="details-grid-actions" id="details-grid-actions"></dl>
+          <dl class="details-grid-info" id="details-grid-info"></dl>
+          <section class="details-media-section" id="details-trailer-section" hidden>
+            <h3>Trailer</h3>
+            <div id="details-trailer"></div>
+          </section>
+          <section class="details-media-section" id="details-screenshots-section" hidden>
+            <h3>Screenshots</h3>
+            <div class="details-screenshot-gallery" id="details-screenshot-gallery"></div>
+          </section>
+          <p
+            class="details-requirements-warning"
+            id="details-requirements-warning"
+            role="alert"
+            hidden
+          ></p>
+          <section class="details-achievements" aria-labelledby="details-achievements-title">
+            <div class="details-achievements-heading">
+              <h3 id="details-achievements-title">Achievements</h3>
+              <p id="details-achievements-status" role="status" aria-live="polite"></p>
+            </div>
+            <ul id="details-achievements-list"></ul>
+          </section>
+        </div>
+      </dialog>
+
+      <dialog id="screenshot-lightbox" class="lg-dialog" aria-label="Screenshots"></dialog>
+
+      <section class="mnavgame">
+        <a href="/admin" class="nav-button navgamerelbtn" aria-label="Admin dashboard">
+          Admin dashboard
+        </a>
+        <a 
+          href="/library/releases"
+          class="nav-button navgamerelbtn"
+          id="navgamerelbtn"
+          type="button"
+          aria-label="Games releases"
+        >
+          Games releases
+        </a>
+      </section>
+      
+      <section class="msubtle">
+        <p class="subtle">
+          A quiet place for the games, you keep coming back to.
+        </p>
+      </section>
+
+      <footer class="crightblk">
+        <p>Created by <a href="mailto:luiscarvalho239@gmail.com">Luigi Carvalho</a> - All rights are reserved to LCP</p>
+      </footer>
+    </main>
+
+    <script src="/nmodules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/public/scripts/loading.js"></script>
+    <script src="/public/scripts/i18n.js"></script>
+    <script src="/public/scripts/preferences.js"></script>
+    <script src="/public/scripts/functions.js"></script>
+    <script src="/nmodules/video.js/dist/video.min.js"></script>
+    <script src="/nmodules/videojs-youtube/dist/Youtube.min.js"></script>
+    <script src="/nmodules/lightgallery/lightgallery.umd.js"></script>
+    <script src="/nmodules/lightgallery/plugins/zoom/lg-zoom.umd.js"></script>
+    <script src="/public/scripts/shelf.js"></script>
+    <script src="/public/scripts/games.js"></script>
+  </body>
+</html>

@@ -1,0 +1,23 @@
+[run]
+branch = True
+source = .
+data_file = mycoverage/.coverage
+omit =
+    tests/*
+    .venv/*
+    node_modules/*
+    mycoverage/*
+
+[report]
+show_missing = True
+skip_empty = True
+exclude_also =
+    if __name__ == .__main__.:
+    raise NotImplementedError
+
+[html]
+directory = mycoverage/htmlcov
+title = lcpgamelib coverage
+
+[json]
+output = mycoverage/coverage.json

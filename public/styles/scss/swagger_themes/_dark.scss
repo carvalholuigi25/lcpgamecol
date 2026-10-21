@@ -1,0 +1,16 @@
+@use "base" as *;
+
+body[data-theme="dark"] {
+  @include dark-palette;
+}
+
+// Auto follows the operating system's light/dark setting.
+body[data-theme="auto"] {
+  @include light-palette;
+}
+
+@media (prefers-color-scheme: dark) {
+  body[data-theme="auto"] {
+    @include dark-palette;
+  }
+}

@@ -1,0 +1,52 @@
+function getGameESRBLabel(esrb) {
+  switch (esrb) {
+    case "e": return "Everyone";
+    case "e10": return "Everyone 10+";
+    case "t": return "Teen";
+    case "m": return "Mature 17+";
+    case "ao": return "Adults Only 18+";
+    case "rp": return "Rating Pending";
+    case "nr": return "Not Rated";
+    case "ec": return "Early Childhood";
+    case "k-a": return "Kids to Adults";
+    case "c": return "Children";
+    case "y": return "Youth";
+    case "g": return "General";
+    case "pg": return "Parental Guidance";
+    case "pg13": return "Parents Strongly Cautioned";
+    case "nc17": return "Adults Only";
+    case "x": return "Explicit Content";
+    case "r": return "Restricted";
+    case "CERO_A": return "CERO A (All Ages)";
+    case "CERO_B": return "CERO B (Ages 12+)";
+    case "CERO_C": return "CERO C (Ages 15+)";
+    case "CERO_D": return "CERO D (Ages 17+)";
+    case "CERO_Z": return "CERO Z (Ages 18+)";
+    case "PEGI_3": return "PEGI 3";
+    case "PEGI_7": return "PEGI 7";
+    case "PEGI_12": return "PEGI 12";
+    case "PEGI_16": return "PEGI 16";
+    case "PEGI_18": return "PEGI 18";
+    case "USK_0": return "USK 0 (All Ages)";
+    case "USK_6": return "USK 6 (Ages 6+)";
+    case "USK_12": return "USK 12 (Ages 12+)";
+    case "USK_16": return "USK 16 (Ages 16+)";
+    case "USK_18": return "USK 18 (Ages 18+)";
+    case "GRAC_0": return "GRAC 0 (All Ages)";
+    case "GRAC_12": return "GRAC 12 (Ages 12+)";
+    case "GRAC_15": return "GRAC 15 (Ages 15+)";
+    case "GRAC_18": return "GRAC 18 (Ages 18+)";
+    case "GRAC_19": return "GRAC 19 (Ages 19+)";
+    case "CLASS_IND_L": return "CLASS IND L (All Ages)";
+    case "CLASS_IND_10": return "CLASS IND 10 (Ages 10+)";
+    case "CLASS_IND_12": return "CLASS IND 12 (Ages 12+)";
+    case "CLASS_IND_14": return "CLASS IND 14 (Ages 14+)";
+    case "CLASS_IND_16": return "CLASS IND 16 (Ages 16+)";
+    case "CLASS_IND_18": return "CLASS IND 18 (Ages 18+)";
+    case "ACB_G": return "ACB G (All Ages)";
+    case "ACB_PG": return "ACB PG (Parental Guidance)";
+    case "ACB_M": return "ACB M (Mature)";
+    case "ACB_R18+": return "ACB R18+ (Adults Only)";
+    default: return "Not set";
+  }
+}

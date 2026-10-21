@@ -1,0 +1,266 @@
+{
+  "tables": {
+    "games": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "primary_key": true
+        },
+        {
+          "name": "title",
+          "type": "TEXT",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "genre",
+          "type": "TEXT",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "release_year",
+          "type": "INTEGER",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "release_date",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "description",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "cover_image_url",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "image_url",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "screenshot_url",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "developer_name",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "publisher_name",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "website_url",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "trailer_url",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "screenshots",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "platforms",
+          "type": "TEXT",
+          "nullable": false,
+          "default": "'PC'"
+        },
+        {
+          "name": "gamemodes",
+          "type": "TEXT",
+          "nullable": true,
+          "default": "'all'"
+        },
+        {
+          "name": "editions",
+          "type": "TEXT",
+          "nullable": true,
+          "default": "'Standard'"
+        },
+        {
+          "name": "user_rating",
+          "type": "REAL",
+          "nullable": true,
+          "default": "0"
+        },
+        {
+          "name": "critic_rating",
+          "type": "REAL",
+          "nullable": true,
+          "default": "0"
+        },
+        {
+          "name": "wishlisted",
+          "type": "BOOLEAN",
+          "nullable": true,
+          "default": "0"
+        },
+        {
+          "name": "hoursplayed",
+          "type": "REAL",
+          "nullable": true,
+          "default": "0"
+        },
+        {
+          "name": "esrb",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null,
+          "enum": [
+            "three",
+            "seven",
+            "twelve",
+            "sixteen",
+            "eighteen",
+            "rp",
+            "ec",
+            "e",
+            "e10",
+            "t",
+            "m",
+            "ao",
+            "cero_a",
+            "cero_b",
+            "cero_c",
+            "cero_d",
+            "cero_z",
+            "usk_0",
+            "usk_6",
+            "usk_12",
+            "usk_16",
+            "usk_18",
+            "grac_all",
+            "grac_twelve",
+            "grac_fifteen",
+            "grac_eighteen",
+            "grac_testing",
+            "class_ind_l",
+            "class_ind_ten",
+            "class_ind_twelve",
+            "class_ind_fourteen",
+            "class_ind_sixteen",
+            "class_ind_eighteen",
+            "acb_g",
+            "acb_pg",
+            "acb_m",
+            "acb_ma15",
+            "acb_r18",
+            "acb_rc"
+          ]
+        },
+        {
+          "name": "minimum_system_requirements",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "recommended_system_requirements",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null
+        }
+      ]
+    },
+    "achievements": {
+      "columns": [
+        {
+          "name": "achievement_id",
+          "type": "INTEGER",
+          "primary_key": true
+        },
+        {
+          "name": "title",
+          "type": "TEXT",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "description",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "image_url",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "points",
+          "type": "INTEGER",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "unlocked",
+          "type": "BOOLEAN",
+          "nullable": false,
+          "default": "0"
+        },
+        {
+          "name": "date_unlocked",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "status",
+          "type": "TEXT",
+          "nullable": false,
+          "default": "'Locked'",
+          "enum": [
+            "Locked",
+            "Unlocked"
+          ]
+        },
+        {
+          "name": "achievement_type",
+          "type": "TEXT",
+          "nullable": false,
+          "default": "'Bronze'",
+          "enum": [
+            "Platinum",
+            "Gold",
+            "Silver",
+            "Bronze"
+          ]
+        },
+        {
+          "name": "game_id",
+          "type": "INTEGER",
+          "nullable": false,
+          "default": null,
+          "references": "games (id) ON DELETE CASCADE"
+        }
+      ]
+    }
+  }
+}

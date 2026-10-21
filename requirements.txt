@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+anyio<4.13
+python-multipart
+PyJWT
+httpx2
+pytest
+pytest-cov

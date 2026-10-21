@@ -1,0 +1,214 @@
+$swagger-ui-css: "https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css";
+
+@import url($swagger-ui-css);
+
+$ink: #173042;
+$muted: #607787;
+$paper: #f4f8f7;
+$panel: #ffffff;
+$teal: #087f8c;
+$teal-dark: #075b66;
+$line: #d9e5e3;
+$code: #10252d;
+
+$sunset-bg-top: #1d0b1d;
+$sunset-bg-mid: #4e2354;
+$sunset-bg-low: #ff7a59;
+$sunset-sky: #ffb36b;
+$sunset-gold: #ffd166;
+$sunset-orange: #ff7a59;
+$sunset-rose: #ff5a7a;
+$sunset-purple: #9b59ff;
+$sunset-cyan: #7be3f7;
+$sunset-text: #fff3eb;
+$sunset-muted: #f6c7b3;
+
+@mixin sunset-glow($color: $sunset-gold) {
+  text-shadow: 0 0 8px rgba($color, 0.8), 0 0 22px rgba($color, 0.35);
+}
+
+@mixin sunset-panel($radius: 8px) {
+  background: rgba(45, 16, 38, 0.64);
+  border: 1px solid rgba($sunset-gold, 0.35);
+  border-radius: $radius;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 0 18px rgba($sunset-orange, 0.2), inset 0 0 25px rgba($sunset-cyan, 0.04);
+}
+
+@mixin light-palette {
+  --swagger-ink: #{$ink};
+  --swagger-muted: #{$muted};
+  --swagger-paper: #{$paper};
+  --swagger-panel: #{$panel};
+  --swagger-accent: #{$teal};
+  --swagger-accent-dark: #{$teal-dark};
+  --swagger-line: #{$line};
+  --swagger-code: #e8f0ee;
+  --swagger-shadow: rgba(23, 48, 66, 0.06);
+  --swagger-header: #{$code};
+  --swagger-header-text: #f5fbfa;
+  --swagger-section: #e8f0ee;
+  --swagger-link: #{$teal};
+  --swagger-type: #55a;
+  color-scheme: light;
+}
+
+@mixin dark-palette {
+  --swagger-ink: #e8edf2;
+  --swagger-muted: #aab7c4;
+  --swagger-paper: #172027;
+  --swagger-panel: #202c35;
+  --swagger-accent: #58c7d1;
+  --swagger-accent-dark: #2e9da8;
+  --swagger-line: #40515d;
+  --swagger-code: #0e151a;
+  --swagger-shadow: rgba(0, 0, 0, 0.28);
+  --swagger-header: #0e151a;
+  --swagger-header-text: #f4fbff;
+  --swagger-section: #26343f;
+  --swagger-link: #7fd8e0;
+  --swagger-type: #b4a8ff;
+  color-scheme: dark;
+}
+
+:root {
+  @include light-palette;
+}
+
+// Swagger UI hard-codes colours meant for a white page. These rules route them
+// through the theme variables so every theme, light or dark, stays readable.
+// They live here so the theme files, compiled after this one, can override them.
+body[data-theme] .swagger-ui {
+  .info,
+  .info p,
+  .info li,
+  .info table,
+  .info h1,
+  .info h2,
+  .info h3,
+  .info h4,
+  .info h5,
+  .renderedMarkdown p,
+  .opblock-description-wrapper p,
+  .opblock-external-docs-wrapper p,
+  .opblock-title_normal p,
+  .opblock .opblock-section-header h4,
+  .opblock .opblock-section-header label,
+  .responses-inner h4,
+  .responses-inner h5,
+  .response-col_status,
+  .response-col_description,
+  .parameter__name,
+  .parameter__type,
+  .tab li.active,
+  .tab li.active button.tablinks,
+  .models h4,
+  .models h4 span,
+  .model-title,
+  .model,
+  .json-schema-2020-12__title,
+  .json-schema-2020-12-keyword__name,
+  .json-schema-2020-12-keyword__value,
+  .dialog-ux .modal-ux,
+  .dialog-ux .modal-ux-header h3,
+  .dialog-ux .modal-ux-content p,
+  .dialog-ux .modal-ux-content h4,
+  .dialog-ux .modal-ux-content label,
+  .scopes h2,
+  .loading-container .loading:after {
+    color: var(--swagger-ink);
+  }
+
+  .tab li,
+  .tab li button.tablinks,
+  .parameter__in,
+  .prop-format,
+  .response-col_links,
+  .opblock-body .opblock-section .no-margin,
+  table thead tr td,
+  table thead tr th,
+  .col_header {
+    color: var(--swagger-muted);
+  }
+
+  .info a,
+  .info .base-url,
+  .info .link,
+  .dialog-ux .modal-ux-content a {
+    color: var(--swagger-link);
+  }
+
+  .prop-type,
+  .json-schema-2020-12__attribute--primary {
+    color: var(--swagger-type);
+  }
+
+  .information-container,
+  .scheme-container {
+    border-bottom: 1px solid var(--swagger-line);
+    box-shadow: none;
+  }
+
+  .filter .operation-filter-input {
+    background: var(--swagger-panel);
+    border: 1px solid var(--swagger-line);
+    color: var(--swagger-ink);
+
+    &::placeholder {
+      color: var(--swagger-muted);
+    }
+  }
+
+  .opblock .opblock-section-header {
+    background: var(--swagger-section);
+    box-shadow: none;
+  }
+
+  .opblock-control-arrow svg,
+  .opblock-summary-control svg,
+  .models-control svg,
+  .model-box-control svg,
+  .json-schema-2020-12-accordion svg,
+  .close-modal svg {
+    fill: var(--swagger-ink);
+  }
+
+  .authorization__btn.unlocked {
+    opacity: 0.85;
+  }
+
+  .models {
+    border-color: var(--swagger-line);
+  }
+
+  .models,
+  .model-container,
+  div.json-schema-2020-12-head,
+  .json-schema-2020-12-accordion,
+  .json-schema-2020-12-expand-deep-button {
+    background-color: transparent !important;
+  }
+
+  .model-container:hover {
+    background-color: var(--swagger-section) !important;
+  }
+
+  .json-schema-2020-12-expand-deep-button {
+    color: var(--swagger-muted);
+  }
+
+  .dialog-ux .modal-ux {
+    background: var(--swagger-panel);
+    border-color: var(--swagger-line);
+  }
+
+  .dialog-ux .modal-ux-header {
+    border-color: var(--swagger-line);
+  }
+
+  .model-box,
+  .highlight-code {
+    background-color: var(--swagger-code) !important;
+  }
+}

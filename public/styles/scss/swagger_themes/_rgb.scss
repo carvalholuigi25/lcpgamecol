@@ -1,0 +1,72 @@
+@use "base" as *;
+
+// The spectrum is repeated so a 200%-wide gradient can scroll by one period and loop seamlessly.
+$rgb-spectrum: #ff0040, #ff8a00, #ffe600, #00ff6a, #00d5ff, #3d5bff, #c400ff, #ff0040;
+$rgb-loop: linear-gradient(90deg, $rgb-spectrum, $rgb-spectrum);
+
+@property --rgb-shift {
+  syntax: "<percentage>";
+  initial-value: 0%;
+  inherits: true;
+}
+
+@keyframes rgb-flow {
+  to {
+    --rgb-shift: 100%;
+  }
+}
+
+@keyframes rgb-hue {
+  to {
+    filter: hue-rotate(360deg);
+  }
+}
+
+body[data-theme="rgb"] {
+  --swagger-ink: #f2f4ff;
+  --swagger-muted: #a9b0d6;
+  --swagger-paper: #07080f;
+  --swagger-panel: #10121f;
+  --swagger-accent: #ff0040;
+  --swagger-accent-dark: #c4002f;
+  --swagger-line: #2a2e4a;
+  --swagger-code: #04050a;
+  --swagger-shadow: rgba(0, 0, 0, 0.5);
+  --swagger-header: #04050a;
+  --swagger-header-text: #ffffff;
+  --swagger-section: #181b2e;
+  --swagger-link: #00d5ff;
+  --swagger-type: #b4a8ff;
+  color-scheme: dark;
+
+  animation: rgb-flow 4s linear infinite;
+
+  // Rainbow lines: a gradient strip drawn in the transparent border area.
+  .api-docs-header {
+    background: linear-gradient(var(--swagger-header), var(--swagger-header)) padding-box,
+      $rgb-loop var(--rgb-shift) 0 / 200% 100% border-box !important;
+    border-bottom: 3px solid transparent;
+  }
+
+  .swagger-ui .opblock-tag {
+    background: $rgb-loop var(--rgb-shift) 100% / 200% 2px repeat-x border-box;
+    border-bottom-color: transparent;
+  }
+
+  .swagger-ui .opblock {
+    background: linear-gradient(var(--swagger-panel), var(--swagger-panel)) padding-box,
+      $rgb-loop var(--rgb-shift) 0 / 200% 100% border-box;
+    border: 1px solid transparent;
+  }
+
+  .swagger-ui .btn.execute {
+    animation: rgb-hue 6s linear infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &,
+    .swagger-ui .btn.execute {
+      animation: none;
+    }
+  }
+}

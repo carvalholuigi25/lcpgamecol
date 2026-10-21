@@ -1,0 +1,8 @@
+@use "base" as *;
+
+body[data-theme="white"] {
+  @include light-palette;
+  --swagger-paper: #ffffff;
+  --swagger-panel: #ffffff;
+  --swagger-shadow: rgba(23, 48, 66, 0.08);
+}

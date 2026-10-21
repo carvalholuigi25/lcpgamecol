@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>429 - Too Many Requests | Games API</title>
+    <link rel="stylesheet" href="/public/styles/css/error.css" />
+  </head>
+  <body>
+    <main class="error-card">
+      <p class="eyebrow">Games API</p>
+      <p class="error-code">429</p>
+      <h1>Too many requests</h1>
+      <p>Please wait a little while before trying again.</p>
+      <section
+        class="retry-timer"
+        id="retry-timer"
+        data-retry-after="0"
+        hidden
+        aria-live="polite"
+      >
+        <p class="retry-label" id="retry-label"></p>
+        <div
+          class="retry-progress"
+          id="retry-progress"
+          role="progressbar"
+          aria-label="Rate limit cooldown"
+          aria-valuemin="0"
+          aria-valuemax="0"
+          aria-valuenow="0"
+        >
+          <span></span>
+        </div>
+      </section>
+      <a href="/library" class="btn btn-primary btnretgamelibrary" id="btnretgamelibrary">Return to the game library</a>
+    </main>
+    <script>
+      (() => {
+        const timer = document.getElementById("retry-timer");
+        const label = document.getElementById("retry-label");
+        const progress = document.getElementById("retry-progress");
+        const btnretgamelibrary = document.getElementById("btnretgamelibrary");
+        const duration = Number(timer.dataset.retryAfter);
+
+        const removeDisabledReturnLib = () => {
+          if(btnretgamelibrary) {
+            if (!btnretgamelibrary.hasAttribute("disabled")) {
+              return;
+            }
+            btnretgamelibrary.classList.remove("disabled");
+            btnretgamelibrary.removeAttribute("disabled");
+            btnretgamelibrary.removeEventListener("click", removeDisabledReturnLib);
+          }
+        };
+
+        const addDisabledReturnLib = () => {
+          if(btnretgamelibrary) {
+            if (btnretgamelibrary.hasAttribute("disabled")) {
+              return;
+            }
+            btnretgamelibrary.classList.add("disabled");
+            btnretgamelibrary.setAttribute("disabled", "disabled");
+            btnretgamelibrary.addEventListener("click", removeDisabledReturnLib);
+          }
+        };
+
+        if (!Number.isFinite(duration)) {
+          return;
+        }
+
+        if (duration === 0) {
+          window.location.replace("/library");
+          return;
+        }
+
+        if (duration < 0) {
+          return;
+        }
+
+        const startedAt = Date.now();
+        const bar = progress.querySelector("span");
+        progress.setAttribute("aria-valuemax", String(duration));
+        timer.hidden = false;
+
+        addDisabledReturnLib();
+
+        const update = () => {
+          const elapsed = Math.floor((Date.now() - startedAt) / 1000);
+          const remaining = Math.max(0, duration - elapsed);
+          const unit = remaining === 1 ? "second" : "seconds";
+
+          label.textContent = remaining > 0
+            ? `You can try again in ${remaining} ${unit}.`
+            : "You can try again now.";
+          progress.setAttribute("aria-valuenow", String(remaining));
+          bar.style.width = `${(remaining / duration) * 100}%`;
+
+          if (remaining <= 0) {
+            removeDisabledReturnLib();
+          }
+
+          if (remaining === 0) {
+            window.clearInterval(interval);
+            window.location.replace("/library");
+          }
+        };
+
+        update();
+        const interval = window.setInterval(update, 250);
+      })();
+    </script>
+  </body>
+</html>
