@@ -57,6 +57,13 @@ The app is available at:
 - Health check: http://127.0.0.1:8000/health
 
 The database is created at `backend/database/mydb.db`. Pending migrations are applied automatically when the app starts.
+After initializing the database, seed the default games and achievements with:
+
+```powershell
+python -c "from backend.database.database import seed_database; seed_database()"
+```
+
+The seed data is defined in `backend/database/seed.sql`; running the seeder more than once does not add duplicates.
 
 ## Features
 
