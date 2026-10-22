@@ -1,4 +1,4 @@
-# LCP Games Collection
+# LCP Game Collection
 
 A FastAPI application for managing and exploring a video game collection. It includes a SQLite-backed API, a browser-based games library and administrator dashboard, and optional IGDB integration for game searches and upcoming releases.
 

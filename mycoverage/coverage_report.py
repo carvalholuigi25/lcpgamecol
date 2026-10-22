@@ -194,7 +194,7 @@ def main():
         split = argv.index("--")
         argv, pytest_args = argv[:split], argv[split + 1:]
 
-    parser = argparse.ArgumentParser(description="Pretty coverage report for lcpgamelib.")
+    parser = argparse.ArgumentParser(description="Pretty coverage report for lcpgamecol.")
     parser.add_argument("--fail-under", type=float, default=40,
                         help="minimum total coverage %% (default: 40)")
     parser.add_argument("--sort", choices=["name", "cover", "miss"], default="cover",

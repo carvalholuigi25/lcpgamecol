@@ -17,7 +17,7 @@ exclude_also =
 
 [html]
 directory = mycoverage/htmlcov
-title = lcpgamelib coverage
+title = lcpgamecol coverage
 
 [json]
 output = mycoverage/coverage.json
