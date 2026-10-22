@@ -60,6 +60,7 @@ function showLogin(message = "") {
   loginStatus.textContent = message;
   accountName.textContent = "";
   logoutButton.hidden = true;
+  window.adminSidebar?.setAvailable(false);
 }
 
 function showDashboard(username) {
@@ -67,6 +68,7 @@ function showDashboard(username) {
   dashboardView.hidden = false;
   accountName.textContent = username;
   logoutButton.hidden = false;
+  window.adminSidebar?.setAvailable(true);
 }
 
 function showToast(message) {
@@ -762,6 +764,18 @@ logoutButton.addEventListener("click", async () => {
   }
 });
 
+window.initRegistration({
+  loginForm,
+  registerForm: document.getElementById("register-form"),
+  switchButton: document.getElementById("auth-switch"),
+  onRegistered: (username) => {
+    loginForm.elements.namedItem("username").value = username;
+    loginStatus.textContent = window.i18n.t(
+      "Account {username} created. It can browse the library; an administrator must grant dashboard access.",
+      { username },
+    );
+  },
+});
 initRichTextEditors();
 applyDashboardSettings();
 

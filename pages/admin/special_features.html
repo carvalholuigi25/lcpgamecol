@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f4f5ef" />
+    <title>Special features / Games Library</title>
+    <link rel="stylesheet" href="/public/styles/css/admin.css" />
+  </head>
+  <body>
+    <div id="page-loader" class="page-loader" role="status" aria-live="polite">
+      <span class="loading-spinner" aria-hidden="true"></span>
+      <span>Loading page...</span>
+    </div>
+    <aside id="admin-sidebar" class="admin-sidebar" aria-label="Admin pages" hidden>
+      <nav class="sidebar-nav" aria-label="Page links">
+        <p class="sidebar-group">DASHBOARD</p>
+        <a href="/admin" title="Overview"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h6V4H4zm10 7h6v-9h-6zM4 20h6v-4H4zm10-11h6V4h-6z" /></svg><span>Overview</span></a>
+        <a href="/admin#records-panel" title="Records"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM9 8h6m-6 4h6m-6 4h4" /></svg><span>Records</span></a>
+        <a href="/admin#settings-panel" title="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10m4 0h2M4 17h4m4 0h8M14 4v6m-6 4v6" /></svg><span>Settings</span></a>
+        <a href="/admin#charts-section" title="Charts"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10m6 10V4m6 16v-7m4 7H3" /></svg><span>Charts</span></a>
+        <a href="/admin#recent-section" title="Recent games"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v5l3 2m6-2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" /></svg><span>Recent games</span></a>
+        <p class="sidebar-group">TOOLS</p>
+        <a href="/admin/special-features" title="Special features"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7z" /></svg><span>Special features</span></a>
+        <a href="/admin/user-directory" title="Users"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 19v-1a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v1m6.5-9a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM21 19v-1a4 4 0 0 0-3-3.9M16 3.1a3.5 3.5 0 0 1 0 6.8" /></svg><span>Users</span></a>
+        <p class="sidebar-group">LIBRARY</p>
+        <a href="/library" title="Games"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9h4m-2-2v4m7-1h.01M18 8h.01M7 5h10a4 4 0 0 1 4 4v4a3 3 0 0 1-5.4 1.8L14 13h-4l-1.6 1.8A3 3 0 0 1 3 13V9a4 4 0 0 1 4-4z" /></svg><span>Games</span></a>
+        <a href="/library/releases" title="Releases"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14v15H5zM5 9h14M9 3v4m6-4v4" /></svg><span>Releases</span></a>
+        <a href="/docs" title="API docs"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 8l-4 4 4 4m6-8l4 4-4 4" /></svg><span>API docs</span></a>
+      </nav>
+    </aside>
+    <div id="sidebar-backdrop" class="sidebar-backdrop" hidden></div>
+    <main class="admin-shell">
+      <header class="topbar">
+        <div class="topbar-start">
+          <button id="sidebar-toggle" class="icon-button sidebar-toggle" type="button" aria-controls="admin-sidebar" aria-expanded="true" aria-label="Hide page links" title="Hide page links" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+          </button>
+          <a class="wordmark" href="/admin" aria-label="Games Library admin home">
+            <span class="wordmark-mark" aria-hidden="true">G</span>
+            <span>LCPGAMECOL <small>LIBRARY ADMIN</small></span>
+          </a>
+        </div>
+        <nav class="main-nav" aria-label="Main navigation">
+          <a href="/admin">Overview</a>
+          <a href="/library">Games</a>
+          <a href="/library/releases">Releases</a>
+          <a href="/admin#settings-panel">Settings</a>
+          <a href="/docs">API</a>
+        </nav>
+        <div class="account-area">
+          <label class="language-control" for="language-selector">Language
+            <select id="language-selector" aria-label="Language">
+              <option value="en">English</option><option value="pt">Português</option>
+              <option value="de">Deutsch</option><option value="fr">Français</option>
+            </select>
+          </label>
+          <span id="account-name" class="account-name"></span>
+          <button id="logout-button" class="icon-button" type="button" aria-label="Log out" title="Log out" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3m9-8h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6" /></svg>
+          </button>
+        </div>
+      </header>
+
+      <section id="access-view" class="login-view" aria-labelledby="access-title" hidden>
+        <p class="kicker">SPECIAL FEATURES / ADMIN ACCESS</p>
+        <h1 id="access-title">Admin tools,<br />behind the door.</h1>
+        <p id="access-message" class="login-copy">Sign in with an administrator account to use special features.</p>
+        <a class="primary-button" href="/admin">Go to sign in <span aria-hidden="true">↗</span></a>
+      </section>
+
+      <section id="features-view" hidden>
+        <div class="page-heading">
+          <div>
+            <p class="kicker">ADMIN TOOLS / SPECIAL FEATURES</p>
+            <h1>Special features<span class="heading-period">.</span></h1>
+            <p class="heading-copy">Extra tools for looking after your library.</p>
+          </div>
+          <div class="heading-tools">
+            <time id="live-clock" class="live-clock"></time>
+            <label class="theme-control" for="theme-selector">Theme
+              <select id="theme-selector">
+                <option value="auto">Auto</option><option value="dark">Dark</option>
+                <option value="white">White</option><option value="glassmorphism">Glassmorphism</option>
+                <option value="liquid-glass">Liquid glass</option>
+                <option value="sunsetvibes">Sunset Vibes</option><option value="cyber-retro">Cyber Retro Gaming</option>
+                <option value="rgb">RGB</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <section class="feature-grid" aria-label="Available features">
+          <a class="feature-card" href="#upload-panel">
+            <span class="metric-mark" aria-hidden="true">01</span>
+            <strong>Safe file upload</strong>
+            <span>Store images and PDFs after their contents are checked.</span>
+          </a>
+          <a class="feature-card" href="/admin/user-directory">
+            <span class="metric-mark" aria-hidden="true">02</span>
+            <strong>Users</strong>
+            <span>See every account, its profile, and favorite games.</span>
+          </a>
+          <div class="feature-card feature-card-placeholder">
+            <span class="metric-mark" aria-hidden="true">03</span>
+            <strong>More tools soon</strong>
+            <span>New admin features will appear here.</span>
+          </div>
+        </section>
+
+        <section id="upload-panel" class="records-panel upload-panel" aria-labelledby="upload-title">
+          <div class="panel-heading">
+            <div><p class="kicker">SAFE FILE UPLOAD</p><h2 id="upload-title">Upload a file</h2></div>
+            <span class="chart-note">ADMIN ONLY</span>
+          </div>
+          <div class="upload-layout">
+            <form id="upload-form" class="upload-form">
+              <label id="upload-dropzone" class="upload-dropzone" for="upload-input">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L7 9m5-5 5 5M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" /></svg>
+                <strong>Drop a file here or choose one</strong>
+                <span id="upload-rules">PNG, JPEG, GIF, WebP, or PDF</span>
+                <input id="upload-input" name="file" type="file" class="upload-input" accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,image/png,image/jpeg,image/gif,image/webp,application/pdf" />
+              </label>
+              <div id="upload-selection" class="upload-selection" hidden>
+                <span id="upload-file-name" class="upload-file-name" translate="no"></span>
+                <span id="upload-file-size" class="chart-note"></span>
+              </div>
+              <progress id="upload-progress" class="upload-progress" max="100" value="0" aria-label="Upload progress" hidden></progress>
+              <div class="upload-actions">
+                <button id="upload-submit" class="primary-button" type="submit" disabled>Upload file</button>
+                <button id="upload-clear" class="secondary-button" type="button" hidden>Clear</button>
+              </div>
+              <p id="upload-status" class="records-status" role="status" aria-live="polite"></p>
+            </form>
+            <aside class="upload-safety" aria-labelledby="upload-safety-title">
+              <h3 id="upload-safety-title">How uploads are kept safe</h3>
+              <ul>
+                <li>Only administrators can upload, list, download, or delete files.</li>
+                <li>The file contents must match an allowed type; the name and browser-reported type are not trusted.</li>
+                <li>SVG, HTML, scripts, and other active content are refused.</li>
+                <li>Files are size-limited while they stream and stored under random names outside the public folders.</li>
+                <li>Downloads are sent as attachments with a locked-down content policy.</li>
+              </ul>
+            </aside>
+          </div>
+
+          <div class="upload-list-heading">
+            <h3>Uploaded files</h3>
+            <span id="upload-count" class="chart-note"></span>
+          </div>
+          <div class="recent-table-wrap upload-table-wrap">
+            <table>
+              <thead><tr><th scope="col">FILE</th><th scope="col">TYPE</th><th scope="col">SIZE</th><th scope="col">UPLOADED</th><th scope="col">ACTIONS</th></tr></thead>
+              <tbody id="upload-rows"></tbody>
+            </table>
+            <p id="upload-empty" class="empty-note" hidden>No files uploaded yet.</p>
+          </div>
+        </section>
+
+        <footer class="page-footer"><span>LCPGAMECOL / SPECIAL FEATURES</span><span>ADMIN TOOLS</span></footer>
+      </section>
+      <div id="toast-region" class="toast-region" role="status" aria-live="polite" aria-atomic="true"></div>
+    </main>
+    <script src="/public/scripts/loading.js"></script>
+    <script src="/public/scripts/i18n.js"></script>
+    <script src="/public/scripts/preferences.js"></script>
+    <script src="/public/scripts/sidebar.js"></script>
+    <script src="/public/scripts/special_features.js"></script>
+  </body>
+</html>

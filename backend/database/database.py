@@ -98,6 +98,44 @@ def initialize_database() -> None:
                 game_id INTEGER NOT NULL,
                 FOREIGN KEY (game_id) REFERENCES games (id) ON DELETE CASCADE
             );
+
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL UNIQUE COLLATE NOCASE,
+                password_hash TEXT NOT NULL,
+                role TEXT NOT NULL DEFAULT 'viewer',
+                created_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS uploads (
+                id TEXT PRIMARY KEY,
+                original_name TEXT NOT NULL,
+                stored_name TEXT NOT NULL UNIQUE,
+                content_type TEXT NOT NULL,
+                size_bytes INTEGER NOT NULL,
+                sha256 TEXT NOT NULL,
+                uploaded_by TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            );
+
+            -- Keyed by username so accounts configured in AUTH_USERS can have a profile too.
+            CREATE TABLE IF NOT EXISTS user_profiles (
+                username TEXT PRIMARY KEY COLLATE NOCASE,
+                display_name TEXT NULL,
+                bio TEXT NULL,
+                location TEXT NULL,
+                avatar_url TEXT NULL,
+                cover_url TEXT NULL,
+                updated_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS user_favorite_games (
+                username TEXT NOT NULL COLLATE NOCASE,
+                game_id INTEGER NOT NULL,
+                position INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (username, game_id),
+                FOREIGN KEY (game_id) REFERENCES games (id) ON DELETE CASCADE
+            );
             """
         )
         game_columns = {

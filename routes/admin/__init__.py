@@ -80,3 +80,9 @@ def get_dashboard_summary() -> dict:
             for game in reversed(games[-5:])
         ],
     }
+
+from routes.admin.uploads import router as uploads_router  # noqa: E402
+from routes.admin.users import router as users_router  # noqa: E402
+
+router.include_router(uploads_router)
+router.include_router(users_router)

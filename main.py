@@ -1,4 +1,3 @@
-import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated
@@ -10,6 +9,7 @@ from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field
 from starlette import status
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -25,23 +25,25 @@ from backend.auth.auth import (
     get_current_user,
     get_current_user_from_refresh_token,
     get_role_for_username,
+    get_trusted_origins,
+    register_user,
 )
 from backend.auth.rate_limit import RateLimitMiddleware
 from backend.database.database import initialize_database
 from error_pages.error_pages import ERROR_PAGE_FILES, accepts_html, error_page_response
 from routes import router
+from routes.admin.uploads import UploadBodyLimitMiddleware
 
 PAGES_DIRECTORY = Path(__file__).parent / "pages"
 
 
 def _get_cors_origins() -> list[str]:
-    return [
-        origin.strip()
-        for origin in os.getenv(
-            "CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000"
-        ).split(",")
-        if origin.strip()
-    ]
+    return get_trusted_origins()
+
+
+class RegistrationRequest(BaseModel):
+    username: str = Field(min_length=1, max_length=64)
+    password: str = Field(min_length=1, max_length=256)
 
 
 class SecurityPolicyMiddleware(BaseHTTPMiddleware):
@@ -55,9 +57,10 @@ class SecurityPolicyMiddleware(BaseHTTPMiddleware):
         )
         if request.url.scheme == "https":
             response.headers.setdefault(
-                "Strict-Transport-Security", "max-age=31536000; includeSubDomains",
-                "Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
+                "Strict-Transport-Security", "max-age=31536000; includeSubDomains"
             )
+        if request.url.path.startswith("/auth/"):
+            response.headers.setdefault("Cache-Control", "no-store")
         return response
 
 
@@ -90,6 +93,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.add_middleware(SecurityPolicyMiddleware)
+app.add_middleware(UploadBodyLimitMiddleware)
 app.add_middleware(RateLimitMiddleware)
 app.mount(
     "/nmodules",
@@ -217,6 +221,13 @@ def login(
     }
 
 
+@app.post("/auth/register", status_code=201, tags=["authentication"])
+def register(body: RegistrationRequest, request: Request) -> dict[str, str]:
+    client_id = request.client.host if request.client else "unknown"
+    principal = register_user(body.username, body.password, client_id)
+    return {"username": principal.username, "role": principal.role}
+
+
 @app.post("/auth/refresh", tags=["authentication"])
 def refresh(
     response: Response,
@@ -271,6 +282,18 @@ def read_games_releases_page() -> FileResponse:
 @app.get("/admin", include_in_schema=False)
 def read_admin_page() -> FileResponse:
     return FileResponse(PAGES_DIRECTORY / "admin" / "admin.html", media_type="text/html")
+
+@app.get("/admin/special-features", include_in_schema=False)
+def read_special_features_page() -> FileResponse:
+    return FileResponse(
+        PAGES_DIRECTORY / "admin" / "special_features.html", media_type="text/html"
+    )
+
+
+@app.get("/admin/user-directory", include_in_schema=False)
+def read_users_page() -> FileResponse:
+    return FileResponse(PAGES_DIRECTORY / "admin" / "users.html", media_type="text/html")
+
 
 @app.get("/health", tags=["health"])
 def read_health_root(_username: str = Depends(get_current_user)) -> dict[str, str]:
