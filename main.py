@@ -68,8 +68,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Games API",
-    description="Explore and manage your game collection through the Games API.",
+    title="lcpgamecol API",
+    description="Explore and manage your game collection through the lcpgamecol API.",
     version="1.0.0",
     lifespan=lifespan,
     docs_url=None,
