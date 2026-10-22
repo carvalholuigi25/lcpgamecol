@@ -14,10 +14,17 @@ import backend.auth.auth as auth
 import backend.auth.rate_limit as rate_limit
 import backend.database.database as database
 import main
-from routes.achievements.schemas import AchievementCreate, AchievementStatus
+import schemas.schemas as shared_schemas
+from routes.achievements.schemas import (
+    Achievement,
+    AchievementCreate,
+    AchievementStatus,
+    AchievementType,
+)
 from routes.games import routes as games_routes
 from routes.games.routes import _igdb_cover_url, _igdb_screenshot_url
 from routes.games.schemas import (
+    Game,
     GameCreate,
     GameEdition,
     GameModes,
@@ -1175,3 +1182,106 @@ def test_achievement_create_defaults_and_status_validation():
     assert achievement.unlocked is False
     with pytest.raises(ValueError):
         AchievementCreate(title="First Blood", status="Half-unlocked")
+
+
+def test_achievement_create_type_defaults_and_validation():
+    achievement = AchievementCreate(title="First Blood", achievement_type="Gold")
+
+    assert AchievementCreate(title="First Blood").achievement_type is AchievementType.BRONZE
+    assert achievement.achievement_type is AchievementType.GOLD
+    with pytest.raises(ValueError):
+        AchievementCreate(title="First Blood", achievement_type="Diamond")
+
+
+def test_achievement_requires_ids():
+    achievement = Achievement(title="First Blood", achievement_id=1, game_id=2)
+
+    assert (achievement.achievement_id, achievement.game_id) == (1, 2)
+    with pytest.raises(ValueError):
+        Achievement(title="First Blood", achievement_id=1)
+
+
+@pytest.mark.parametrize(
+    "esrb, expected",
+    [
+        ("M", GamesESRB.M),
+        ("m", GamesESRB.M),
+        ("CERO_A", GamesESRB.CERO_A),
+        ("1", GamesESRB.Three),
+        (12, GamesESRB.AO),
+        (len(GamesESRB), list(GamesESRB)[-1]),
+        (GamesESRB.E10, GamesESRB.E10),
+        (None, None),
+    ],
+)
+def test_game_create_parses_esrb_names_values_and_igdb_ids(esrb, expected):
+    game = GameCreate(title="Portal", genre="Puzzle", release_year=2007, esrb=esrb)
+
+    assert game.esrb == expected
+    assert game.model_dump(mode="json")["esrb"] == (
+        expected.value if expected is not None else None
+    )
+
+
+@pytest.mark.parametrize("esrb", ["0", 0, 999, "unknown"])
+def test_game_create_rejects_unknown_esrb(esrb):
+    with pytest.raises(ValueError):
+        GameCreate(title="Portal", genre="Puzzle", release_year=2007, esrb=esrb)
+
+
+def test_game_create_esrb_json_schema_lists_every_rating():
+    esrb_schema = GameCreate.model_json_schema()["properties"]["esrb"]
+
+    assert esrb_schema["example"] == GamesESRB.E.value
+    assert [option["const"] for option in esrb_schema["oneOf"]] == [
+        rating.value for rating in GamesESRB
+    ]
+
+
+def test_game_create_accepts_gamemode_models_and_edition_lists():
+    game = GameCreate(
+        title="Portal",
+        genre="Puzzle",
+        release_year=2007,
+        gamemodes=[{"id": 1, "name": "Single player"}],
+        editions=["Deluxe", "Game of the Year"],
+    )
+
+    assert game.gamemodes[0].id == 1
+    assert game.gamemodes[0].name == "Single player"
+    assert game.editions == [GameEdition.DELUXE, GameEdition.GAME_OF_THE_YEAR]
+
+
+def test_game_create_screenshots_default_is_not_shared():
+    first = GameCreate(title="Portal", genre="Puzzle", release_year=2007)
+    second = GameCreate(title="Portal 2", genre="Puzzle", release_year=2011)
+
+    first.screenshots.append("shot.jpg")
+
+    assert second.screenshots == []
+
+
+def test_game_requires_id():
+    assert Game(id=7, title="Portal", genre="Puzzle", release_year=2007).id == 7
+    with pytest.raises(ValueError):
+        Game(title="Portal", genre="Puzzle", release_year=2007)
+
+
+def test_schemas_module_reexports_route_schemas():
+    from routes.achievements import schemas as achievement_schemas
+    from routes.games import schemas as game_schemas
+
+    assert shared_schemas.__all__ == [
+        "Achievement",
+        "AchievementCreate",
+        "AchievementStatus",
+        "Game",
+        "GameCreate",
+        "GameEdition",
+        "GameModes",
+        "Gameplatforms",
+        "GamesESRB",
+    ]
+    for name in shared_schemas.__all__:
+        source = achievement_schemas if hasattr(achievement_schemas, name) else game_schemas
+        assert getattr(shared_schemas, name) is getattr(source, name)
