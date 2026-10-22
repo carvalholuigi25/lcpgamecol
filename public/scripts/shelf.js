@@ -594,6 +594,18 @@ function initShelf({ load, reset = () => {} }) {
     }
   });
 
+  window.initRegistration({
+    loginForm,
+    registerForm: document.getElementById("register-form"),
+    switchButton: document.getElementById("auth-switch"),
+    onRegistered: (username, password) => {
+      // Sign the new account in straight away.
+      loginForm.elements.namedItem("username").value = username;
+      loginForm.elements.namedItem("password").value = password;
+      loginForm.requestSubmit();
+    },
+  });
+
   searchInput.addEventListener("input", renderGames);
 
   platformMenu?.addEventListener("change", (event) => {

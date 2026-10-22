@@ -1,14 +1,19 @@
+import logging
 import os
 import secrets
 import threading
 import time
+from collections import deque
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from urllib.parse import urlsplit
 
 import jwt
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jwt.exceptions import InvalidTokenError
+
+from backend.auth import users
 
 TOKEN_EXPIRE_SECONDS = int(os.getenv("TOKEN_EXPIRE_SECONDS", "1800"))
 REFRESH_TOKEN_EXPIRE_SECONDS = int(
@@ -16,13 +21,24 @@ REFRESH_TOKEN_EXPIRE_SECONDS = int(
 )
 AUTH_COOKIE_NAME = os.getenv("AUTH_COOKIE_NAME", "access_token")
 AUTH_COOKIE_SECURE = os.getenv("AUTH_COOKIE_SECURE", "false").lower() == "true"
-JWT_SECRET = os.getenv("JWT_SECRET", "change-this-secret-in-production")
+DEFAULT_JWT_SECRET = "change-this-secret-in-production"
+JWT_SECRET = os.getenv("JWT_SECRET") or DEFAULT_JWT_SECRET
 JWT_ALGORITHM = "HS256"
 AUTH_USERNAME = os.getenv("AUTH_USERNAME", "admin")
 AUTH_PASSWORD = os.getenv("AUTH_PASSWORD", "1234")
 LOGIN_MAX_ATTEMPTS = int(os.getenv("LOGIN_MAX_ATTEMPTS", "3"))
 LOGIN_LOCKOUT_SECONDS = int(os.getenv("LOGIN_LOCKOUT_SECONDS", "60"))
 LOGIN_ATTEMPT_WINDOW_SECONDS = int(os.getenv("LOGIN_ATTEMPT_WINDOW_SECONDS", "300"))
+REGISTRATION_ENABLED = os.getenv("AUTH_REGISTRATION_ENABLED", "true").lower() == "true"
+REGISTRATION_MAX_PER_CLIENT = int(os.getenv("REGISTRATION_MAX_PER_CLIENT", "5"))
+REGISTRATION_WINDOW_SECONDS = int(os.getenv("REGISTRATION_WINDOW_SECONDS", "3600"))
+SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
+
+logger = logging.getLogger(__name__)
+if JWT_SECRET == DEFAULT_JWT_SECRET or len(JWT_SECRET) < 32:
+    logger.warning(
+        "JWT_SECRET is missing or shorter than 32 characters; set a long random value."
+    )
 
 ROLE_ADMIN = "admin"
 ROLE_VIEWER = "viewer"
@@ -34,6 +50,7 @@ def _load_users() -> dict[str, tuple[str, str]]:
 
     Configured via AUTH_USERS="user:password:role,user2:password2:role2".
     Falls back to a single admin user from AUTH_USERNAME/AUTH_PASSWORD.
+    A password may also be a hash from `python -m backend.auth.users hash`.
     """
     raw = os.getenv("AUTH_USERS")
     if not raw:
@@ -54,6 +71,9 @@ def _load_users() -> dict[str, tuple[str, str]]:
 AUTH_USERS = _load_users()
 _login_attempts: dict[tuple[str, str], tuple[int, float | None, float]] = {}
 _login_attempts_lock = threading.Lock()
+_registrations: dict[str, deque[float]] = {}
+_registrations_lock = threading.Lock()
+_dummy_password_hash: str | None = None
 _monotonic = time.monotonic
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token", auto_error=False)
@@ -70,6 +90,8 @@ def _create_token(
     username: str, token_type: str, expires_in: int, role: str | None = None
 ) -> str:
     claims = {
+        "iat": datetime.now(timezone.utc),
+        "jti": secrets.token_urlsafe(12),
         "sub": username,
         "type": token_type,
         "exp": datetime.now(timezone.utc) + timedelta(seconds=expires_in),
@@ -87,16 +109,45 @@ def create_refresh_token(username: str) -> str:
     return _create_token(username, "refresh", REFRESH_TOKEN_EXPIRE_SECONDS)
 
 
+def _find_credentials(username: str) -> tuple[str, str, str] | None:
+    """Return (username, password or hash, role) for a configured or registered user."""
+    configured = AUTH_USERS.get(username)
+    if configured is not None:
+        return username, configured[0], configured[1]
+    registered = users.get_user(username)
+    if registered is not None and registered["role"] in VALID_ROLES:
+        return registered["username"], registered["password_hash"], registered["role"]
+    return None
+
+
+def _password_matches(password: str, secret: str) -> bool:
+    if users.is_password_hash(secret):
+        return users.verify_password(password, secret)
+    return secrets.compare_digest(password.encode("utf-8"), secret.encode("utf-8"))
+
+
+def _verify_unknown_user(password: str) -> None:
+    # Spend the same hashing time as a real account so response timing does not
+    # reveal which usernames exist.
+    global _dummy_password_hash
+    if _dummy_password_hash is None:
+        _dummy_password_hash = users.hash_password(secrets.token_urlsafe(16))
+    users.verify_password(password, _dummy_password_hash)
+
+
+def _lockout_exception(retry_after: int) -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        detail=f"Login locked after {LOGIN_MAX_ATTEMPTS} failed attempts. Try again when the timer ends.",
+        headers={"Retry-After": str(retry_after)},
+    )
+
+
 def authenticate(
     form_data: OAuth2PasswordRequestForm, client_id: str | None = None
 ) -> Principal:
-    credentials = AUTH_USERS.get(form_data.username)
-    valid_credentials = credentials is not None and secrets.compare_digest(
-        form_data.password, credentials[0]
-    )
-
+    key = (form_data.username.lower(), client_id)
     if client_id is not None:
-        key = (form_data.username, client_id)
         now = _monotonic()
         with _login_attempts_lock:
             expired_keys = [
@@ -108,16 +159,24 @@ def authenticate(
             for attempt_key in expired_keys:
                 _login_attempts.pop(attempt_key, None)
 
+            _, locked_until, _ = _login_attempts.get(key, (0, None, now))
+            # Checked before the password so a locked account cannot be probed.
+            if locked_until is not None and now < locked_until:
+                raise _lockout_exception(max(1, int(locked_until - now + 0.999)))
+
+    credentials = _find_credentials(form_data.username)
+    if credentials is None:
+        _verify_unknown_user(form_data.password)
+        valid_credentials = False
+    else:
+        valid_credentials = _password_matches(form_data.password, credentials[1])
+
+    if client_id is not None:
+        now = _monotonic()
+        with _login_attempts_lock:
             failures, locked_until, last_attempt = _login_attempts.get(
                 key, (0, None, now)
             )
-            if locked_until is not None and now < locked_until:
-                retry_after = max(1, int(locked_until - now + 0.999))
-                raise HTTPException(
-                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                    detail=f"Login locked after {LOGIN_MAX_ATTEMPTS} failed attempts. Try again when the timer ends.",
-                    headers={"Retry-After": str(retry_after)},
-                )
             if locked_until is not None:
                 failures = 0
             if now - last_attempt >= LOGIN_ATTEMPT_WINDOW_SECONDS:
@@ -127,13 +186,8 @@ def authenticate(
             else:
                 failures += 1
                 if failures >= LOGIN_MAX_ATTEMPTS:
-                    locked_until = now + LOGIN_LOCKOUT_SECONDS
-                    _login_attempts[key] = (0, locked_until, now)
-                    raise HTTPException(
-                        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                        detail=f"Login locked after {LOGIN_MAX_ATTEMPTS} failed attempts. Try again when the timer ends.",
-                        headers={"Retry-After": str(LOGIN_LOCKOUT_SECONDS)},
-                    )
+                    _login_attempts[key] = (0, now + LOGIN_LOCKOUT_SECONDS, now)
+                    raise _lockout_exception(LOGIN_LOCKOUT_SECONDS)
                 _login_attempts[key] = (failures, None, now)
 
     if not valid_credentials:
@@ -142,18 +196,86 @@ def authenticate(
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    return Principal(username=form_data.username, role=credentials[1])
+    return Principal(username=credentials[0], role=credentials[2])
+
+
+def register_user(
+    username: str, password: str, client_id: str | None = None
+) -> Principal:
+    """Create a viewer account after checking the username and password policy."""
+    if not REGISTRATION_ENABLED:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Registration is disabled.",
+        )
+
+    if client_id is not None and REGISTRATION_MAX_PER_CLIENT > 0:
+        now = _monotonic()
+        with _registrations_lock:
+            attempts = _registrations.setdefault(client_id, deque())
+            while attempts and now - attempts[0] >= REGISTRATION_WINDOW_SECONDS:
+                attempts.popleft()
+            if len(attempts) >= REGISTRATION_MAX_PER_CLIENT:
+                retry_after = max(
+                    1, int(REGISTRATION_WINDOW_SECONDS - (now - attempts[0]))
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail="Too many registration attempts from this connection. Try again later.",
+                    headers={"Retry-After": str(retry_after)},
+                )
+            attempts.append(now)
+
+    problem = users.username_problem(username) or users.password_problem(
+        password, username
+    )
+    if problem:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=problem)
+
+    taken = HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail="That username is not available.",
+    )
+    if any(existing.lower() == username.lower() for existing in AUTH_USERS):
+        raise taken
+    try:
+        users.create_user(username, password, ROLE_VIEWER)
+    except users.UsernameTakenError:
+        raise taken from None
+    return Principal(username=username, role=ROLE_VIEWER)
 
 
 def get_role_for_username(username: str) -> str:
-    credentials = AUTH_USERS.get(username)
+    credentials = _find_credentials(username)
     if credentials is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Unknown user",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    return credentials[1]
+    return credentials[2]
+
+
+def get_trusted_origins() -> list[str]:
+    return [
+        origin.strip()
+        for origin in os.getenv(
+            "CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000"
+        ).split(",")
+        if origin.strip()
+    ]
+
+
+def _is_trusted_origin(request: Request) -> bool:
+    """Block cross-site writes that ride on the browser's auth cookie (CSRF)."""
+    headers = getattr(request, "headers", None) or {}
+    source = headers.get("origin") or headers.get("referer")
+    if not source:
+        return True
+    parts = urlsplit(source)
+    if parts.netloc and parts.netloc == headers.get("host"):
+        return True
+    return f"{parts.scheme}://{parts.netloc}" in get_trusted_origins()
 
 
 def _decode_access_token(token: str) -> Principal:
@@ -188,6 +310,15 @@ def get_current_principal(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired authentication token",
             headers={"WWW-Authenticate": "Bearer"},
+        )
+    if (
+        bearer_token is None
+        and getattr(request, "method", "GET") not in SAFE_METHODS
+        and not _is_trusted_origin(request)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cross-site request blocked",
         )
     return _decode_access_token(token)
 

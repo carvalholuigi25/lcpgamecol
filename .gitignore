@@ -16,3 +16,4 @@ sample_data.txt
 config.env
 .env
 *.env
+uploads/

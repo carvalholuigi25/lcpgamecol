@@ -52,6 +52,7 @@ The app is available at:
 - Games library: <http://127.0.0.1:8000/library>
 - Upcoming releases: <http://127.0.0.1:8000/library/releases>
 - Administrator dashboard: <http://127.0.0.1:8000/admin>
+- Special features (admin tools such as file upload): <http://127.0.0.1:8000/admin/special-features>
 - Interactive API docs (Swagger UI): <http://127.0.0.1:8000/docs>
 - ReDoc API docs: <http://127.0.0.1:8000/redocs>
 - Health check: <http://127.0.0.1:8000/health>
@@ -70,6 +71,9 @@ The seed data is defined in `backend/database/seed.sql`; running the seeder more
 - Create, browse, search, update, and delete games and achievements through the API.
 - Browse and search the game library, view release information, and manage collection data through the browser pages.
 - Review collection statistics in the administrator dashboard. Dashboard data and write operations require the `admin` role.
+- Move between dashboard sections and admin pages using the sidebar. The menu button in the top bar shows or hides it; on wide screens it collapses to icons, and on small screens it opens as an overlay.
+- Upload images and PDFs safely from the Special features page (admin only).
+- Create a viewer account from the library or dashboard sign-in panel.
 - View game screenshots in an image gallery and save dashboard preferences in the browser.
 - Use the library and dashboard in English, Portuguese, German, or French.
 - Receive custom HTML error pages for common HTTP errors; API clients retain API-style error responses.
@@ -85,7 +89,28 @@ By default, `AUTH_USERNAME` and `AUTH_PASSWORD` configure a single administrator
 AUTH_USERS=admin:use-a-strong-password:admin,readonly:another-strong-password:viewer
 ```
 
+Instead of a plaintext password, you can use a password hash in `AUTH_USERS` or `AUTH_PASSWORD`. Generate one with:
+
+```powershell
+python -m backend.auth.users hash
+```
+
 Both `admin` and `viewer` accounts can read games and achievements. Only `admin` accounts can create, update, or delete records and access administrator data. If `AUTH_USERS` is set, it is used instead of `AUTH_USERNAME` and `AUTH_PASSWORD`.
+
+### Registration
+
+People can create their own accounts from the sign-in panel, or with `POST /auth/register` and a JSON body of `{"username": "...", "password": "..."}`. New accounts always get the `viewer` role and are stored in the `users` table with salted scrypt password hashes. Registration rules:
+
+- Usernames are 3 to 32 characters long, using letters, numbers, dots, hyphens, or underscores, and must start with a letter or number. Usernames are not case-sensitive and cannot match a configured account.
+- Passwords must be at least `PASSWORD_MIN_LENGTH` characters long (12 by default) and no longer than 128 characters. They must mix letters with numbers, spaces, or symbols, must not contain the username, and are rejected if they are common or predictable.
+- Each client IP can make up to `REGISTRATION_MAX_PER_CLIENT` registration attempts per `REGISTRATION_WINDOW_SECONDS` window (5 per hour by default).
+- Set `AUTH_REGISTRATION_ENABLED=false` to turn registration off.
+
+### Session security
+
+Failed sign-ins lock a username for each client after `LOGIN_MAX_ATTEMPTS` attempts (3 by default) for `LOGIN_LOCKOUT_SECONDS` seconds. Usernames are not case-sensitive for this lockout. While a username is locked, its password is not checked. Unknown usernames take as long to check as real ones, so response times do not reveal which accounts exist.
+
+When a request is authenticated by the browser cookie, the server rejects state-changing requests (anything other than `GET`, `HEAD`, or `OPTIONS`) whose `Origin` or `Referer` header comes from a site other than the app or a `CORS_ORIGINS` entry. Responses under `/auth/` are sent with `Cache-Control: no-store`. If `JWT_SECRET` is missing or shorter than 32 characters, the app logs a warning at startup.
 
 Access tokens expire after 30 minutes by default. Refresh tokens expire after 7 days. Set `TOKEN_EXPIRE_SECONDS` and `REFRESH_TOKEN_EXPIRE_SECONDS` to change those durations. Exchange a valid refresh token at `POST /auth/refresh`, and use `POST /auth/logout` to clear the browser's authentication cookie.
 
@@ -100,9 +125,13 @@ The interactive API documentation at `/docs` lists all routes and their request/
 | Method | Route | Description |
 | --- | --- | --- |
 | `POST` | `/auth/token` | Sign in and obtain access and refresh tokens |
+| `POST` | `/auth/register` | Create a viewer account |
 | `POST` | `/auth/refresh` | Exchange a refresh token for an access token |
 | `POST` | `/auth/logout` | Clear the authenticated browser session |
 | `GET` | `/users` | Get the signed-in user's profile |
+| `GET` | `/admin/users` | List every account with its profile and favorite games (admin only) |
+| `GET` | `/admin/users/{username}` | Get one user's profile (admin only) |
+| `PUT` | `/admin/users/{username}` | Update a user's display name, bio, location, avatar, cover, and favorite games (admin only) |
 | `GET` | `/games` | List games; supports `skip` and `limit` |
 | `GET` | `/games/page` | List a page of games with the total count |
 | `GET` | `/games/search` | Search games by title, genre, platform, or release year |
@@ -114,10 +143,26 @@ The interactive API documentation at `/docs` lists all routes and their request/
 | `GET` | `/games/external-search` | Search for games outside the local collection |
 | `GET` | `/games/{game_id}/achievements` | List a game's achievements |
 | `POST` | `/games/{game_id}/achievements` | Create an achievement (admin only) |
+| `GET` | `/admin/uploads` | List uploaded files (admin only) |
+| `POST` | `/admin/uploads` | Upload a file as multipart form field `file` (admin only) |
+| `GET` | `/admin/uploads/limits` | Get the upload size limit and allowed file types (admin only) |
+| `GET` | `/admin/uploads/{upload_id}` | Download an uploaded file; add `?inline=true` to preview an image (admin only) |
+| `DELETE` | `/admin/uploads/{upload_id}` | Delete an uploaded file (admin only) |
 
 The game create/update body uses fields such as `title`, `genre`, `platforms`, and `release_year`. Optional fields include `minimum_system_requirements`, `recommended_system_requirements`, `developer_name`, `publisher_name`, `website_url`, `trailer_url`, and `screenshots` (an array of image URLs). For the complete schema and all routes, use `/docs`.
 
 List endpoints that support pagination use zero-based `skip` and `limit` parameters. For example, `/games?skip=10&limit=10` returns the second page of games. The default `skip` is `0`; `limit` defaults to `10` and must be between `1` and `100`.
+
+## Safe file uploads
+
+Administrators can upload PNG, JPEG, GIF, WebP, and PDF files from the Special features page or the `/admin/uploads` API. Uploads are protected as follows:
+
+- A file is accepted only if its contents begin with the signature of an allowed type and its extension matches that type. The filename and the `Content-Type` sent by the client are not trusted. SVG, HTML, and other active content are refused.
+- Request bodies larger than the limit are rejected before they are parsed, and file data is counted as it is received. The default limit is 5 MB; change it with `UPLOAD_MAX_BYTES`. `UPLOAD_MAX_FILES` limits the number of stored files (500 by default).
+- Files are stored in `uploads/` by default, outside the public static folders, under random names. Set `UPLOAD_DIRECTORY` to use another folder. Original filenames are cleaned of path segments and control characters, and they are used only as display and download names.
+- Downloads are sent as attachments with `Content-Security-Policy: default-src 'none'; img-src 'self'; sandbox`, `X-Content-Type-Options: nosniff`, and `Cache-Control: private, no-store`. Only images can be previewed inline.
+
+The `uploads/` folder is ignored by Git.
 
 ## Database migrations
 
