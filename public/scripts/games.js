@@ -7,6 +7,16 @@ const firstPageButton = document.getElementById("first-page");
 const previousPageButton = document.getElementById("previous-page");
 const nextPageButton = document.getElementById("next-page");
 const lastPageButton = document.getElementById("last-page");
+// A sort change during a load would be dropped by the busy guard, so run it afterwards.
+let sortChangedWhileBusy = false;
+function reloadForNewSort() {
+  if (paginationBusy) {
+    sortChangedWhileBusy = true;
+    return;
+  }
+  showGames(1);
+}
+const currentSort = initSortSelect(document.getElementById("sort-select"), "librarySort", reloadForNewSort);
 let gamePage = 1;
 let totalGamePages = 1;
 let paginationBusy = false;
@@ -59,9 +69,17 @@ async function loadGames(page = gamePage) {
     const params = new URLSearchParams({
       limit: GAMES_LIMIT,
       skip: (page - 1) * GAMES_LIMIT,
+      ...currentSort(),
     });
     const response = await fetch(`/games/page?${params}`, { cache: "no-store" });
-    const result = await readGamesResponse(response);
+    let result = await readGamesResponse(response);
+    const lastPage = Math.max(1, Math.ceil(result.total / GAMES_LIMIT));
+    // Deletions can leave the current page empty; fall back to the new last page.
+    if (page > lastPage) {
+      page = lastPage;
+      params.set("skip", (page - 1) * GAMES_LIMIT);
+      result = await readGamesResponse(await fetch(`/games/page?${params}`, { cache: "no-store" }));
+    }
     games = result.items;
     gamePage = page;
     totalGamePages = Math.max(1, Math.ceil(result.total / GAMES_LIMIT));
@@ -71,6 +89,10 @@ async function loadGames(page = gamePage) {
     window.setStatusLoading(appStatus, false);
     paginationBusy = false;
     updatePaginationControls();
+    if (sortChangedWhileBusy) {
+      sortChangedWhileBusy = false;
+      showGames(1);
+    }
   }
 }
 
@@ -94,7 +116,16 @@ pageSelector.addEventListener("change", () => {
 });
 document.addEventListener("languagechange", updatePaginationControls);
 
+// Live updates and deletions reload the page being viewed. If another load is running,
+// wait for it so the newest data still lands.
+async function refreshGames() {
+  while (paginationBusy) await new Promise((resolve) => setTimeout(resolve, 100));
+  await loadGames(gamePage);
+}
+
 initShelf({
+  gameActions: "library",
+  refresh: refreshGames,
   load: () => loadGames(1),
   reset: () => {
     gamePage = 1;

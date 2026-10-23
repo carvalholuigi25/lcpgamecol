@@ -21,6 +21,9 @@ let toastTimer = null;
 let gameRecords = [];
 let achievementRecords = [];
 const richTextEditors = new Map();
+// Forms with unsaved changes; background refreshes leave their records alone.
+const dirtyRecordForms = new Set();
+let liveRefreshTimer = null;
 
 function initRichTextEditors() {
   for (const textarea of document.querySelectorAll("textarea[data-rich-text]")) {
@@ -39,8 +42,9 @@ function initRichTextEditors() {
       },
     });
     editor.root.setAttribute("aria-labelledby", textarea.getAttribute("aria-labelledby"));
-    editor.on("text-change", () => {
+    editor.on("text-change", (_delta, _oldDelta, source) => {
       textarea.value = editor.getText().trim() ? editor.root.innerHTML : "";
+      if (source === "user") dirtyRecordForms.add(textarea.form);
     });
     richTextEditors.set(textarea.name, editor);
   }
@@ -61,6 +65,7 @@ function showLogin(message = "") {
   accountName.textContent = "";
   logoutButton.hidden = true;
   window.adminSidebar?.setAvailable(false);
+  window.realtime?.stop();
 }
 
 function showDashboard(username) {
@@ -69,6 +74,7 @@ function showDashboard(username) {
   accountName.textContent = username;
   logoutButton.hidden = false;
   window.adminSidebar?.setAvailable(true);
+  window.realtime?.start();
 }
 
 function showToast(message) {
@@ -96,7 +102,7 @@ async function loadDashboard() {
     }
     if (!response.ok) throw new Error("Dashboard data could not be loaded.");
     renderDashboard(await response.json());
-    await loadRecordGames();
+    if (dirtyRecordForms.size === 0) await loadRecordGames(gameRecordSelect.value || undefined);
     dashboardStatus.textContent = "";
     const locale = { en: "en-GB", pt: "pt-PT", de: "de-DE", fr: "fr-FR" }[window.i18n.language];
     document.getElementById("updated-label").textContent = window.i18n.t("UPDATED {time}", {
@@ -135,6 +141,7 @@ function setFormField(form, name, value) {
 }
 
 function setRecordFormMode(form, editButtonId, deleteButtonId, hasRecord, editing, editLabel) {
+  dirtyRecordForms.delete(form);
   for (const field of form.querySelectorAll(".record-fields input, .record-fields textarea, .record-fields select")) {
     field.disabled = hasRecord && !editing;
     richTextEditors.get(field.name)?.enable(!field.disabled);
@@ -476,6 +483,47 @@ document.getElementById("delete-achievement-button").addEventListener("click", a
     recordsStatus.textContent = error.message;
   }
 });
+for (const form of [gameRecordForm, achievementRecordForm]) {
+  form.addEventListener("input", () => dirtyRecordForms.add(form));
+}
+
+// The library's Edit button links to /admin?edit-game=<id>; open that game ready to edit.
+let requestedGameId = new URLSearchParams(window.location.search).get("edit-game");
+function openRequestedGame() {
+  // Wait until an administrator is signed in and the records have loaded.
+  if (!requestedGameId || dashboardView.hidden) return;
+  const gameId = requestedGameId;
+  requestedGameId = null;
+  const url = new URL(window.location.href);
+  url.searchParams.delete("edit-game");
+  window.history.replaceState(null, "", url);
+  if (!gameRecords.some((game) => String(game.id) === gameId)) {
+    showToast("That game is no longer in the library.");
+    return;
+  }
+  const recordsToggle = document.getElementById("toggle-records-button");
+  if (recordsToggle.getAttribute("aria-expanded") !== "true") recordsToggle.click();
+  setRecordTab("games", false);
+  gameRecordSelect.value = gameId;
+  selectGameRecord(gameId);
+  setRecordFormMode(gameRecordForm, "edit-game-button", "delete-game-button", true, true, "Edit game");
+  document.getElementById("records-panel").scrollIntoView({ block: "start" });
+  gameRecordForm.elements.namedItem("title").focus({ preventScroll: true });
+}
+
+// Another admin (or the library page) changed the collection: refresh the numbers.
+function scheduleLiveRefresh() {
+  clearTimeout(liveRefreshTimer);
+  liveRefreshTimer = setTimeout(async () => {
+    const hadUnsavedChanges = dirtyRecordForms.size > 0;
+    await loadDashboard();
+    if (hadUnsavedChanges) showToast("The library changed in another session. Your unsaved edits were kept.");
+  }, 500);
+}
+window.realtime?.on("gameChanged", scheduleLiveRefresh);
+window.realtime?.on("achievementChanged", scheduleLiveRefresh);
+window.realtime?.onReconnected(scheduleLiveRefresh);
+
 document.getElementById("games-tab").addEventListener("click", () => setRecordTab("games"));
 document.getElementById("achievements-tab").addEventListener("click", () => setRecordTab("achievements"));
 
@@ -747,6 +795,7 @@ loginForm.addEventListener("submit", async (event) => {
     showDashboard(profile.username);
     applyDashboardSettings();
     await loadDashboard();
+    openRequestedGame();
   } catch {
     loginStatus.textContent = "The server could not be reached.";
   } finally {
@@ -787,6 +836,6 @@ fetchProfile()
     }
     showDashboard(profile.username);
     applyDashboardSettings();
-    return loadDashboard();
+    return loadDashboard().then(openRequestedGame);
   })
   .catch(() => showLogin("The server could not be reached."));

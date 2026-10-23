@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from backend.auth import auth
 from backend.database.database import get_connection
+from backend.realtime.hub import hub
 
 FAVORITE_GAMES_MAX = 12
 IMAGE_URL_MAX_LENGTH = 2048
@@ -61,8 +62,8 @@ class ProfileUpdate(BaseModel):
 
     @field_validator("favorite_game_ids")
     @classmethod
-    def unique_ids(cls, value: list[int]) -> list[int]:
-        return list(dict.fromkeys(value))
+    def unique_ids(cls, value: list[int] | None) -> list[int] | None:
+        return None if value is None else list(dict.fromkeys(value))
 
 
 def _accounts() -> dict[str, dict]:
@@ -82,6 +83,26 @@ def _accounts() -> dict[str, dict]:
     return accounts
 
 
+GAME_SUMMARY_COLUMNS = (
+    "g.id, g.title, g.genre, g.release_year, g.platforms, "
+    "g.cover_image_url, g.image_url, g.user_rating, g.hoursplayed"
+)
+
+
+def game_summary(row) -> dict:
+    """Shape a row selected with GAME_SUMMARY_COLUMNS for profile pages."""
+    return {
+        "id": row["id"],
+        "title": row["title"],
+        "genre": row["genre"],
+        "release_year": row["release_year"],
+        "platforms": row["platforms"],
+        "cover_image_url": row["cover_image_url"] or row["image_url"] or None,
+        "user_rating": row["user_rating"] or 0,
+        "hours_played": row["hoursplayed"] or 0,
+    }
+
+
 def _profiles(usernames: list[str]) -> list[dict]:
     if not usernames:
         return []
@@ -97,26 +118,14 @@ def _profiles(usernames: list[str]) -> list[dict]:
         favorites: dict[str, list[dict]] = {}
         for row in connection.execute(
             f"""
-            SELECT f.username, g.id, g.title, g.genre, g.release_year, g.platforms,
-                   g.cover_image_url, g.image_url, g.user_rating, g.hoursplayed
+            SELECT f.username, {GAME_SUMMARY_COLUMNS}
             FROM user_favorite_games f JOIN games g ON g.id = f.game_id
             WHERE lower(f.username) IN ({placeholders})
             ORDER BY f.position, g.title
             """,
             keys,
         ):
-            favorites.setdefault(row["username"].lower(), []).append(
-                {
-                    "id": row["id"],
-                    "title": row["title"],
-                    "genre": row["genre"],
-                    "release_year": row["release_year"],
-                    "platforms": row["platforms"],
-                    "cover_image_url": row["cover_image_url"] or row["image_url"] or None,
-                    "user_rating": row["user_rating"] or 0,
-                    "hours_played": row["hoursplayed"] or 0,
-                }
-            )
+            favorites.setdefault(row["username"].lower(), []).append(game_summary(row))
 
     accounts = _accounts()
     results = []
@@ -138,6 +147,10 @@ def _profiles(usernames: list[str]) -> list[dict]:
             }
         )
     return results
+
+
+def get_profile(username: str) -> dict:
+    return _profiles([username])[0]
 
 
 def _get_account(username: str) -> dict:
@@ -163,25 +176,26 @@ def list_favorite_game_options() -> list[dict]:
 
 @router.get("/{username}")
 def get_user_profile(username: str = PathParam(pattern=USERNAME_PATH_PATTERN)) -> dict:
-    account = _get_account(username)
-    return _profiles([account["username"]])[0]
+    return get_profile(_get_account(username)["username"])
 
 
-@router.put("/{username}")
-def update_user_profile(
-    body: ProfileUpdate, username: str = PathParam(pattern=USERNAME_PATH_PATTERN)
-) -> dict:
+def save_profile(username: str, body: ProfileUpdate) -> dict:
+    """Store the profile of an existing account and return it.
+
+    A favorite_game_ids of None keeps the current favorites.
+    """
     account = _get_account(username)
+    favorite_ids = body.favorite_game_ids
     with closing(get_connection()) as connection:
-        if body.favorite_game_ids:
-            placeholders = ", ".join("?" for _ in body.favorite_game_ids)
+        if favorite_ids:
+            placeholders = ", ".join("?" for _ in favorite_ids)
             found = {
                 row[0]
                 for row in connection.execute(
-                    f"SELECT id FROM games WHERE id IN ({placeholders})", body.favorite_game_ids
+                    f"SELECT id FROM games WHERE id IN ({placeholders})", favorite_ids
                 )
             }
-            missing = [game_id for game_id in body.favorite_game_ids if game_id not in found]
+            missing = [game_id for game_id in favorite_ids if game_id not in found]
             if missing:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -203,10 +217,20 @@ def update_user_profile(
                 datetime.now(timezone.utc).isoformat(timespec="seconds"),
             ),
         )
-        connection.execute("DELETE FROM user_favorite_games WHERE username = ?", (account["username"],))
-        connection.executemany(
-            "INSERT INTO user_favorite_games (username, game_id, position) VALUES (?, ?, ?)",
-            [(account["username"], game_id, position) for position, game_id in enumerate(body.favorite_game_ids)],
-        )
+        if favorite_ids is not None:
+            connection.execute("DELETE FROM user_favorite_games WHERE username = ?", (account["username"],))
+            connection.executemany(
+                "INSERT INTO user_favorite_games (username, game_id, position) VALUES (?, ?, ?)",
+                [(account["username"], game_id, position) for position, game_id in enumerate(favorite_ids)],
+            )
         connection.commit()
-    return _profiles([account["username"]])[0]
+    if favorite_ids is not None:
+        hub.publish("listsChanged", {"game_id": None}, username=account["username"])
+    return get_profile(account["username"])
+
+
+@router.put("/{username}")
+def update_user_profile(
+    body: ProfileUpdate, username: str = PathParam(pattern=USERNAME_PATH_PATTERN)
+) -> dict:
+    return save_profile(username, body)

@@ -102,7 +102,10 @@ def test_registration_creates_viewer_that_can_sign_in(client):
     login = client.post("/auth/token", data={"username": "NewPlayer", "password": STRONG_PASSWORD})
     assert login.status_code == 200
     headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
-    assert client.get("/users", headers=headers).json() == {"username": "newplayer"}
+    assert client.get("/users", headers=headers).json() == {
+        "username": "newplayer",
+        "role": "viewer",
+    }
     assert client.get("/games", headers=headers).status_code == 200
     assert client.get("/admin/dashboard", headers=headers).status_code == 403
 

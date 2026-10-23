@@ -54,12 +54,13 @@ window.initRegistration = ({ loginForm, registerForm, switchButton, onRegistered
     const password = passwordField.value;
     usernameField.setCustomValidity(
       username && !usernamePattern.test(username)
-        ? "Use 3 to 32 letters, numbers, dots, hyphens, or underscores, starting with a letter or number."
+        ? window.i18n.t("Use 3 to 32 letters, numbers, dots, hyphens, or underscores, starting with a letter or number.")
         : "",
     );
-    passwordField.setCustomValidity(password ? registrationPasswordProblem(password, username) : "");
+    // Validity messages are shown by the browser, outside the DOM that i18n.js translates.
+    passwordField.setCustomValidity(password ? window.i18n.t(registrationPasswordProblem(password, username)) : "");
     confirmField.setCustomValidity(
-      confirmField.value && confirmField.value !== password ? "The passwords do not match." : "",
+      confirmField.value && confirmField.value !== password ? window.i18n.t("The passwords do not match.") : "",
     );
 
     const score = passwordStrength(password, username);

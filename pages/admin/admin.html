@@ -27,6 +27,7 @@
         <p class="sidebar-group">LIBRARY</p>
         <a href="/library" title="Games"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9h4m-2-2v4m7-1h.01M18 8h.01M7 5h10a4 4 0 0 1 4 4v4a3 3 0 0 1-5.4 1.8L14 13h-4l-1.6 1.8A3 3 0 0 1 3 13V9a4 4 0 0 1 4-4z" /></svg><span>Games</span></a>
         <a href="/library/releases" title="Releases"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14v15H5zM5 9h14M9 3v4m6-4v4" /></svg><span>Releases</span></a>
+        <a href="/profile" title="My profile"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 20v-1a5 5 0 0 0-5-5h-4a5 5 0 0 0-5 5v1M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" /></svg><span>My profile</span></a>
         <a href="/docs" title="API docs"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 8l-4 4 4 4m6-8l4 4-4 4" /></svg><span>API docs</span></a>
       </nav>
     </aside>
@@ -56,6 +57,7 @@
               <option value="de">Deutsch</option><option value="fr">Français</option>
             </select>
           </label>
+          <span class="realtime-status" data-realtime-status role="status" hidden></span>
           <span id="account-name" class="account-name"></span>
           <button id="logout-button" class="icon-button" type="button" aria-label="Log out" title="Log out" hidden>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3m9-8h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6" /></svg>
@@ -347,6 +349,8 @@
     <script src="/public/scripts/preferences.js"></script>
     <script src="/public/scripts/sidebar.js"></script>
     <script src="/public/scripts/register.js"></script>
+    <script src="/nmodules/@microsoft/signalr/dist/browser/signalr.min.js"></script>
+    <script src="/public/scripts/realtime.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
     <script src="/public/scripts/admin.js"></script>
   </body>

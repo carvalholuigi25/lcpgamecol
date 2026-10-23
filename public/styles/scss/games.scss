@@ -287,6 +287,38 @@ button.link-button {
   gap: 12px;
 }
 
+// Matches the rounded number inputs next to it.
+#release-sort {
+  display: block;
+  width: 100%;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: calc(16px + 8px);
+  color: var(--ink);
+  background: var(--panel);
+  font: 1rem Arial, sans-serif;
+}
+
+.sort-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font: 0.8rem Arial, sans-serif;
+  white-space: nowrap;
+
+  select {
+    min-height: 42px;
+    padding: 0 12px;
+    border: 1px solid var(--line);
+    border-radius: calc(16px + 8px);
+    color: var(--ink);
+    background: var(--panel);
+    font: 0.95rem Arial, sans-serif;
+  }
+}
+
 .platform-switch {
   position: relative;
   width: 220px;
@@ -429,6 +461,29 @@ button.link-button {
   justify-content: space-between;
   align-items: center;
   width: 100%;
+}
+
+.user-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+// Styled like the buttons next to it.
+.profile-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 42px;
+  padding: 0 18px;
+  border: 1px solid var(--line);
+  border-radius: calc(16px + 8px);
+  color: var(--ink);
+  font: 700 1rem Arial, sans-serif;
+  text-decoration: none;
+
+  &:hover,
+  &:focus-visible { border-color: var(--accent); color: var(--accent); }
 }
 
 .grid {
@@ -1101,6 +1156,128 @@ dialog::backdrop {
   padding: 0 10px;
 }
 
+.details-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 18px 0 6px;
+
+  &[hidden] { display: none; }
+}
+
+.details-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  min-height: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  font-size: 1.05rem;
+  color: var(--ink);
+  background: transparent;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s;
+
+  &:hover {
+    color: var(--ink);
+    border-color: var(--accent);
+    background: rgba(244, 162, 97, 0.14);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  &[aria-pressed="true"] {
+    color: #201a16;
+    border-color: var(--accent);
+    background: var(--accent);
+  }
+
+  &:disabled { opacity: 0.6; cursor: progress; }
+  &[hidden] { display: none; }
+}
+
+.details-action-danger {
+  color: #ff9b9b;
+  border-color: rgba(255, 107, 107, 0.45);
+
+  &:hover {
+    color: #ffc2c2;
+    border-color: #ff6b6b;
+    background: rgba(255, 107, 107, 0.16);
+  }
+}
+
+.details-actions-status {
+  min-height: 1.2em;
+  margin: 0 0 12px;
+  color: var(--muted);
+  font: 0.82rem Arial, sans-serif;
+  text-align: left;
+
+  &:empty { min-height: 0; margin: 0; }
+}
+
+.game-badges {
+  position: absolute;
+  z-index: 4;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 6px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  color: var(--accent);
+  background: rgba(10, 11, 15, 0.62);
+  backdrop-filter: blur(6px);
+  font-size: 0.85rem;
+  pointer-events: none;
+}
+
+.realtime-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 8px;
+  padding: 2px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font: 700 0.68rem Arial, sans-serif;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+
+  &::before {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    content: "";
+  }
+
+  &[data-state="live"] { color: #4ade80; }
+  &[data-state="connecting"], &[data-state="reconnecting"] { color: #fbbf24; }
+  &[data-state="connecting"]::before, &[data-state="reconnecting"]::before { animation: realtime-pulse 1.2s ease-in-out infinite; }
+  &[data-state="offline"] { color: #f87171; }
+  &[hidden] { display: none; }
+}
+
+@keyframes realtime-pulse {
+  50% { opacity: 0.25; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .realtime-status::before { animation: none !important; }
+}
+
 .mnavgame,
 .mnavgamerel {
   display: block;
@@ -1172,6 +1349,21 @@ dialog::backdrop {
   .toolbar-filters {
     flex-direction: column;
     width: 100%;
+  }
+
+  .sort-control {
+    width: 100%;
+
+    select { flex: 1; }
+  }
+
+  // Two date/limit fields per row, with the sort on its own row.
+  .release-filter .row > .col {
+    flex: 1 1 calc(50% - 12px);
+  }
+
+  .release-filter .row > .release-sort-col {
+    flex-basis: 100%;
   }
 
   .platform-switch {
@@ -1398,6 +1590,14 @@ body[data-theme="white"] {
   .achievement-item { background: #f3f7f5; }
   .details-grid .progress-bar { background: radial-gradient(closest-side, #fff 78%, transparent 79% 100%), conic-gradient(var(--rating-color) calc(var(--progress-value) * 1%), rgba(23, 48, 66, 0.1) 0); }
 
+  .details-action[aria-pressed="true"] { color: #fff; }
+  .details-action-danger { color: #b42318; border-color: rgba(180, 35, 24, 0.4); }
+  .details-action-danger:hover { color: #8f1c13; background: rgba(180, 35, 24, 0.08); }
+  .game-badges { background: rgba(255, 255, 255, 0.85); }
+  .realtime-status[data-state="live"] { color: #15803d; }
+  .realtime-status[data-state="connecting"], .realtime-status[data-state="reconnecting"] { color: #a16207; }
+  .realtime-status[data-state="offline"] { color: #b91c1c; }
+
   .game {
     &:hover, &:focus-within {
       background: radial-gradient(circle at 50% 0%, rgba(8, 127, 140, 0.08), transparent 55%) padding-box, linear-gradient(#7d7d7d00, #7d7d7d00) padding-box, conic-gradient(from var(--neon-angle), var(--neon-cyan), var(--neon-magenta), var(--accent-dark), var(--neon-cyan)) border-box !important;
@@ -1431,28 +1631,242 @@ body[data-theme="glassmorphism"] {
   }
 }
 
+// --- Liquid glass -------------------------------------------------------------
+// Translucent layers that blur and saturate what sits behind them, with a bright
+// specular rim on top, over a slowly drifting colour field so the glass has
+// something to refract.
+
+$liquid-ink: #0b1626;
+
+@mixin liquid-glass-surface($tint: 0.14, $blur: 26px) {
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, $tint + 0.08) 0%, rgba(255, 255, 255, $tint * 0.3) 48%, rgba(255, 255, 255, $tint * 0.55) 100%),
+    var(--panel);
+  -webkit-backdrop-filter: blur($blur) saturate(180%);
+  backdrop-filter: blur($blur) saturate(180%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 0 24px rgba(255, 255, 255, 0.05),
+    0 12px 32px rgba(4, 12, 28, 0.35);
+}
+
+@mixin liquid-glass-pill {
+  color: $liquid-ink;
+  border-color: rgba(255, 255, 255, 0.65);
+  background: linear-gradient(180deg, rgba(232, 245, 255, 0.96), rgba(159, 212, 255, 0.86));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -2px 6px rgba(40, 90, 140, 0.25),
+    0 6px 18px rgba(4, 12, 28, 0.35);
+}
+
 body[data-theme="liquid-glass"] {
   color-scheme: dark;
   --ink: #f6f9ff;
-  --muted: #c0c8d6;
-  --line: rgba(225, 238, 255, 0.34);
-  --panel: rgba(54, 76, 99, 0.42);
-  --accent: #a8d8ff;
-  --accent-dark: #4d8dbd;
-  --background: #16283a;
-  --neon-cyan: #a8d8ff;
-  --neon-magenta: #ffb7a0;
+  --muted: #cbd5e5;
+  --line: rgba(255, 255, 255, 0.22);
+  --panel: rgba(30, 50, 78, 0.3);
+  --accent: #9fd4ff;
+  --accent-dark: #5a9fd6;
+  --background: #0d192a;
+  --neon-cyan: #9fd4ff;
+  --neon-magenta: #ffb3c7;
 
-  background-image: radial-gradient(ellipse at 12% 18%, rgba(168, 216, 255, 0.28), transparent 34%), radial-gradient(ellipse at 88% 72%, rgba(255, 183, 160, 0.22), transparent 40%);
-  .panel, .game, dialog, .platform-switch-menu { backdrop-filter: blur(24px) saturate(155%); }
-  .game, dialog { background-color: var(--panel); }
-  input, .platform-switch summary { color: var(--ink); background: rgba(19, 39, 59, 0.46); }
+  background-color: var(--background);
+  background-image: none;
+
+  &::before {
+    position: fixed;
+    z-index: -1;
+    inset: -15vmax;
+    pointer-events: none;
+    background:
+      radial-gradient(34vmax 34vmax at 22% 26%, rgba(88, 156, 255, 0.55), transparent 62%),
+      radial-gradient(28vmax 28vmax at 80% 18%, rgba(255, 138, 190, 0.42), transparent 62%),
+      radial-gradient(38vmax 38vmax at 72% 82%, rgba(72, 214, 196, 0.36), transparent 62%),
+      radial-gradient(26vmax 26vmax at 22% 86%, rgba(168, 118, 255, 0.38), transparent 62%);
+    animation: liquid-drift 40s ease-in-out infinite alternate;
+    content: "";
+  }
+
+  h1 { text-shadow: 0 2px 22px rgba(159, 212, 255, 0.4); }
+  .eyebrow { color: var(--accent); }
+
+  .panel, .game, .platform-switch-menu { @include liquid-glass-surface; }
+  .panel, .game { border-radius: 22px; }
 
   .game {
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+
+    h2 { color: var(--ink); text-shadow: none; }
+
     &:hover, &:focus-within {
-      background: radial-gradient(circle at 50% 0%, rgba(168, 216, 255, 0.08), transparent 55%) padding-box, linear-gradient(rgba(54, 76, 99, 0.42), rgba(54, 76, 99, 0.42)) padding-box, conic-gradient(from var(--neon-angle), var(--neon-cyan), var(--neon-magenta), var(--accent-dark), var(--neon-cyan)) border-box !important;
-      box-shadow: 0 0 10px rgba(168, 216, 255, .5), 0 0 30px rgba(168, 216, 255, .25), 0 0 60px rgba(255, 183, 160, .25), 0 24px 80px rgba(23, 48, 66, .5) !important;
+      border-color: rgba(255, 255, 255, 0.45);
+      background:
+        linear-gradient(160deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.07) 48%, rgba(255, 255, 255, 0.12) 100%),
+        var(--panel) !important;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.75),
+        0 0 0 1px rgba(159, 212, 255, 0.35),
+        0 18px 50px rgba(4, 12, 28, 0.45),
+        0 0 42px rgba(159, 212, 255, 0.25) !important;
+      transform: translateY(-3px);
+      animation: none;
     }
+  }
+
+  .game-badges {
+    color: $liquid-ink;
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    background: rgba(232, 245, 255, 0.78);
+    backdrop-filter: blur(10px) saturate(160%);
+  }
+
+  dialog {
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 28px;
+    background:
+      linear-gradient(160deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.04) 50%, rgba(255, 255, 255, 0.08)),
+      rgba(20, 34, 54, 0.58);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    backdrop-filter: blur(40px) saturate(180%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.55),
+      inset 0 0 40px rgba(255, 255, 255, 0.05),
+      0 30px 80px rgba(2, 8, 20, 0.55);
+    animation: none;
+  }
+
+  dialog::backdrop {
+    background: rgba(8, 16, 30, 0.35);
+    -webkit-backdrop-filter: blur(10px) saturate(140%);
+    backdrop-filter: blur(10px) saturate(140%);
+  }
+
+  .details h2 { color: var(--ink); text-shadow: none; }
+
+  .details-grid > div,
+  .details-grid-info > div,
+  .details-grid-actions > div {
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.05);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  }
+
+  .details-grid dt,
+  .details-grid-info dt,
+  .details-grid-actions dt {
+    color: var(--accent);
+    text-shadow: none;
+  }
+
+  .details-grid .progress-bar {
+    background:
+      radial-gradient(closest-side, rgba(18, 32, 52, 0.9) 78%, transparent 79% 100%),
+      conic-gradient(var(--rating-color) calc(var(--progress-value) * 1%), rgba(255, 255, 255, 0.12) 0);
+  }
+
+  .achievement-item {
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.06);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  }
+
+  input,
+  select,
+  .platform-switch summary {
+    color: var(--ink);
+    border-color: rgba(255, 255, 255, 0.24);
+    background: rgba(255, 255, 255, 0.08);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
+    backdrop-filter: blur(14px) saturate(160%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  }
+
+  input:focus-visible,
+  select:focus-visible {
+    outline: 2px solid rgba(159, 212, 255, 0.75);
+    outline-offset: 2px;
+  }
+
+  // Native dropdown lists ignore the glass and render on a light surface.
+  option { color: $liquid-ink; background: #eef6ff; }
+
+  // Leave the screenshot thumbnails and lightGallery's own controls unstyled.
+  button:not(.link-button, .details-action, .details-screenshot-thumb, .lg-icon),
+  .nav-button,
+  .details-button {
+    @include liquid-glass-pill;
+  }
+
+  button:not(.link-button, .details-action, .details-screenshot-thumb, .lg-icon):hover,
+  .nav-button:hover,
+  .details-button:hover {
+    color: $liquid-ink;
+    background: linear-gradient(180deg, #fff, rgba(196, 229, 255, 0.96)) !important;
+    box-shadow:
+      inset 0 1px 0 #fff,
+      0 0 0 1px rgba(159, 212, 255, 0.5),
+      0 8px 24px rgba(4, 12, 28, 0.4) !important;
+  }
+
+  .details-action {
+    border-color: rgba(255, 255, 255, 0.24);
+    background: rgba(255, 255, 255, 0.08);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+
+    &:hover { border-color: rgba(255, 255, 255, 0.5); background: rgba(255, 255, 255, 0.16); }
+    &[aria-pressed="true"] { @include liquid-glass-pill; }
+  }
+
+  .details-action-danger {
+    color: #ffb4b4;
+    border-color: rgba(255, 140, 140, 0.4);
+
+    &:hover { color: #ffd4d4; border-color: rgba(255, 140, 140, 0.7); background: rgba(255, 107, 107, 0.16); }
+  }
+
+  .realtime-status {
+    border-color: rgba(255, 255, 255, 0.24);
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(10px);
+  }
+}
+
+@keyframes liquid-drift {
+  from { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
+  to { transform: translate3d(-4vmax, 3vmax, 0) rotate(8deg) scale(1.08); }
+}
+
+// Without backdrop blur (or when transparency should be reduced) the glass would
+// be see-through and hard to read, so fall back to solid frosted panels.
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  body[data-theme="liquid-glass"] {
+    --panel: rgba(28, 46, 70, 0.94);
+
+    dialog { background: #172a43; }
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  body[data-theme="liquid-glass"] {
+    --panel: rgba(28, 46, 70, 0.96);
+
+    &::before { opacity: 0.35; }
+    dialog { background: #172a43; }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-theme="liquid-glass"] {
+    &::before { animation: none; }
+    .game:hover, .game:focus-within { transform: none; }
   }
 }
 
@@ -1474,12 +1888,20 @@ body[data-theme="liquid-glass"] {
     .game, .game:hover, .game:focus-within { border-color: var(--line); box-shadow: 0 8px 22px rgba(23, 48, 66, 0.1); }
     dialog { color: var(--ink); background: #fff; border-color: var(--line); box-shadow: 0 18px 50px rgba(23, 48, 66, 0.2); animation: none; }
     .achievement-item { background: #f3f7f5; }
-  }
 
-  .game {
-    &:hover, &:focus-within {
-      background: radial-gradient(circle at 50% 0%, rgba(8, 127, 140, 0.08), transparent 55%) padding-box, linear-gradient(#7d7d7d00, #7d7d7d00) padding-box, conic-gradient(from var(--neon-angle), var(--neon-cyan), var(--neon-magenta), var(--accent-dark), var(--neon-cyan)) border-box !important;
-      box-shadow: 0 0 10px rgba(8, 127, 140, .5), 0 0 30px rgba(8, 127, 140, .25), 0 0 60px rgba(215, 108, 70, .25), 0 24px 80px rgba(23, 48, 66, .5) !important;
+    .details-action[aria-pressed="true"] { color: #fff; }
+    .details-action-danger { color: #b42318; border-color: rgba(180, 35, 24, 0.4); }
+    .details-action-danger:hover { color: #8f1c13; background: rgba(180, 35, 24, 0.08); }
+    .game-badges { background: rgba(255, 255, 255, 0.85); }
+    .realtime-status[data-state="live"] { color: #15803d; }
+    .realtime-status[data-state="connecting"], .realtime-status[data-state="reconnecting"] { color: #a16207; }
+    .realtime-status[data-state="offline"] { color: #b91c1c; }
+
+    .game {
+      &:hover, &:focus-within {
+        background: radial-gradient(circle at 50% 0%, rgba(8, 127, 140, 0.08), transparent 55%) padding-box, linear-gradient(#7d7d7d00, #7d7d7d00) padding-box, conic-gradient(from var(--neon-angle), var(--neon-cyan), var(--neon-magenta), var(--accent-dark), var(--neon-cyan)) border-box !important;
+        box-shadow: 0 0 10px rgba(8, 127, 140, .5), 0 0 30px rgba(8, 127, 140, .25), 0 0 60px rgba(215, 108, 70, .25), 0 24px 80px rgba(23, 48, 66, .5) !important;
+      }
     }
   }
 }

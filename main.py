@@ -30,6 +30,7 @@ from backend.auth.auth import (
 )
 from backend.auth.rate_limit import RateLimitMiddleware
 from backend.database.database import initialize_database
+from backend.realtime.hub import router as realtime_router
 from error_pages.error_pages import ERROR_PAGE_FILES, accepts_html, error_page_response
 from routes import router
 from routes.admin.uploads import UploadBodyLimitMiddleware
@@ -279,6 +280,11 @@ def read_games_releases_page() -> FileResponse:
     )
 
 
+@app.get("/profile", include_in_schema=False)
+def read_profile_page() -> FileResponse:
+    return FileResponse(PAGES_DIRECTORY / "users" / "profile.html", media_type="text/html")
+
+
 @app.get("/admin", include_in_schema=False)
 def read_admin_page() -> FileResponse:
     return FileResponse(PAGES_DIRECTORY / "admin" / "admin.html", media_type="text/html")
@@ -300,3 +306,4 @@ def read_health_root(_username: str = Depends(get_current_user)) -> dict[str, st
     return {"message": "Games API is running"}
 
 app.include_router(router)
+app.include_router(realtime_router)

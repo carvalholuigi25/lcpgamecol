@@ -1,5 +1,5 @@
 // Shared behaviour for the Game Shelf pages (login, rendering, details, logout).
-// Page scripts call initShelf({ load, reset }) after this file is loaded.
+// Page scripts call initShelf({ load, reset, refresh, gameActions }) after this file is loaded.
 
 const mLoginPanel = document.getElementById("mlogin-panel");
 const loginPanel = document.getElementById("login-panel");
@@ -20,8 +20,39 @@ const logoutButton = document.getElementById("logout-button");
 const platformSwitch = document.getElementById("platform-switch");
 const platformMenu = platformSwitch?.querySelector(".platform-switch-menu");
 const platformLabel = platformSwitch?.querySelector(".platform-switch-label");
+const detailsActions = document.getElementById("details-actions");
+const detailsActionsStatus = document.getElementById("details-actions-status");
 const DEFAULT_GAME_COVER = "/public/images/default-game-cover.svg";
+const LIST_ACTIONS = {
+  wishlist: {
+    path: "wishlist",
+    list: "wishlist",
+    stateKey: "wishlisted",
+    add: "Add to wishlist",
+    remove: "Remove from wishlist",
+    icons: ["bi-bookmark-plus", "bi-bookmark-check-fill"],
+    added: "Added to your wishlist.",
+    removed: "Removed from your wishlist.",
+  },
+  favorite: {
+    path: "favorite",
+    list: "favorites",
+    stateKey: "favorite",
+    add: "Add to favorites",
+    remove: "Remove from favorites",
+    icons: ["bi-heart", "bi-heart-fill"],
+    added: "Added to your favorites.",
+    removed: "Removed from your favorites.",
+  },
+};
 let games = [];
+let currentProfile = null;
+// "library": games are library rows. "releases": games are IGDB records, linked to a
+// library copy (if any) through releaseLinks. null: no wishlist/favorite/edit/delete.
+let gameActionsMode = null;
+let myLists = { wishlist: new Set(), favorites: new Set() };
+// IGDB id -> library game id, or null once we know the release is not in the library.
+const releaseLinks = new Map();
 let activeDetailsGameId = null;
 let detailsTrailerPlayer = null;
 let screenshotGallery = null;
@@ -30,6 +61,21 @@ let screenshotGalleryOpen = false;
 // An empty set means all platforms.
 let selectedPlatforms = new Set();
 let renderedPlatforms = null;
+
+// Sort selects hold "field:order" values; the choice is remembered per browser.
+function initSortSelect(select, settingName, onChange) {
+  if (!select) return () => ({});
+  const saved = window.gamesLibrarySettings.get(settingName);
+  if ([...select.options].some((option) => option.value === saved)) select.value = saved;
+  select.addEventListener("change", () => {
+    window.gamesLibrarySettings.set(settingName, select.value);
+    onChange();
+  });
+  return () => {
+    const [sort, order] = select.value.split(":");
+    return { sort, order };
+  };
+}
 
 function escapeHtml(value) {
   return String(value).replace(
@@ -104,9 +150,15 @@ function gameCard(game) {
   const title = escapeHtml(game.title);
 
   const coverHtml = `<img class="game-cover game-cover-image" src="${escapeHtml(cover || DEFAULT_GAME_COVER)}" alt="${title} cover" loading="lazy" data-fallback-applied="${!cover}"><div class="game-cover game-cover-fallback" hidden>No cover image</div>`;
+  const lists = listStateOf(game);
+  const badges = [
+    lists.favorite ? `<i class="bi bi-heart-fill" role="img" aria-label="In your favorites" title="In your favorites"></i>` : "",
+    lists.wishlisted ? `<i class="bi bi-bookmark-check-fill" role="img" aria-label="On your wishlist" title="On your wishlist"></i>` : "",
+  ].join("");
   
     return `
     <article class="game panel">
+      ${badges ? `<span class="game-badges">${badges}</span>` : ""}
       ${coverHtml}
       <div><h2 class="longtitle">${title}</h2><p class="hidden">${escapeHtml(game.description || "No description yet.")}</p></div>
       <div><div class="meta hidden"><span>${escapeHtml(game.genre || "Uncategorized")}</span><span>${escapeHtml(game.release_year ?? "")}</span></div><button class="details-button" type="button" data-game-id="${escapeHtml(game.id)}">View details</button></div>
@@ -396,6 +448,10 @@ function renderScreenshotGallery(game) {
 
 function showGameDetails(game) {
   if (!game) return;
+  // Keep the last action message while live updates re-render the same game.
+  if (activeDetailsGameId !== game.id || !detailsDialog.open) {
+    if (detailsActionsStatus) detailsActionsStatus.textContent = "";
+  }
   activeDetailsGameId = game.id;
   const minimumRequirements = game.minimum_system_requirements?.trim()
     ? game.minimum_system_requirements
@@ -440,11 +496,15 @@ function showGameDetails(game) {
   ].map(
       ([label, value]) => getGamesDetailsRes(label, value),
     ).join("");
-  document.getElementById("details-grid-actions").innerHTML = [
-    ["Wishlisted", game.wishlisted],
-  ].map(
-      ([label, value]) => getGamesDetailsRes(label, value),
-    ).join("");
+  const actionsGrid = document.getElementById("details-grid-actions");
+  if (actionsGrid) {
+    actionsGrid.innerHTML = [
+      ["Wishlisted", game.wishlisted],
+    ].map(
+        ([label, value]) => getGamesDetailsRes(label, value),
+      ).join("");
+  }
+  renderDetailsActions(game);
   document.getElementById("details-grid-info").innerHTML = [
     ["Minimum system requirements", minimumRequirements],
     ["Recommended system requirements", recommendedRequirements]
@@ -457,27 +517,38 @@ function showGameDetails(game) {
   achievementList.replaceChildren();
   achievementStatus.textContent = "Loading achievements...";
   window.setStatusLoading(achievementStatus, true);
-  detailsDialog.showModal();
+  if (!detailsDialog.open) detailsDialog.showModal();
   renderTrailer(game.trailer_url);
   loadGameAchievements(game.id);
 }
 
+// gameId is the id of the game shown in the dialog. On the releases page that is an
+// IGDB id, and the achievements belong to the release's library copy instead.
 async function loadGameAchievements(gameId) {
   const achievementList = document.getElementById("details-achievements-list");
   const achievementStatus = document.getElementById("details-achievements-status");
+  const game = games.find((item) => item.id === gameId);
+  const libraryId = gameActionsMode === "releases" ? (game ? libraryIdOf(game) : null) : gameId;
+  if (libraryId === null) {
+    window.setStatusLoading(achievementStatus, false);
+    achievementList.replaceChildren();
+    achievementStatus.textContent = window.i18n.t("Add this release to the library to track its achievements.");
+    return;
+  }
   try {
-    const response = await fetch(`/games/${encodeURIComponent(gameId)}/achievements?limit=100`);
+    const response = await fetch(`/games/${encodeURIComponent(libraryId)}/achievements?limit=100`);
     if (!response.ok) throw new Error("Achievements could not be loaded.");
     const achievements = await response.json();
     if (String(activeDetailsGameId) !== String(gameId)) return;
     window.setStatusLoading(achievementStatus, false);
     achievementList.innerHTML = achievements.map((achievement) => {
       const unlocked = Boolean(achievement.unlocked);
+      // One span per part so i18n.js can translate the type and points separately.
       const metadata = [
         achievement.achievement_type,
         achievement.points == null ? "" : `${achievement.points} points`,
         unlocked && achievement.date_unlocked ? achievement.date_unlocked : "",
-      ].filter(Boolean).map(escapeHtml).join(" / ");
+      ].filter(Boolean).map((part) => `<span>${escapeHtml(part)}</span>`).join(" / ");
       return `<li class="achievement-item${unlocked ? " is-unlocked" : ""}">
         <span class="achievement-state" role="img" aria-label="${unlocked ? "Unlocked" : "Locked"}"></span>
         <div class="achievement-copy">
@@ -503,7 +574,182 @@ async function loadGameAchievements(gameId) {
   }
 }
 
-function showApp(username) {
+function isAdmin() {
+  return currentProfile?.role === "admin";
+}
+
+// The library game behind a card: itself on the library page, its imported copy on
+// the releases page (null when the release is not in the library yet).
+function libraryIdOf(game) {
+  if (gameActionsMode === "releases") return releaseLinks.get(game.id) ?? null;
+  return gameActionsMode ? game.id : null;
+}
+
+function listStateOf(game) {
+  const libraryId = libraryIdOf(game);
+  return {
+    wishlisted: libraryId !== null && myLists.wishlist.has(libraryId),
+    favorite: libraryId !== null && myLists.favorites.has(libraryId),
+  };
+}
+
+function activeGame() {
+  return games.find((item) => item.id === activeDetailsGameId);
+}
+
+function renderDetailsActions(game) {
+  if (!detailsActions) return;
+  detailsActions.hidden = !gameActionsMode || !currentProfile;
+  if (detailsActions.hidden) return;
+  const lists = listStateOf(game);
+  for (const button of detailsActions.querySelectorAll("[data-list-action]")) {
+    const action = LIST_ACTIONS[button.dataset.listAction];
+    const active = lists[action.stateKey];
+    button.setAttribute("aria-pressed", String(active));
+    button.querySelector("i").className = `bi ${action.icons[Number(active)]}`;
+    // Icon-only button: the label lives in aria-label (screen readers) and title (tooltip).
+    const label = window.i18n.t(active ? action.remove : action.add);
+    button.setAttribute("aria-label", label);
+    button.title = label;
+  }
+  const libraryId = libraryIdOf(game);
+  const editLink = document.getElementById("details-edit");
+  editLink.hidden = !isAdmin();
+  // On the releases page the game may still need importing; the click handler does that.
+  editLink.href = libraryId === null ? "/admin" : `/admin?edit-game=${encodeURIComponent(libraryId)}#records-panel`;
+  document.getElementById("details-delete").hidden = !isAdmin() || libraryId === null;
+}
+
+async function readActionError(response, fallback) {
+  try {
+    return (await response.json()).detail || fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function renderActiveDetailsActions() {
+  const game = activeGame();
+  if (game && detailsDialog.open) renderDetailsActions(game);
+}
+
+async function loadMyLists() {
+  if (!gameActionsMode) return;
+  const response = await fetch("/users/me/game-lists", { cache: "no-store" });
+  if (!response.ok) return;
+  const lists = await response.json();
+  myLists = { wishlist: new Set(lists.wishlist), favorites: new Set(lists.favorites) };
+  renderGames();
+  renderActiveDetailsActions();
+}
+
+// Releases page: find which of the shown IGDB games are already in the library.
+async function syncReleaseLinks(ids = games.map((game) => game.id)) {
+  if (gameActionsMode !== "releases" || !ids.length) return;
+  const response = await fetch(`/games/igdb/links?ids=${ids.slice(0, 100).join(",")}`, { cache: "no-store" });
+  if (!response.ok) return;
+  const links = await response.json();
+  const openGame = detailsDialog.open ? activeGame() : null;
+  const openLinkBefore = openGame ? libraryIdOf(openGame) : null;
+  for (const id of ids) releaseLinks.set(id, links[id] ?? null);
+  renderGames();
+  renderActiveDetailsActions();
+  if (openGame && libraryIdOf(openGame) !== openLinkBefore) loadGameAchievements(openGame.id);
+}
+
+// Returns the library id for a game, importing an IGDB release first when needed.
+async function ensureLibraryGame(game) {
+  const libraryId = libraryIdOf(game);
+  if (libraryId !== null) return libraryId;
+  detailsActionsStatus.textContent = window.i18n.t("Adding {title} to the library...", { title: game.title });
+  const response = await fetch(`/games/igdb/${encodeURIComponent(game.id)}/import`, { method: "POST" });
+  if (!response.ok) {
+    throw new Error(await readActionError(response, "The game could not be added to the library."));
+  }
+  const status = await response.json();
+  releaseLinks.set(game.id, status.game_id);
+  if (activeDetailsGameId === game.id) loadGameAchievements(game.id);
+  return status.game_id;
+}
+
+async function toggleGameList(button) {
+  const action = LIST_ACTIONS[button.dataset.listAction];
+  const game = activeGame();
+  if (!game) return;
+  const active = button.getAttribute("aria-pressed") === "true";
+  button.disabled = true;
+  try {
+    const libraryId = await ensureLibraryGame(game);
+    const response = await fetch(`/games/${encodeURIComponent(libraryId)}/${action.path}`, {
+      method: active ? "DELETE" : "PUT",
+    });
+    if (!response.ok) {
+      throw new Error(await readActionError(response, "Your lists could not be updated."));
+    }
+    const state = await response.json();
+    myLists.wishlist[state.wishlisted ? "add" : "delete"](state.game_id);
+    myLists.favorites[state.favorite ? "add" : "delete"](state.game_id);
+    renderGames();
+    if (activeDetailsGameId === game.id) renderDetailsActions(game);
+    detailsActionsStatus.textContent = window.i18n.t(state[action.stateKey] ? action.added : action.removed);
+  } catch (error) {
+    detailsActionsStatus.textContent = window.i18n.t(error.message);
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function editActiveGame(event) {
+  if (gameActionsMode !== "releases") return;
+  event.preventDefault();
+  const game = activeGame();
+  if (!game) return;
+  try {
+    const libraryId = await ensureLibraryGame(game);
+    window.location.href = `/admin?edit-game=${encodeURIComponent(libraryId)}#records-panel`;
+  } catch (error) {
+    detailsActionsStatus.textContent = window.i18n.t(error.message);
+  }
+}
+
+async function deleteActiveGame(refresh) {
+  const game = activeGame();
+  const libraryId = game ? libraryIdOf(game) : null;
+  if (libraryId === null) return;
+  const releases = gameActionsMode === "releases";
+  const question = releases ? "Remove {title} from the library?" : "Delete {title} and its achievements?";
+  if (!window.confirm(window.i18n.t(question, { title: game.title }))) return;
+  const button = document.getElementById("details-delete");
+  button.disabled = true;
+  try {
+    const response = await fetch(`/games/${encodeURIComponent(libraryId)}`, { method: "DELETE" });
+    if (!response.ok && response.status !== 404) {
+      throw new Error(await readActionError(response, "The game could not be deleted."));
+    }
+    if (releases) {
+      // The release itself is still on IGDB, so keep its details open.
+      releaseLinks.set(game.id, null);
+      myLists.wishlist.delete(libraryId);
+      myLists.favorites.delete(libraryId);
+      renderGames();
+      renderDetailsActions(game);
+      loadGameAchievements(game.id);
+      detailsActionsStatus.textContent = window.i18n.t("{title} was removed from the library.", { title: game.title });
+      return;
+    }
+    detailsDialog.close();
+    await refresh();
+    appStatus.textContent = window.i18n.t("{title} was deleted.", { title: game.title });
+  } catch (error) {
+    detailsActionsStatus.textContent = window.i18n.t(error.message);
+  } finally {
+    button.disabled = false;
+  }
+}
+
+function showApp(profile) {
+  const { username } = profile;
+  currentProfile = profile;
   mLoginPanel.classList.add("hidden");
   appPanel.style.display = "block";
   userAvatar.textContent = username.charAt(0).toUpperCase();
@@ -513,6 +759,10 @@ function showApp(username) {
 }
 
 function showLogin() {
+  currentProfile = null;
+  myLists = { wishlist: new Set(), favorites: new Set() };
+  releaseLinks.clear();
+  if (detailsDialog.open) detailsDialog.close();
   appPanel.style.display = "none";
   userMenu.hidden = true;
   usernameDisplay.textContent = "";
@@ -535,18 +785,84 @@ async function fetchProfile() {
   return response.ok ? response.json() : null;
 }
 
-function initShelf({ load, reset = () => {} }) {
-  async function openShelf(username) {
-    showApp(username);
+function initShelf({ load, reset = () => {}, refresh = null, gameActions = null }) {
+  gameActionsMode = gameActions;
+
+  async function openShelf(profile) {
+    showApp(profile);
     window.setStatusLoading(appStatus, true);
     try {
       await load();
+      await loadMyLists();
       window.setStatusLoading(appStatus, false);
     } catch (error) {
       window.setStatusLoading(appStatus, false);
       appStatus.textContent = error.message;
     }
+    if (gameActionsMode) window.realtime?.start();
   }
+
+  // Collapse bursts of live events (e.g. an admin saving several records) into one reload.
+  let liveRefreshTimer = null;
+  let pendingChanges = [];
+  function scheduleLiveRefresh(change) {
+    if (change) pendingChanges.push(change);
+    clearTimeout(liveRefreshTimer);
+    liveRefreshTimer = setTimeout(async () => {
+      const changes = pendingChanges;
+      pendingChanges = [];
+      try {
+        await refresh();
+      } catch (error) {
+        appStatus.textContent = error.message;
+        return;
+      }
+      if (!detailsDialog.open) return;
+      const removed = changes.some(
+        (item) => item.action === "cleared" || (item.action === "deleted" && item.game_id === activeDetailsGameId),
+      );
+      if (removed) {
+        detailsDialog.close();
+        appStatus.textContent = window.i18n.t("This game was removed from the library.");
+      } else if (changes.some((item) => item.game_id === activeDetailsGameId)) {
+        const game = games.find((item) => item.id === activeDetailsGameId);
+        if (game) showGameDetails(game);
+      }
+    }, 300);
+  }
+
+  if (gameActionsMode === "releases" && window.realtime) {
+    // Release data comes from IGDB; only which releases are in the library can change.
+    window.realtime.on("gameChanged", () => syncReleaseLinks());
+    window.realtime.on("achievementChanged", (change) => {
+      const game = detailsDialog.open ? activeGame() : null;
+      if (game && libraryIdOf(game) === change.game_id) loadGameAchievements(game.id);
+    });
+    window.realtime.on("listsChanged", () => loadMyLists());
+    window.realtime.onReconnected(() => {
+      syncReleaseLinks();
+      loadMyLists();
+    });
+  }
+
+  if (gameActionsMode === "library" && refresh && window.realtime) {
+    window.realtime.on("gameChanged", scheduleLiveRefresh);
+    window.realtime.on("achievementChanged", (change) => {
+      if (detailsDialog.open && change.game_id === activeDetailsGameId) loadGameAchievements(change.game_id);
+    });
+    window.realtime.on("listsChanged", () => loadMyLists());
+    window.realtime.onReconnected(() => {
+      scheduleLiveRefresh();
+      loadMyLists();
+    });
+  }
+
+  detailsActions?.addEventListener("click", (event) => {
+    const listButton = event.target.closest("[data-list-action]");
+    if (listButton) toggleGameList(listButton);
+    if (event.target.closest("#details-edit")) editActiveGame(event);
+    if (event.target.closest("#details-delete")) deleteActiveGame(refresh);
+  });
 
   loginForm.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -585,7 +901,7 @@ function initShelf({ load, reset = () => {} }) {
         return;
       }
       loginForm.reset();
-      await openShelf(profile.username);
+      await openShelf(profile);
     } catch {
       loginStatus.textContent = "The server could not be reached.";
     } finally {
@@ -685,6 +1001,7 @@ function initShelf({ load, reset = () => {} }) {
         return;
       }
       showLogin();
+      window.realtime?.stop();
       reset();
     } catch {
       appStatus.textContent = "The server could not be reached.";
@@ -706,7 +1023,7 @@ function initShelf({ load, reset = () => {} }) {
 
   fetchProfile()
     .then((profile) => {
-      if (profile) return openShelf(profile.username);
+      if (profile) return openShelf(profile);
     })
     .catch(() => {
       if(loginStatus.classList.contains("hidden")) {

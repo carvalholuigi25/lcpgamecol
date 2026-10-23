@@ -4,12 +4,14 @@ import time
 from contextlib import closing
 from datetime import UTC
 from datetime import datetime as ndt
+from typing import Annotated
 
 import httpx2 as httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from backend.auth.auth import require_admin
 from backend.database.database import get_autoincrement, get_connection, reset_autoincrement
+from backend.realtime.hub import hub
 from routes.games.schemas import (
     IGDB_AGE_RATING_BY_ID,
     Game,
@@ -19,13 +21,50 @@ from routes.games.schemas import (
     GamePlatformVersions,
     GameReleasePage,
     GamesESRB,
+    GameSort,
     ModelGamesESRB,
     ModelGamesGameModes,
+    ReleaseSort,
+    SortOrder,
 )
 
 router = APIRouter()
 
 current_datetime = ndt.now(tz=UTC)
+
+# Each sort maps to a fixed SQL expression and its natural direction; user input only
+# ever picks a key from this table, so nothing user-supplied reaches the SQL text.
+GAME_SORT_COLUMNS = {
+    GameSort.ADDED: ("id", SortOrder.ASC),
+    GameSort.TITLE: ("title COLLATE NOCASE", SortOrder.ASC),
+    # Games without a full date fall back to their year ("2018" sorts before "2018-01-01").
+    GameSort.RELEASE_DATE: ("COALESCE(NULLIF(release_date, ''), printf('%04d', release_year))", SortOrder.DESC),
+    GameSort.USER_RATING: ("user_rating", SortOrder.DESC),
+    GameSort.CRITIC_RATING: ("critic_rating", SortOrder.DESC),
+    GameSort.HOURS_PLAYED: ("hoursplayed", SortOrder.DESC),
+}
+
+RELEASE_SORT_FIELDS = {
+    ReleaseSort.RELEASE_DATE: ("first_release_date", SortOrder.ASC),
+    ReleaseSort.TITLE: ("name", SortOrder.ASC),
+    ReleaseSort.HYPE: ("hypes", SortOrder.DESC),
+    ReleaseSort.USER_RATING: ("rating", SortOrder.DESC),
+    ReleaseSort.CRITIC_RATING: ("aggregated_rating", SortOrder.DESC),
+}
+
+
+def game_order_by(sort: GameSort = GameSort.ADDED, order: SortOrder | None = None) -> str:
+    expression, natural_order = GAME_SORT_COLUMNS[sort]
+    direction = (order or natural_order).value.upper()
+    if sort is GameSort.ADDED:
+        return f"ORDER BY id {direction}"
+    # Missing values go last either way, and id keeps pages stable between ties.
+    return f"ORDER BY {expression} {direction} NULLS LAST, id ASC"
+
+
+def release_sort_clause(sort: ReleaseSort = ReleaseSort.RELEASE_DATE, order: SortOrder | None = None) -> str:
+    field, natural_order = RELEASE_SORT_FIELDS[sort]
+    return f"sort {field} {(order or natural_order).value}; "
 
 def _igdb_cover_url(cover: dict | None) -> str:
     if not cover or not cover.get("url"):
@@ -443,7 +482,13 @@ def _fetch_all_esrb_ratings(limit: int) -> list[ModelGamesESRB]:
     ]
 
 def _fetch_all_games_by_date(
-    year: int, month: int, day: int, limit: int, skip: int
+    year: int,
+    month: int,
+    day: int,
+    limit: int,
+    skip: int,
+    sort: ReleaseSort = ReleaseSort.RELEASE_DATE,
+    order: SortOrder | None = None,
 ) -> GameReleasePage:
     # Docs: https://api-docs.igdb.com/#getting-started
     client_id = os.environ.get("IGDB_CLIENT_ID") or os.getenv("IGDB_CLIENT_ID")
@@ -462,7 +507,7 @@ def _fetch_all_games_by_date(
         "fields name,first_release_date,summary,game_modes.id,game_modes.name,cover.url,screenshots.url,websites.category,websites.url,videos.video_id,"
         "involved_companies.developer,involved_companies.publisher,involved_companies.company.name,age_ratings.category,age_ratings.rating,genres.name,"
         f"platforms.name,rating,aggregated_rating; {where_clause}"
-        "sort first_release_date asc; "
+        f"{release_sort_clause(sort, order)}"
         f"offset {skip}; "
         f"limit {limit};"
     )
@@ -605,6 +650,17 @@ def game_database_values(game: GameCreate) -> tuple:
     values["screenshots"] = json.dumps(values["screenshots"])
     return tuple(values.values())
 
+def insert_game(connection, game: GameCreate) -> int:
+    """Insert a game without committing and return its new id."""
+    cursor = connection.execute(
+        """
+        INSERT INTO games (title, genre, release_year, release_date, description, cover_image_url, image_url, screenshot_url, developer_name, publisher_name, website_url, trailer_url, screenshots, platforms, gamemodes, editions, user_rating, critic_rating, wishlisted, hoursplayed, esrb, minimum_system_requirements, recommended_system_requirements)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        game_database_values(game),
+    )
+    return cursor.lastrowid
+
 @router.post(
     "/games",
     response_model=Game,
@@ -613,17 +669,10 @@ def game_database_values(game: GameCreate) -> tuple:
     dependencies=[Depends(require_admin)],
 )
 def create_game(game: GameCreate) -> Game:
-    values = game_database_values(game)
     with closing(get_connection()) as connection:
-        cursor = connection.execute(
-            """
-            INSERT INTO games (title, genre, release_year, release_date, description, cover_image_url, image_url, screenshot_url, developer_name, publisher_name, website_url, trailer_url, screenshots, platforms, gamemodes, editions, user_rating, critic_rating, wishlisted, hoursplayed, esrb, minimum_system_requirements, recommended_system_requirements)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            values,
-        )
+        game_id = insert_game(connection, game)
         connection.commit()
-        game_id = cursor.lastrowid
+    hub.publish("gameChanged", {"action": "created", "game_id": game_id, "title": game.title})
     return Game(id=game_id, **game.model_dump())
 
 
@@ -631,10 +680,12 @@ def create_game(game: GameCreate) -> Game:
 def list_games(
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=1, le=100),
+    sort: GameSort = GameSort.ADDED,
+    order: Annotated[SortOrder | None, Query(description="Defaults to the natural order of the sort")] = None,
 ) -> list[Game]:
     with closing(get_connection()) as connection:
         rows = connection.execute(
-            "SELECT * FROM games ORDER BY id LIMIT ? OFFSET ?", (limit, skip)
+            f"SELECT * FROM games {game_order_by(sort, order)} LIMIT ? OFFSET ?", (limit, skip)
         ).fetchall()
     return [game_from_row(row) for row in rows]
 
@@ -643,11 +694,13 @@ def list_games(
 def list_games_page(
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=1, le=100),
+    sort: GameSort = GameSort.ADDED,
+    order: Annotated[SortOrder | None, Query(description="Defaults to the natural order of the sort")] = None,
 ) -> GamePage:
     with closing(get_connection()) as connection:
         total = connection.execute("SELECT COUNT(*) FROM games").fetchone()[0]
         rows = connection.execute(
-            "SELECT * FROM games ORDER BY id LIMIT ? OFFSET ?", (limit, skip)
+            f"SELECT * FROM games {game_order_by(sort, order)} LIMIT ? OFFSET ?", (limit, skip)
         ).fetchall()
     return GamePage(
         items=[game_from_row(row) for row in rows],
@@ -663,8 +716,10 @@ def list_all_releases(
     day: int = current_datetime.day,
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=1, le=100),
+    sort: ReleaseSort = ReleaseSort.RELEASE_DATE,
+    order: Annotated[SortOrder | None, Query(description="Defaults to the natural order of the sort")] = None,
 ) -> list[Game]:
-    return _fetch_all_games_by_date(year, month, day, limit, skip)
+    return _fetch_all_games_by_date(year, month, day, limit, skip, sort, order)
 
 @router.get("/games/title", response_model=list[Game], tags=["games"])
 def list_all_releases_by_title(
@@ -708,6 +763,8 @@ def search_games(
     release_year: int | None = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=1, le=100),
+    sort: GameSort = GameSort.ADDED,
+    order: Annotated[SortOrder | None, Query(description="Defaults to the natural order of the sort")] = None,
 ) -> list[Game]:
     filters = []
     parameters: list[str | int] = []
@@ -722,7 +779,7 @@ def search_games(
     query = "SELECT * FROM games"
     if filters:
         query += " WHERE " + " AND ".join(filters)
-    query += " ORDER BY id LIMIT ? OFFSET ?"
+    query += f" {game_order_by(sort, order)} LIMIT ? OFFSET ?"
     parameters.extend((limit, skip))
 
     with closing(get_connection()) as connection:
@@ -808,6 +865,7 @@ def update_game(game_id: int, game: GameCreate) -> Game:
         connection.commit()
     if cursor.rowcount == 0:
         raise HTTPException(status_code=404, detail="Game not found")
+    hub.publish("gameChanged", {"action": "updated", "game_id": game_id, "title": game.title})
     return Game(id=game_id, **game.model_dump())
 
 
@@ -824,6 +882,7 @@ def delete_all_games() -> None:
         reset_autoincrement("games")
     if cursor.rowcount == 0:
         raise HTTPException(status_code=404, detail="No games found to delete")
+    hub.publish("gameChanged", {"action": "cleared", "game_id": None, "title": None})
 
 
 @router.delete(
@@ -839,3 +898,4 @@ def delete_game(game_id: int) -> None:
         reset_autoincrement("games")
     if cursor.rowcount == 0:
         raise HTTPException(status_code=404, detail="Game not found")
+    hub.publish("gameChanged", {"action": "deleted", "game_id": game_id, "title": None})

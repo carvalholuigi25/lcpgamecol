@@ -104,6 +104,32 @@ IGDB_AGE_RATING_BY_ID = {
     for rating_id, rating in enumerate(GamesESRB, start=1)
 }
 
+class SortOrder(str, enum.Enum):
+    ASC = "asc"
+    DESC = "desc"
+
+
+class GameSort(str, enum.Enum):
+    """Ways to order library games."""
+
+    ADDED = "added"
+    TITLE = "title"
+    RELEASE_DATE = "release_date"
+    USER_RATING = "user_rating"
+    CRITIC_RATING = "critic_rating"
+    HOURS_PLAYED = "hours_played"
+
+
+class ReleaseSort(str, enum.Enum):
+    """Ways to order IGDB releases."""
+
+    RELEASE_DATE = "release_date"
+    TITLE = "title"
+    HYPE = "hype"
+    USER_RATING = "user_rating"
+    CRITIC_RATING = "critic_rating"
+
+
 class ModelGamesESRB(BaseModel):
     organization: str | int | None = ""
     rating: str | int | None = ""
