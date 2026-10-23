@@ -51,6 +51,7 @@ The app is available at:
 
 - Games library: <http://127.0.0.1:8000/library>
 - Upcoming releases: <http://127.0.0.1:8000/library/releases>
+- Your profile (any signed-in user): <http://127.0.0.1:8000/profile>
 - Administrator dashboard: <http://127.0.0.1:8000/admin>
 - Special features (admin tools such as file upload): <http://127.0.0.1:8000/admin/special-features>
 - Interactive API docs (Swagger UI): <http://127.0.0.1:8000/docs>
@@ -74,6 +75,8 @@ The seed data is defined in `backend/database/seed.sql`; running the seeder more
 - Move between dashboard sections and admin pages using the sidebar. The menu button in the top bar shows or hides it; on wide screens it collapses to icons, and on small screens it opens as an overlay.
 - Upload images and PDFs safely from the Special features page (admin only).
 - Create a viewer account from the library or dashboard sign-in panel.
+- Add games to your own wishlist and favorites from the game details. Administrators also get **Edit** and **Delete** buttons there.
+- See changes as they happen: the library and dashboard update by themselves through a SignalR hub at `/hubs/library`. Python clients can subscribe with `signalrcore`; run a single server worker, because live connections are kept in memory.
 - View game screenshots in an image gallery and save dashboard preferences in the browser.
 - Use the library and dashboard in English, Portuguese, German, or French.
 - Receive custom HTML error pages for common HTTP errors; API clients retain API-style error responses.

@@ -179,6 +179,38 @@ body {
   color: var(--muted);
   font-size: 0.82rem;
 }
+.realtime-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font: 500 0.62rem var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+
+  &::before {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    content: "";
+  }
+
+  &[data-state="live"] { color: var(--green); }
+  &[data-state="connecting"], &[data-state="reconnecting"] { color: var(--muted); }
+  &[data-state="connecting"]::before, &[data-state="reconnecting"]::before { animation: realtime-pulse 1.2s ease-in-out infinite; }
+  &[data-state="offline"] { color: var(--orange); }
+}
+@keyframes realtime-pulse {
+  50% { opacity: 0.25; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .realtime-status::before { animation: none !important; }
+}
 .icon-button {
   width: 36px;
   height: 36px;
@@ -1874,6 +1906,48 @@ td.upload-actions-cell {
   &:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
 }
 
+// The signed-in user's own profile (/profile) shows the user page in the page flow.
+.profile-page {
+  width: auto;
+  max-height: none;
+  margin: 0 0 18px;
+  overflow: hidden;
+  box-shadow: none;
+}
+
+.profile-form-hint {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.profile-wishlist .favorite-grid { margin-top: 8px; }
+
+.favorite-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+
+  button {
+    display: inline-grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    background: var(--surface);
+    color: var(--ink);
+    cursor: pointer;
+
+    &:hover:not(:disabled),
+    &:focus-visible { border-color: var(--green); color: var(--green); }
+    &:disabled { opacity: 0.4; cursor: not-allowed; }
+    svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  }
+}
+
 @media (max-width: 860px) {
   .user-page-body,
   .user-profile-form,
@@ -1926,24 +2000,6 @@ body[data-theme="glassmorphism"] {
   .metric, .chart-panel, .records-panel, .settings-panel, .recent-table-wrap, .login-view, .toast-region { backdrop-filter: blur(18px); }
   .setting-option, .setting-field { background: rgba(18, 41, 36, 0.45); }
   .record-list select, .record-fields input, .record-fields textarea, .rich-text-field .ql-container, .record-fields select, .login-view input { background: rgba(15, 35, 31, 0.62); color: var(--ink); }
-}
-
-body[data-theme="liquid-glass"] {
-  color-scheme: dark;
-  --paper: #17283a;
-  --surface: rgba(53, 77, 103, 0.48);
-  --ink: #f4f7fc;
-  --muted: #bac7d7;
-  --line: rgba(218, 233, 250, 0.32);
-  --green: #a5d2ed;
-  --green-soft: rgba(78, 125, 160, 0.34);
-  --orange: #ffb294;
-  --yellow: #e5ca85;
-
-  background-image: radial-gradient(ellipse at 12% 16%, rgba(165, 210, 237, 0.26), transparent 34%), radial-gradient(ellipse at 88% 72%, rgba(255, 178, 148, 0.2), transparent 40%);
-  .metric, .chart-panel, .records-panel, .settings-panel, .recent-table-wrap, .login-view, .toast-region { backdrop-filter: blur(24px) saturate(155%); }
-  .setting-option, .setting-field { background: rgba(24, 43, 62, 0.46); }
-  .record-list select, .record-fields input, .record-fields textarea, .rich-text-field .ql-container, .record-fields select, .login-view input { background: rgba(21, 39, 57, 0.58); color: var(--ink); }
 }
 
 @media (prefers-color-scheme: light) {
@@ -2120,4 +2176,156 @@ body[data-theme="rgb"] {
 
 @keyframes theme-rgb-flow {
   to { --rgb-shift: 100%; }
+}
+
+// --- Liquid glass -------------------------------------------------------------
+// Translucent panels that blur and saturate a slowly drifting colour field, with a
+// bright specular rim on top. Kept last so it can use the shared theme mixins.
+
+$liquid-ink: #0b1626;
+$liquid-surfaces: "#{$theme-panels}, .admin-sidebar, .feature-card, .user-card, .upload-dropzone, .upload-safety";
+
+@mixin liquid-glass-surface($tint: 0.14, $blur: 26px) {
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, $tint + 0.08) 0%, rgba(255, 255, 255, $tint * 0.3) 48%, rgba(255, 255, 255, $tint * 0.55) 100%),
+    var(--surface);
+  -webkit-backdrop-filter: blur($blur) saturate(180%);
+  backdrop-filter: blur($blur) saturate(180%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.08),
+    0 12px 32px rgba(4, 12, 28, 0.32);
+}
+
+body[data-theme="liquid-glass"] {
+  color-scheme: dark;
+  --paper: #0d192a;
+  --surface: rgba(30, 50, 78, 0.32);
+  --ink: #f4f7fc;
+  --muted: #c3cfe0;
+  --line: rgba(255, 255, 255, 0.2);
+  --green: #9fd4ff;
+  --green-soft: rgba(159, 212, 255, 0.16);
+  --orange: #ffb294;
+  --yellow: #ffd98a;
+
+  background-color: var(--paper);
+  background-image: none;
+
+  &::before {
+    position: fixed;
+    z-index: -1;
+    inset: -15vmax;
+    pointer-events: none;
+    background:
+      radial-gradient(34vmax 34vmax at 18% 22%, rgba(88, 156, 255, 0.5), transparent 62%),
+      radial-gradient(28vmax 28vmax at 84% 16%, rgba(255, 138, 190, 0.36), transparent 62%),
+      radial-gradient(38vmax 38vmax at 74% 84%, rgba(72, 214, 196, 0.32), transparent 62%),
+      radial-gradient(26vmax 26vmax at 20% 88%, rgba(168, 118, 255, 0.34), transparent 62%);
+    animation: liquid-drift 40s ease-in-out infinite alternate;
+    content: "";
+  }
+
+  @include theme-accent-buttons($liquid-ink, #d6ecff);
+
+  #{$liquid-surfaces} { @include liquid-glass-surface; }
+  #{$theme-panels}, .feature-card, .user-card, .upload-dropzone, .upload-safety { border-radius: 20px; }
+  .metric { border-top: 1px solid rgba(255, 255, 255, 0.22); box-shadow: inset 0 3px 0 -1px var(--metric-accent, var(--green)), inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 12px 32px rgba(4, 12, 28, 0.32); }
+  .metric-hours { --metric-accent: var(--orange); }
+  .metric-rating { --metric-accent: var(--yellow); }
+  .metric-wishlist { --metric-accent: #ff9ec4; }
+  .admin-sidebar { border-width: 0 1px 0 0; border-radius: 0 22px 22px 0; }
+  .topbar { border-bottom-color: rgba(255, 255, 255, 0.16); }
+
+  .refresh-button,
+  .primary-button {
+    border-color: rgba(255, 255, 255, 0.65);
+    border-radius: 999px;
+    background: linear-gradient(180deg, rgba(232, 245, 255, 0.96), rgba(159, 212, 255, 0.86));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 -2px 6px rgba(40, 90, 140, 0.25), 0 6px 18px rgba(4, 12, 28, 0.35);
+  }
+
+  .secondary-button,
+  .danger-button,
+  .icon-button,
+  .setting-option,
+  .setting-field {
+    border-color: rgba(255, 255, 255, 0.22);
+    background: rgba(255, 255, 255, 0.07);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+  .secondary-button, .danger-button, .icon-button { border-radius: 999px; }
+  .secondary-button:hover, .icon-button:hover { border-color: rgba(255, 255, 255, 0.5); background: rgba(255, 255, 255, 0.14); }
+  .danger-button { color: #ffb4b4; border-color: rgba(255, 140, 140, 0.4); }
+  .danger-button:hover { border-color: rgba(255, 140, 140, 0.7); background: rgba(255, 107, 107, 0.16); }
+
+  #{$theme-fields}, #theme-selector, #language-selector {
+    color: var(--ink);
+    border-color: rgba(255, 255, 255, 0.22);
+    background: rgba(255, 255, 255, 0.07);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+  .record-fields :disabled, .rich-text-field .ql-disabled { background: rgba(255, 255, 255, 0.03); }
+  .rich-text-field .ql-toolbar.ql-snow { border-color: rgba(255, 255, 255, 0.22); background: rgba(255, 255, 255, 0.1); }
+  .rich-text-field .ql-snow .ql-stroke { stroke: var(--ink); }
+  .rich-text-field .ql-snow .ql-fill { fill: var(--ink); }
+  .rich-text-field .ql-snow .ql-picker { color: var(--ink); }
+  option { color: $liquid-ink; background: #eef6ff; }
+
+  .chart-gridline { stroke: rgba(255, 255, 255, 0.14); }
+  .completion-ring { background: conic-gradient(var(--green) var(--completion), rgba(255, 255, 255, 0.14) var(--completion)); }
+  .completion-ring > div { background: rgba(18, 32, 52, 0.85); }
+  .bar-track { background: rgba(255, 255, 255, 0.12); }
+  td { border-color: rgba(255, 255, 255, 0.14); }
+
+  .user-page {
+    border-color: rgba(255, 255, 255, 0.28);
+    border-radius: 28px;
+    background: linear-gradient(160deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.04) 50%, rgba(255, 255, 255, 0.08)), rgba(20, 34, 54, 0.62);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    backdrop-filter: blur(40px) saturate(180%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 30px 80px rgba(2, 8, 20, 0.55);
+
+    &::backdrop {
+      background: rgba(8, 16, 30, 0.35);
+      -webkit-backdrop-filter: blur(10px) saturate(140%);
+      backdrop-filter: blur(10px) saturate(140%);
+    }
+  }
+
+  .realtime-status {
+    border-color: rgba(255, 255, 255, 0.22);
+    background: rgba(255, 255, 255, 0.07);
+  }
+}
+
+@keyframes liquid-drift {
+  from { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
+  to { transform: translate3d(-4vmax, 3vmax, 0) rotate(8deg) scale(1.08); }
+}
+
+// Without backdrop blur (or when transparency should be reduced) fall back to solid
+// frosted panels so text stays readable.
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  body[data-theme="liquid-glass"] {
+    --surface: rgba(28, 46, 70, 0.94);
+
+    .user-page { background: #172a43; }
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  body[data-theme="liquid-glass"] {
+    --surface: rgba(28, 46, 70, 0.96);
+
+    &::before { opacity: 0.35; }
+    .user-page { background: #172a43; }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-theme="liquid-glass"]::before { animation: none; }
 }

@@ -90,7 +90,11 @@ def test_root_route_package_rejects_unknown_exports():
     assert str(exc_info.value) == "unknown_export"
 
 
-def test_current_user_profile_returns_username():
+def test_current_user_profile_returns_username_and_role():
     package = importlib.import_module("routes")
+    from backend.auth.auth import Principal
 
-    assert package.get_current_user_profile("alice") == {"username": "alice"}
+    assert package.get_current_user_profile(Principal("alice", "viewer")) == {
+        "username": "alice",
+        "role": "viewer",
+    }

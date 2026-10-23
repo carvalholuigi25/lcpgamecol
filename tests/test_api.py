@@ -183,7 +183,7 @@ def test_users_endpoint_requires_authentication(client, auth_headers):
     response = client.get("/users", headers=auth_headers)
 
     assert response.status_code == 200
-    assert response.json() == {"username": "admin"}
+    assert response.json() == {"username": "admin", "role": "admin"}
 
 
 def test_admin_dashboard_summary_is_admin_only(client, auth_headers, viewer_headers):

@@ -13,6 +13,16 @@ const previousPageButton = document.getElementById("previous-page");
 const nextPageButton = document.getElementById("next-page");
 const lastPageButton = document.getElementById("last-page");
 const DEFAULT_LIMIT = 12;
+// A sort change during a load would be dropped by the busy guard, so run it afterwards.
+let sortChangedWhileBusy = false;
+function reloadForNewSort() {
+  if (paginationBusy) {
+    sortChangedWhileBusy = true;
+    return;
+  }
+  showReleases(1);
+}
+const currentSort = initSortSelect(document.getElementById("release-sort"), "releaseSort", reloadForNewSort);
 let releasePage = 1;
 let totalReleasePages = 1;
 let paginationBusy = false;
@@ -103,6 +113,7 @@ async function loadGamesReleases(page = releasePage) {
       year,
       month,
       day,
+      ...currentSort(),
     });
     const response = await fetch(`/games/all-releases?${params}`);
     const result = await readReleaseResponse(response);
@@ -110,11 +121,16 @@ async function loadGamesReleases(page = releasePage) {
     releasePage = page;
     totalReleasePages = Math.max(1, Math.ceil(result.total / limit));
     renderGames();
+    await syncReleaseLinks();
     appStatus.textContent = "";
   } finally {
     window.setStatusLoading(appStatus, false);
     paginationBusy = false;
     updatePaginationControls();
+    if (sortChangedWhileBusy) {
+      sortChangedWhileBusy = false;
+      showReleases(1);
+    }
   }
 }
 
@@ -144,6 +160,7 @@ pageSelector.addEventListener("change", () => {
 document.addEventListener("languagechange", updatePaginationControls);
 
 initShelf({
+  gameActions: "releases",
   load: () => loadGamesReleases(1),
   reset: () => {
     releasePage = 1;

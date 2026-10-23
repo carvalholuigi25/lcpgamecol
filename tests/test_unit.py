@@ -1077,7 +1077,7 @@ def test_fetch_platform_versions_rejects_non_list_response(fake_igdb):
             games_routes.list_all_releases,
             "_fetch_all_games_by_date",
             (2024, 1, 2, 5, 20),
-            (2024, 1, 2, 20, 5),
+            (2024, 1, 2, 20, 5, games_routes.ReleaseSort.RELEASE_DATE, None),
         ),
         (
             games_routes.list_all_releases_by_title,

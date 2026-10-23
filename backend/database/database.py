@@ -136,6 +136,23 @@ def initialize_database() -> None:
                 PRIMARY KEY (username, game_id),
                 FOREIGN KEY (game_id) REFERENCES games (id) ON DELETE CASCADE
             );
+
+            -- Which library game each imported IGDB release became.
+            CREATE TABLE IF NOT EXISTS igdb_games (
+                igdb_id INTEGER PRIMARY KEY,
+                game_id INTEGER NOT NULL UNIQUE,
+                imported_by TEXT NOT NULL,
+                imported_at TEXT NOT NULL,
+                FOREIGN KEY (game_id) REFERENCES games (id) ON DELETE CASCADE
+            );
+
+            CREATE TABLE IF NOT EXISTS user_wishlist_games (
+                username TEXT NOT NULL COLLATE NOCASE,
+                game_id INTEGER NOT NULL,
+                added_at TEXT NOT NULL,
+                PRIMARY KEY (username, game_id),
+                FOREIGN KEY (game_id) REFERENCES games (id) ON DELETE CASCADE
+            );
             """
         )
         game_columns = {

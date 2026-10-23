@@ -6,3 +6,4 @@ PyJWT
 httpx2
 pytest
 pytest-cov
+signalrcore

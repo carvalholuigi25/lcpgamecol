@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from backend.auth.auth import require_admin
 from backend.database.database import get_connection, reset_autoincrement
+from backend.realtime.hub import hub
 from routes.achievements.schemas import Achievement, AchievementCreate
 from routes.games.routes import get_game
 
@@ -12,6 +13,13 @@ router = APIRouter()
 
 def achievement_from_row(row) -> Achievement:
     return Achievement(**dict(row))
+
+
+def _publish(action: str, game_id: int, achievement_id: int | None) -> None:
+    hub.publish(
+        "achievementChanged",
+        {"action": action, "game_id": game_id, "achievement_id": achievement_id},
+    )
 
 
 @router.get("/games/{game_id}/achievements", response_model=list[Achievement], tags=["achievements"])
@@ -54,6 +62,7 @@ def create_achievement(game_id: int, achievement: AchievementCreate) -> Achievem
         )
         connection.commit()
         achievement_id = cursor.lastrowid
+    _publish("created", game_id, achievement_id)
     return Achievement(achievement_id=achievement_id, game_id=game_id, **achievement.model_dump())
 
 
@@ -77,6 +86,7 @@ def update_achievement(game_id: int, achievement_id: int, achievement: Achieveme
         connection.commit()
     if cursor.rowcount == 0:
         raise HTTPException(status_code=404, detail="Achievement not found")
+    _publish("updated", game_id, achievement_id)
     return Achievement(achievement_id=achievement_id, game_id=game_id, **achievement.model_dump())
 
 
@@ -97,6 +107,7 @@ def delete_achievement(game_id: int, achievement_id: int) -> None:
         reset_autoincrement("achievements")
     if cursor.rowcount == 0:
         raise HTTPException(status_code=404, detail="Achievement not found")
+    _publish("deleted", game_id, achievement_id)
 
 
 @router.delete(
@@ -115,6 +126,7 @@ def delete_all_achievements(game_id: int) -> None:
         reset_autoincrement("achievements")
     if cursor.rowcount == 0:
         raise HTTPException(status_code=404, detail="No achievements found to delete")
+    _publish("cleared", game_id, None)
 
 
 @router.post(
