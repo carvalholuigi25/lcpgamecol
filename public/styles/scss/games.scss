@@ -1159,8 +1159,10 @@ dialog::backdrop {
 .details-actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
   gap: 10px;
-  margin: 18px 0 6px;
+  margin: 12px 0 12px 0;
 
   &[hidden] { display: none; }
 }
