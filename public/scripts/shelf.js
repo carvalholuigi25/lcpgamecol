@@ -23,6 +23,20 @@ const platformLabel = platformSwitch?.querySelector(".platform-switch-label");
 const detailsActions = document.getElementById("details-actions");
 const detailsActionsStatus = document.getElementById("details-actions-status");
 const DEFAULT_GAME_COVER = "/public/images/default-game-cover.svg";
+// Covers of the first cards are above the fold: fetch them right away instead of lazily.
+const EAGER_COVER_COUNT = 4;
+// The trailer player and screenshot lightbox are only needed inside the details dialog,
+// so their libraries are fetched on demand instead of blocking the first page load.
+const VIDEO_PLAYER_ASSETS = [
+  "/nmodules/video.js/dist/video-js.min.css",
+  "/nmodules/video.js/dist/video.min.js",
+  "/nmodules/videojs-youtube/dist/Youtube.min.js",
+];
+const SCREENSHOT_GALLERY_ASSETS = [
+  "/nmodules/lightgallery/css/lightgallery-bundle.min.css",
+  "/nmodules/lightgallery/lightgallery.umd.js",
+  "/nmodules/lightgallery/plugins/zoom/lg-zoom.umd.js",
+];
 const LIST_ACTIONS = {
   wishlist: {
     path: "wishlist",
@@ -58,6 +72,8 @@ let detailsTrailerPlayer = null;
 let screenshotGallery = null;
 let screenshotGalleryItems = [];
 let screenshotGalleryOpen = false;
+// Asset URL -> promise that settles once the stylesheet or script has loaded.
+const loadedAssets = new Map();
 // An empty set means all platforms.
 let selectedPlatforms = new Set();
 let renderedPlatforms = null;
@@ -145,11 +161,42 @@ function setImage(image, fallback, source, altText) {
   image.src = source || DEFAULT_GAME_COVER;
 }
 
-function gameCard(game) {
+function loadAsset(url) {
+  if (!loadedAssets.has(url)) {
+    loadedAssets.set(url, new Promise((resolve, reject) => {
+      const isStylesheet = url.endsWith(".css");
+      const element = document.createElement(isStylesheet ? "link" : "script");
+      if (isStylesheet) {
+        element.rel = "stylesheet";
+        element.href = url;
+      } else {
+        // Dynamic scripts default to async; keep them in order so plugins run after their library.
+        element.async = false;
+        element.src = url;
+      }
+      element.addEventListener("load", resolve);
+      element.addEventListener("error", () => {
+        loadedAssets.delete(url);
+        element.remove();
+        reject(new Error(`Failed to load ${url}`));
+      });
+      // Insert vendor styles before the page's own stylesheets so the page overrides still win.
+      document.head.insertBefore(element, document.head.querySelector('link[rel="stylesheet"][href^="/public/"]'));
+    }));
+  }
+  return loadedAssets.get(url);
+}
+
+function loadAssets(urls) {
+  return Promise.all(urls.map(loadAsset));
+}
+
+function gameCard(game, index) {
   const cover = coverOf(game);
   const title = escapeHtml(game.title);
+  const loading = index < EAGER_COVER_COUNT ? `fetchpriority="high"` : `loading="lazy"`;
 
-  const coverHtml = `<img class="game-cover game-cover-image" src="${escapeHtml(cover || DEFAULT_GAME_COVER)}" alt="${title} cover" loading="lazy" data-fallback-applied="${!cover}"><div class="game-cover game-cover-fallback" hidden>No cover image</div>`;
+  const coverHtml = `<img class="game-cover game-cover-image" src="${escapeHtml(cover || DEFAULT_GAME_COVER)}" alt="${title} cover" width="264" height="374" ${loading} decoding="async" data-fallback-applied="${!cover}"><div class="game-cover game-cover-fallback" hidden>No cover image</div>`;
   const lists = listStateOf(game);
   const badges = [
     lists.favorite ? `<i class="bi bi-heart-fill" role="img" aria-label="In your favorites" title="In your favorites"></i>` : "",
@@ -353,13 +400,19 @@ function renderTrailer(trailerUrl) {
     video.controls = true;
     video.preload = "metadata";
     container.append(video);
-    detailsTrailerPlayer = window.videojs(video, {
-      aspectRatio: "16:9",
-      controls: true,
-      fluid: true,
-      preload: "metadata",
-      techOrder: ["youtube", "html5"],
-      sources: [videoSource],
+    loadAssets(VIDEO_PLAYER_ASSETS).then(() => {
+      // The dialog may have closed or switched games while the player was loading.
+      if (!video.isConnected || !detailsDialog.open) return;
+      detailsTrailerPlayer = window.videojs(video, {
+        aspectRatio: "16:9",
+        controls: true,
+        fluid: true,
+        preload: "metadata",
+        techOrder: ["youtube", "html5"],
+        sources: [videoSource],
+      });
+    }, () => {
+      if (video.isConnected) video.replaceWith(trailerLink(url));
     });
     return;
   }
@@ -383,12 +436,16 @@ function renderTrailer(trailerUrl) {
     return;
   }
 
+  container.append(trailerLink(url));
+}
+
+function trailerLink(url) {
   const link = document.createElement("a");
   link.href = url.href;
   link.target = "_blank";
   link.rel = "noopener noreferrer";
   link.textContent = "Watch trailer";
-  container.append(link);
+  return link;
 }
 
 function renderScreenshotGallery(game) {
@@ -400,6 +457,8 @@ function renderScreenshotGallery(game) {
     .filter((url) => typeof url === "string" && safeWebUrl(url)))];
   gallery.replaceChildren();
   section.hidden = imageUrls.length === 0;
+  // Warm the lightbox up while the user looks at the thumbnails, so opening it feels instant.
+  if (imageUrls.length) loadAssets(SCREENSHOT_GALLERY_ASSETS).catch(() => {});
   screenshotGalleryItems = imageUrls.map((imageUrl, index) => ({
     src: imageUrl,
     thumb: imageUrl,
@@ -417,11 +476,17 @@ function renderScreenshotGallery(game) {
     image.alt = `${game.title} screenshot ${index + 1}`;
     image.loading = "lazy";
     button.append(image);
-    button.addEventListener("click", () => {
+    button.addEventListener("click", async () => {
       setImage(screenshot, fallback, imageUrl, image.alt);
       for (const thumbnail of gallery.children) {
         thumbnail.setAttribute("aria-pressed", String(thumbnail === button));
       }
+      try {
+        await loadAssets(SCREENSHOT_GALLERY_ASSETS);
+      } catch {
+        return;
+      }
+      if (!button.isConnected || !detailsDialog.open) return;
       if (!screenshotGallery) {
         screenshotGallery = window.lightGallery(gallery, {
           container: lightboxDialog,

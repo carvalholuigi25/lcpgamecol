@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
+// The Press Start 2P font is linked from the page <head> so it downloads in parallel with this file.
 
 // Animated from 0 up to each bar's --rating (set inline by shelf.js).
 // Inherits so the ::before counter follows the bar's animation.
@@ -644,6 +644,11 @@ button.link-button {
   margin: 15px auto;
   object-fit: cover;
   object-position: top center;
+}
+
+// IGDB cover ratio; reserves the card width before the image loads so the grid doesn't shift.
+img.game-cover {
+  aspect-ratio: 264 / 374;
 }
 
 .game-cover-fallback {
@@ -1496,6 +1501,9 @@ header {
 }
 
 .live-clock {
+  display: inline-block;
+  // Holds the line while the clock is still empty, so filling it in doesn't shift the header.
+  min-height: 1.5em;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
