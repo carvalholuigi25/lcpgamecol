@@ -5,6 +5,18 @@ const liveClock = document.getElementById("live-clock");
 const lockoutTimers = new WeakMap();
 let selectedTheme = "auto";
 let autoThemeTimer = null;
+// Only the Cyber Retro theme uses this font, so it is fetched when that theme is picked
+// instead of render-blocking every page load.
+const PIXEL_FONT_URL = "https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap";
+
+function loadPixelFont() {
+  if (document.getElementById("pixel-font")) return;
+  const link = document.createElement("link");
+  link.id = "pixel-font";
+  link.rel = "stylesheet";
+  link.href = PIXEL_FONT_URL;
+  document.head.append(link);
+}
 
 function applyAutoTheme() {
   const now = new Date();
@@ -31,6 +43,7 @@ function applyTheme(theme) {
   } else {
     document.body.dataset.theme = selectedTheme;
   }
+  if (selectedTheme === "cyber-retro") loadPixelFont();
   if (themeSelector) themeSelector.value = selectedTheme;
   window.gamesLibrarySettings.set("theme", selectedTheme);
 }

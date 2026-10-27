@@ -1094,7 +1094,11 @@ function initShelf({ load, reset = () => {}, refresh = null, gameActions = null 
       if(loginStatus.classList.contains("hidden")) {
         loginStatus.classList.remove("hidden");
       }
-      
+
       loginStatus.textContent = "The server could not be reached.";
+    })
+    .finally(() => {
+      // Reveals the login form, pagination and footer (hidden while pending, see games.scss).
+      document.body.dataset.shelfState = "ready";
     });
 }

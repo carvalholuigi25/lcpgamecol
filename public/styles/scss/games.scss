@@ -1,4 +1,4 @@
-// The Press Start 2P font is linked from the page <head> so it downloads in parallel with this file.
+// The Press Start 2P font is loaded by preferences.js only when the Cyber Retro theme is active.
 
 // Animated from 0 up to each bar's --rating (set inline by shelf.js).
 // Inherits so the ::before counter follows the bar's animation.
@@ -463,8 +463,40 @@ button.link-button {
   width: 100%;
 }
 
+// Kept on one line: a longer realtime status ("Connecting...") is truncated instead of
+// wrapping the menu onto two lines and pushing the shelf down.
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.3em;
+  min-width: 0;
+  white-space: nowrap;
+
+  > * { flex-shrink: 0; }
+  > .realtime-status { flex-shrink: 1; }
+}
+
+// Until the session check and the first page of games settle, these stay invisible
+// (keeping their space) so arriving content doesn't visibly shove them around.
+body[data-shelf-state="pending"] {
+  #login-panel,
+  .pagination,
+  .mnavgame,
+  .mnavgamerel,
+  .msubtle,
+  .crightblk {
+    visibility: hidden;
+  }
+}
+
+// Reserves the count line before the games load, so the toolbar doesn't shift.
+#count:empty::before {
+  content: "\00a0";
+}
+
 .user-actions {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   gap: 8px;
 }
@@ -1249,9 +1281,10 @@ dialog::backdrop {
 }
 
 .realtime-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  display: inline-block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   margin-left: 8px;
   padding: 2px 9px;
   border: 1px solid var(--line);
@@ -1263,8 +1296,11 @@ dialog::backdrop {
   white-space: nowrap;
 
   &::before {
+    display: inline-block;
     width: 7px;
     height: 7px;
+    margin-right: 6px;
+    vertical-align: 0.05em;
     border-radius: 50%;
     background: currentColor;
     content: "";
