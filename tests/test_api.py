@@ -70,10 +70,10 @@ def test_custom_page_routes_preserve_games_api_route(client, auth_headers):
         assert f'id="{control_id}"' in library.text
     assert releases.status_code == 200
     assert 'id="login-form"' in releases.text
+    # The trailer player is fetched on demand by shelf.js, not loaded by the pages.
+    shelf_script = client.get("/public/scripts/shelf.js").text
     for page in (library, releases):
-        assert "/nmodules/video.js/dist/video-js.min.css" in page.text
-        assert "/nmodules/video.js/dist/video.min.js" in page.text
-        assert "/nmodules/videojs-youtube/dist/Youtube.min.js" in page.text
+        assert "/nmodules/video.js/dist/video.min.js" not in page.text
         assert 'id="details-trailer-section"' in page.text
         assert 'id="details-screenshots-section"' in page.text
         assert 'id="details-requirements-warning"' in page.text
@@ -82,7 +82,10 @@ def test_custom_page_routes_preserve_games_api_route(client, auth_headers):
         "/nmodules/video.js/dist/video.min.js",
         "/nmodules/videojs-youtube/dist/Youtube.min.js",
     ):
-        assert client.get(asset).status_code == 200
+        assert asset in shelf_script
+        response = client.get(asset)
+        assert response.status_code == 200
+        assert response.headers["cache-control"].startswith("public, max-age=")
     assert admin.status_code == 200
     assert 'id="login-view"' in admin.text
     assert client.get("/pages/games/games.html").text == library.text

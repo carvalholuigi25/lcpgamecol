@@ -1,3 +1,4 @@
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated
@@ -5,6 +6,7 @@ from typing import Annotated
 from fastapi import Depends, FastAPI, Request, Response
 from fastapi.exception_handlers import http_exception_handler
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
@@ -36,6 +38,21 @@ from routes import router
 from routes.admin.uploads import UploadBodyLimitMiddleware
 
 PAGES_DIRECTORY = Path(__file__).parent / "pages"
+# Vendor packages only change on `npm install`; app assets change while developing,
+# so their lifetime is configurable (set STATIC_CACHE_MAX_AGE=0 to always revalidate).
+VENDOR_CACHE_MAX_AGE = 7 * 24 * 60 * 60
+STATIC_CACHE_MAX_AGE = int(os.getenv("STATIC_CACHE_MAX_AGE", "3600"))
+
+
+class CachedStaticFiles(StaticFiles):
+    def __init__(self, *args, max_age: int, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.cache_control = f"public, max-age={max_age}" if max_age > 0 else "no-cache"
+
+    def file_response(self, *args, **kwargs) -> Response:
+        response = super().file_response(*args, **kwargs)
+        response.headers.setdefault("Cache-Control", self.cache_control)
+        return response
 
 
 def _get_cors_origins() -> list[str]:
@@ -95,20 +112,27 @@ app.add_middleware(
 )
 app.add_middleware(SecurityPolicyMiddleware)
 app.add_middleware(UploadBodyLimitMiddleware)
+app.add_middleware(GZipMiddleware, minimum_size=1024)
 app.add_middleware(RateLimitMiddleware)
 app.mount(
     "/nmodules",
-    StaticFiles(directory=Path(__file__).parent / "node_modules"),
+    CachedStaticFiles(
+        directory=Path(__file__).parent / "node_modules", max_age=VENDOR_CACHE_MAX_AGE
+    ),
     name="/nmodules",
 )
 app.mount(
     "/static",
-    StaticFiles(directory=Path(__file__).parent / "static"),
+    CachedStaticFiles(
+        directory=Path(__file__).parent / "static", max_age=STATIC_CACHE_MAX_AGE
+    ),
     name="static",
 )
 app.mount(
     "/public",
-    StaticFiles(directory=Path(__file__).parent / "public"),
+    CachedStaticFiles(
+        directory=Path(__file__).parent / "public", max_age=STATIC_CACHE_MAX_AGE
+    ),
     name="public",
 )
 app.mount(
@@ -262,6 +286,15 @@ def logout(
 @app.get("/")
 def read_root():
     return RedirectResponse(url="/library", status_code=status.HTTP_302_FOUND)
+
+@app.get("/favicon.ico", include_in_schema=False)
+def read_favicon() -> FileResponse:
+    return FileResponse(
+        Path(__file__).parent / "public" / "images" / "favicon.svg",
+        media_type="image/svg+xml",
+        headers={"Cache-Control": f"public, max-age={VENDOR_CACHE_MAX_AGE}"},
+    )
+
 
 @app.get("/pages")
 def read_pages():
