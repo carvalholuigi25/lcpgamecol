@@ -8,3 +8,5 @@ pytest
 pytest-cov
 signalrcore
 lighthouse-python-plus
+bandit
+semgrep
