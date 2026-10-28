@@ -46,6 +46,13 @@ All notable changes to this project are documented here. The format follows
 - Registration hints shown by the browser ("The passwords do not match." and others) are now translated.
 - With the **Auto** theme, the light-mode hover glow on game cards no longer appears in other themes when the system uses a light colour scheme.
 
+### Security
+
+- When `JWT_SECRET` is not set, tokens are now signed with a random secret generated at startup. Before, the app used a fixed default secret that anyone could use to create valid tokens, including administrator tokens.
+- Upgraded `anyio` to 4.14.2 or later and `msgpack` to 1.2.3 or later to fix known vulnerabilities.
+- Semgrep is no longer installed in the project environment. It pins vulnerable versions of `mcp` and `opentelemetry-api`; install it with `uv tool install semgrep==1.182.1` instead.
+- `scripts/lighthouse_audit.py` now only opens `http` and `https` URLs.
+
 ## [1.0.0]
 
 ### Added

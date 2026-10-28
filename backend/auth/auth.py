@@ -21,8 +21,9 @@ REFRESH_TOKEN_EXPIRE_SECONDS = int(
 )
 AUTH_COOKIE_NAME = os.getenv("AUTH_COOKIE_NAME", "access_token")
 AUTH_COOKIE_SECURE = os.getenv("AUTH_COOKIE_SECURE", "false").lower() == "true"
-DEFAULT_JWT_SECRET = "change-this-secret-in-production"
-JWT_SECRET = os.getenv("JWT_SECRET") or DEFAULT_JWT_SECRET
+# Without a configured secret, sign with a random per-process key rather than a
+# well-known one; tokens then stop working whenever the app restarts.
+JWT_SECRET = os.getenv("JWT_SECRET") or secrets.token_urlsafe(32)
 JWT_ALGORITHM = "HS256"
 AUTH_USERNAME = os.getenv("AUTH_USERNAME", "admin")
 AUTH_PASSWORD = os.getenv("AUTH_PASSWORD", "1234")
@@ -35,10 +36,12 @@ REGISTRATION_WINDOW_SECONDS = int(os.getenv("REGISTRATION_WINDOW_SECONDS", "3600
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 
 logger = logging.getLogger(__name__)
-if JWT_SECRET == DEFAULT_JWT_SECRET or len(JWT_SECRET) < 32:
+if not os.getenv("JWT_SECRET"):
     logger.warning(
-        "JWT_SECRET is missing or shorter than 32 characters; set a long random value."
+        "JWT_SECRET is not set; using a random secret, so sessions end when the app restarts."
     )
+elif len(JWT_SECRET) < 32:
+    logger.warning("JWT_SECRET is shorter than 32 characters; set a long random value.")
 
 ROLE_ADMIN = "admin"
 ROLE_VIEWER = "viewer"

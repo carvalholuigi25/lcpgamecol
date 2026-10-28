@@ -26,7 +26,7 @@ def get_autoincrement(table_name: str) -> int:
     with closing(get_connection()) as connection:
         connection.execute("BEGIN IMMEDIATE")
         maximum = connection.execute(
-            f"SELECT COALESCE(MAX({primary_key}), 0) FROM {table_name}"
+            f"SELECT COALESCE(MAX({primary_key}), 0) FROM {table_name}"  # names come from AUTOINCREMENT_TABLES  # nosec B608
         ).fetchone()[0]
         connection.commit()
     return maximum + 1
@@ -39,7 +39,7 @@ def reset_autoincrement(table_name: str) -> int:
     with closing(get_connection()) as connection:
         connection.execute("BEGIN IMMEDIATE")
         maximum = connection.execute(
-            f"SELECT COALESCE(MAX({primary_key}), 0) FROM {table_name}"
+            f"SELECT COALESCE(MAX({primary_key}), 0) FROM {table_name}"  # names come from AUTOINCREMENT_TABLES  # nosec B608
         ).fetchone()[0]
         cursor = connection.execute(
             "UPDATE sqlite_sequence SET seq = ? WHERE name = ?",

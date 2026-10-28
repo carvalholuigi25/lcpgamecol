@@ -112,7 +112,7 @@ def _profiles(usernames: list[str]) -> list[dict]:
         profiles = {
             row["username"].lower(): row
             for row in connection.execute(
-                f"SELECT * FROM user_profiles WHERE lower(username) IN ({placeholders})", keys
+                f"SELECT * FROM user_profiles WHERE lower(username) IN ({placeholders})", keys  # only ? placeholders are interpolated  # nosec B608
             )
         }
         favorites: dict[str, list[dict]] = {}
@@ -122,7 +122,7 @@ def _profiles(usernames: list[str]) -> list[dict]:
             FROM user_favorite_games f JOIN games g ON g.id = f.game_id
             WHERE lower(f.username) IN ({placeholders})
             ORDER BY f.position, g.title
-            """,
+            """,  # constant columns and ? placeholders only  # nosec B608
             keys,
         ):
             favorites.setdefault(row["username"].lower(), []).append(game_summary(row))
@@ -192,7 +192,7 @@ def save_profile(username: str, body: ProfileUpdate) -> dict:
             found = {
                 row[0]
                 for row in connection.execute(
-                    f"SELECT id FROM games WHERE id IN ({placeholders})", favorite_ids
+                    f"SELECT id FROM games WHERE id IN ({placeholders})", favorite_ids  # only ? placeholders are interpolated  # nosec B608
                 )
             }
             missing = [game_id for game_id in favorite_ids if game_id not in found]
