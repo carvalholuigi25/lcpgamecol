@@ -9,4 +9,5 @@ pytest-cov
 signalrcore
 lighthouse-python-plus
 bandit
-semgrep
+semgrep==1.182.1  # newer releases have no Windows wheel
+pip-audit

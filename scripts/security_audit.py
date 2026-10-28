@@ -1,20 +1,23 @@
-"""Run static security audits (Bandit and Semgrep) against the codebase.
+"""Run security audits (Bandit, Semgrep and pip-audit) against the codebase.
 
 Bandit checks the Python sources for common security issues; Semgrep runs
-registry rulesets (Python, FastAPI, secrets, ...) across Python, JS and HTML.
-Findings from both tools are normalised to a single severity scale and printed
+registry rulesets (Python, FastAPI, secrets, ...) across Python, JS and HTML;
+pip-audit checks the installed Python dependencies for known vulnerabilities.
+Findings from all tools are normalised to a single severity scale and printed
 as one summary. Raw tool output and a summary.json are written to
 tests/reports/security/<timestamp>/.
 
 Examples:
     python scripts/security_audit.py
     python scripts/security_audit.py --tools bandit --min-severity medium
+    python scripts/security_audit.py --tools pip-audit --requirements requirements.txt
     python scripts/security_audit.py --fail-on high
 """
 
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -24,6 +27,7 @@ from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 DEFAULT_OUTPUT_DIR = ROOT_DIR / "tests" / "reports" / "security"
+REQUIREMENTS_FILE = ROOT_DIR / "requirements.txt"
 DEFAULT_TARGETS = ["."]
 DEFAULT_SEMGREP_CONFIGS = ["p/python", "p/fastapi", "p/security-audit", "p/secrets", "p/javascript"]
 EXCLUDES = [
@@ -36,6 +40,8 @@ TEST_DIRS = ["tests"]
 SEVERITIES = ["low", "medium", "high"]
 # Semgrep severities mapped onto Bandit's low/medium/high scale
 SEMGREP_SEVERITY = {"INFO": "low", "WARNING": "medium", "ERROR": "high"}
+# pip-audit reports no severity; a published vulnerability in a dependency is treated as high
+PIP_AUDIT_SEVERITY = "high"
 
 
 def tool_command(name: str) -> list[str] | None:
@@ -134,6 +140,72 @@ def run_semgrep(args, output_dir: Path) -> dict:
     return {"tool": "semgrep", "findings": findings, "errors": errors}
 
 
+def run_pip_audit(args, output_dir: Path) -> dict:
+    command = tool_command("pip-audit")
+    if command is None:
+        return {"tool": "pip-audit", "error": "pip-audit not found. Run `pip install pip-audit`."}
+
+    report_path = output_dir / "pip-audit.json"
+    command += ["--format", "json", f"--output={report_path}", "--progress-spinner", "off"]
+    if args.requirements:
+        command += ["--requirement", str(args.requirements)]
+        source = f"{args.requirements}"
+    else:
+        source = "installed packages"
+    # Audit the interpreter running this script, not whichever venv pip-audit guesses
+    env = {**utf8_env(), "PIPAPI_PYTHON_LOCATION": sys.executable}
+
+    print(f"Running pip-audit on {source} ...", flush=True)
+    # pip-audit exits 1 when vulnerabilities are found, so only a missing report means failure
+    completed = subprocess.run(command, cwd=ROOT_DIR, env=env, capture_output=True, text=True)
+    if not report_path.exists():
+        detail = completed.stderr.strip().splitlines()[-1:] or [""]
+        return {"tool": "pip-audit", "error": f"pip-audit failed (exit {completed.returncode}): {detail[0]}"}
+
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    requirement_lines = requirement_line_numbers(args.requirements or REQUIREMENTS_FILE)
+    findings, errors, seen = [], [], set()
+    for dependency in report.get("dependencies", []):
+        if "skip_reason" in dependency:
+            errors.append(f"{dependency['name']}: {dependency['skip_reason']}")
+            continue
+        line = requirement_lines.get(normalize_package(dependency["name"]))
+        for vuln in dependency.get("vulns", []):
+            # pip-audit can list the same advisory twice when it comes from several sources
+            if (dependency["name"], vuln["id"]) in seen:
+                continue
+            seen.add((dependency["name"], vuln["id"]))
+            fixes = ", ".join(vuln.get("fix_versions", [])) or "no fix available"
+            aliases = [alias for alias in vuln.get("aliases", []) if alias.startswith("CVE-")]
+            findings.append({
+                "tool": "pip-audit",
+                "severity": PIP_AUDIT_SEVERITY,
+                "confidence": None,
+                "rule": " ".join([vuln["id"], *aliases]),
+                # Transitive dependencies aren't listed in requirements.txt
+                "file": relative_path(str(args.requirements or REQUIREMENTS_FILE)) if line else "(indirect)",
+                "line": line,
+                "message": f"{dependency['name']} {dependency['version']} is vulnerable (fixed in: {fixes})",
+                "cwe": None,
+            })
+    return {"tool": "pip-audit", "findings": findings, "errors": errors}
+
+
+def normalize_package(name: str) -> str:
+    return re.sub(r"[-_.]+", "-", name).lower()
+
+
+def requirement_line_numbers(path: Path) -> dict[str, int]:
+    if not path.exists():
+        return {}
+    lines = {}
+    for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        match = re.match(r"\s*([A-Za-z0-9][A-Za-z0-9._-]*)", line)
+        if match:
+            lines[normalize_package(match.group(1))] = number
+    return lines
+
+
 def relative_path(path: str) -> str:
     try:
         return Path(path).resolve().relative_to(ROOT_DIR).as_posix()
@@ -169,7 +241,8 @@ def print_summary(results: list[dict], findings: list[dict], max_findings: int) 
     print(f"\nFindings ({len(findings)}):")
     for finding in findings[:max_findings]:
         cwe = f" CWE-{finding['cwe']}" if isinstance(finding["cwe"], int) else ""
-        print(f"  [{finding['severity'].upper():<6}] {finding['file']}:{finding['line']}  "
+        location = f"{finding['file']}:{finding['line']}" if finding["line"] else finding["file"]
+        print(f"  [{finding['severity'].upper():<6}] {location}  "
               f"{finding['tool']}:{finding['rule']}{cwe}")
         print(f"           {finding['message']}")
     if len(findings) > max_findings:
@@ -177,12 +250,15 @@ def print_summary(results: list[dict], findings: list[dict], max_findings: int) 
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run Bandit and Semgrep security audits against the codebase.")
-    parser.add_argument("--tools", nargs="+", choices=["bandit", "semgrep"], default=["bandit", "semgrep"])
+    parser = argparse.ArgumentParser(description="Run Bandit, Semgrep and pip-audit security audits.")
+    parser.add_argument("--tools", nargs="+", choices=["bandit", "semgrep", "pip-audit"],
+                        default=["bandit", "semgrep", "pip-audit"])
     parser.add_argument("--targets", nargs="+", default=DEFAULT_TARGETS,
                         help="Paths to scan, relative to the project root (default: %(default)s)")
     parser.add_argument("--semgrep-configs", nargs="+", default=DEFAULT_SEMGREP_CONFIGS,
                         help="Semgrep rulesets or local rule files (default: %(default)s)")
+    parser.add_argument("--requirements", type=Path,
+                        help="Have pip-audit check this requirements file instead of the installed packages")
     parser.add_argument("--include-tests", action="store_true", help="Also scan the tests/ directory")
     parser.add_argument("--min-severity", choices=SEVERITIES, default="low",
                         help="Hide findings below this severity (default: %(default)s)")
@@ -198,14 +274,14 @@ def main() -> int:
     output_dir = args.output_dir / datetime.now().strftime("%Y%m%d-%H%M%S")
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    runners = {"bandit": run_bandit, "semgrep": run_semgrep}
+    runners = {"bandit": run_bandit, "semgrep": run_semgrep, "pip-audit": run_pip_audit}
     results = [runners[tool](args, output_dir) for tool in args.tools]
 
     all_findings = [finding for result in results for finding in result.get("findings", [])]
     min_rank = severity_rank(args.min_severity)
     findings = sorted(
         (finding for finding in all_findings if severity_rank(finding["severity"]) >= min_rank),
-        key=lambda finding: (-severity_rank(finding["severity"]), finding["file"], finding["line"]),
+        key=lambda finding: (-severity_rank(finding["severity"]), finding["file"], finding["line"] or 0),
     )
     summary = {
         "generated_at": datetime.now().isoformat(timespec="seconds"),
