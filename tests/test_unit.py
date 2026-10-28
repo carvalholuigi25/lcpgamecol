@@ -1,6 +1,6 @@
 import sqlite3
 from contextlib import closing
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -10,11 +10,10 @@ import pytest
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
-import backend.auth.auth as auth
-import backend.auth.rate_limit as rate_limit
-import backend.database.database as database
 import main
 import schemas.schemas as shared_schemas
+from backend.auth import auth, rate_limit
+from backend.database import database
 from routes.achievements.schemas import (
     Achievement,
     AchievementCreate,
@@ -34,7 +33,7 @@ from routes.games.schemas import (
 
 
 def make_token(**claims) -> str:
-    claims.setdefault("exp", datetime.now(timezone.utc) + timedelta(minutes=5))
+    claims.setdefault("exp", datetime.now(UTC) + timedelta(minutes=5))
     return jwt.encode(claims, auth.JWT_SECRET, algorithm=auth.JWT_ALGORITHM)
 
 
@@ -144,7 +143,7 @@ def test_access_token_round_trip():
 
 
 def test_access_token_expires_after_configured_lifetime():
-    before = datetime.now(timezone.utc)
+    before = datetime.now(UTC)
     token = auth.create_access_token("alice", auth.ROLE_ADMIN)
 
     exp = jwt.decode(token, auth.JWT_SECRET, algorithms=[auth.JWT_ALGORITHM])["exp"]
@@ -157,12 +156,12 @@ def test_access_token_expires_after_configured_lifetime():
     [
         pytest.param("not-a-jwt", id="garbage"),
         pytest.param(
-            make_token(sub="alice", role="admin", exp=datetime.now(timezone.utc) - timedelta(seconds=1)),
+            make_token(sub="alice", role="admin", exp=datetime.now(UTC) - timedelta(seconds=1)),
             id="expired",
         ),
         pytest.param(
             jwt.encode(
-                {"sub": "alice", "role": "admin", "exp": datetime.now(timezone.utc) + timedelta(minutes=5)},
+                {"sub": "alice", "role": "admin", "exp": datetime.now(UTC) + timedelta(minutes=5)},
                 "some-other-secret-that-is-long-enough",
                 algorithm="HS256",
             ),
@@ -250,7 +249,7 @@ def test_refresh_token_round_trip():
         pytest.param(make_token(sub="alice", type="access", role="admin"), id="access-type"),
         pytest.param(make_token(sub="alice"), id="missing-type"),
         pytest.param(
-            make_token(sub="alice", type="refresh", exp=datetime.now(timezone.utc) - timedelta(seconds=1)),
+            make_token(sub="alice", type="refresh", exp=datetime.now(UTC) - timedelta(seconds=1)),
             id="expired",
         ),
     ],
@@ -396,11 +395,10 @@ def test_deleting_game_cascades_to_achievements(temp_db):
 
 
 def test_achievement_requires_existing_game(temp_db):
-    with closing(database.get_connection()) as connection:
-        with pytest.raises(sqlite3.IntegrityError):
-            connection.execute(
-                "INSERT INTO achievements (title, game_id) VALUES (?, ?)", ("Orphan", 999)
-            )
+    with closing(database.get_connection()) as connection, pytest.raises(sqlite3.IntegrityError):
+        connection.execute(
+            "INSERT INTO achievements (title, game_id) VALUES (?, ?)", ("Orphan", 999)
+        )
 
 
 @pytest.mark.parametrize("table", ["games", "achievements"])

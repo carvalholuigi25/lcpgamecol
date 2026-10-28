@@ -445,6 +445,8 @@ button.link-button {
   flex-wrap: wrap;
   gap: 16px;
   margin-top: 24px;
+
+  &[hidden] { display: none; }
 }
 
 .pagination button:disabled {
@@ -522,6 +524,37 @@ body[data-shelf-state="pending"] {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
   gap: 14px;
+}
+
+.games-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 48px 16px;
+  text-align: center;
+  color: var(--muted);
+
+  &[hidden] { display: none; }
+
+  svg {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 6px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  p { margin: 0; }
+}
+
+.games-empty-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--ink);
 }
 
 .game {

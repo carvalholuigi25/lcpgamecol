@@ -174,7 +174,9 @@
                 <option value="release_date:desc">Newest releases</option>
                 <option value="release_date:asc">Oldest releases</option>
                 <option value="user_rating:desc">Highest user rating</option>
+                <option value="user_rating:asc">Lowest user rating</option>
                 <option value="critic_rating:desc">Highest critic rating</option>
+                <option value="critic_rating:asc">Lowest critic rating</option>
                 <option value="hours_played:desc">Most played</option>
                 <option value="hours_played:asc">Least played</option>
               </select>
@@ -189,6 +191,11 @@
         </div>
         <div id="mgames">
           <div id="games" class="grid"></div>
+          <div id="games-empty" class="games-empty" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zm10 3-5-5M8.5 8.5l5 5m0-5-5 5" /></svg>
+            <p class="games-empty-title">No games found</p>
+            <p class="subtle">Try adjusting your search or filters.</p>
+          </div>
         </div>
         <nav class="pagination" aria-label="Game pages">
           <button id="first-page" type="button" disabled>First</button>

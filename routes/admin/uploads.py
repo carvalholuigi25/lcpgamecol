@@ -12,14 +12,17 @@ import re
 import unicodedata
 import uuid
 from contextlib import closing
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Path as PathParam, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
+from fastapi import Path as PathParam
 from starlette.responses import FileResponse, JSONResponse
 
 from backend.auth.auth import Principal, require_admin
 from backend.database.database import get_connection
+
+ADMIN_PRINCIPAL = Depends(require_admin)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 UPLOAD_DIRECTORY = Path(os.getenv("UPLOAD_DIRECTORY", PROJECT_ROOT / "uploads"))
@@ -167,7 +170,7 @@ def get_upload_limits() -> dict:
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
-async def upload_file(file: UploadFile, principal: Principal = Depends(require_admin)) -> dict:
+async def upload_file(file: UploadFile, principal: Principal = ADMIN_PRINCIPAL) -> dict:
     original_name = sanitize_filename(file.filename)
     extension = os.path.splitext(original_name)[1].lower()
     allowed_extensions = {ext for details in ALLOWED_TYPES.values() for ext in details["extensions"]}
@@ -223,7 +226,7 @@ async def upload_file(file: UploadFile, principal: Principal = Depends(require_a
     finally:
         await file.close()
 
-    created_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    created_at = datetime.now(UTC).isoformat(timespec="seconds")
     try:
         with closing(get_connection()) as connection:
             connection.execute(

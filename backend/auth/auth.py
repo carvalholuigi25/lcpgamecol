@@ -5,7 +5,7 @@ import threading
 import time
 from collections import deque
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from urllib.parse import urlsplit
 
 import jwt
@@ -81,6 +81,8 @@ _monotonic = time.monotonic
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token", auto_error=False)
 refresh_token_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token", auto_error=False)
+_oauth2_dependency = Depends(oauth2_scheme)
+_refresh_token_dependency = Depends(refresh_token_scheme)
 
 
 @dataclass(frozen=True)
@@ -93,11 +95,11 @@ def _create_token(
     username: str, token_type: str, expires_in: int, role: str | None = None
 ) -> str:
     claims = {
-        "iat": datetime.now(timezone.utc),
+        "iat": datetime.now(UTC),
         "jti": secrets.token_urlsafe(12),
         "sub": username,
         "type": token_type,
-        "exp": datetime.now(timezone.utc) + timedelta(seconds=expires_in),
+        "exp": datetime.now(UTC) + timedelta(seconds=expires_in),
     }
     if role is not None:
         claims["role"] = role
@@ -304,7 +306,7 @@ def _decode_access_token(token: str) -> Principal:
 
 
 def get_current_principal(
-    bearer_token: str | None = Depends(oauth2_scheme),
+    bearer_token: str | None = _oauth2_dependency,
     request: Request = None,
 ) -> Principal:
     token = bearer_token or (request.cookies.get(AUTH_COOKIE_NAME) if request else None)
@@ -326,8 +328,11 @@ def get_current_principal(
     return _decode_access_token(token)
 
 
+_current_principal_dependency = Depends(get_current_principal)
+
+
 def get_current_user(
-    bearer_token: str | None = Depends(oauth2_scheme),
+    bearer_token: str | None = _oauth2_dependency,
     request: Request = None,
 ) -> str:
     return get_current_principal(bearer_token, request).username
@@ -336,7 +341,7 @@ def get_current_user(
 def require_role(*allowed_roles: str):
     """Dependency factory: restrict a route to principals with one of the given roles."""
 
-    def dependency(principal: Principal = Depends(get_current_principal)) -> Principal:
+    def dependency(principal: Principal = _current_principal_dependency) -> Principal:
         if principal.role not in allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -351,7 +356,7 @@ require_admin = require_role(ROLE_ADMIN)
 
 
 def get_current_user_from_refresh_token(
-    token: str | None = Depends(refresh_token_scheme),
+    token: str | None = _refresh_token_dependency,
 ) -> str:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,

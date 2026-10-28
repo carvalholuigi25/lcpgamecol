@@ -7,10 +7,11 @@ both kinds of account can have one.
 
 import re
 from contextlib import closing
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from urllib.parse import urlsplit
 
-from fastapi import APIRouter, HTTPException, Path as PathParam, status
+from fastapi import APIRouter, HTTPException, status
+from fastapi import Path as PathParam
 from pydantic import BaseModel, Field, field_validator
 
 from backend.auth import auth
@@ -214,7 +215,7 @@ def save_profile(username: str, body: ProfileUpdate) -> dict:
             (
                 account["username"], body.display_name, body.bio, body.location,
                 body.avatar_url, body.cover_url,
-                datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                datetime.now(UTC).isoformat(timespec="seconds"),
             ),
         )
         if favorite_ids is not None:

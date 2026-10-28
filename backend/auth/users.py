@@ -14,7 +14,7 @@ import secrets
 import sqlite3
 import sys
 from contextlib import closing
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from backend.database import database
@@ -138,7 +138,7 @@ def create_user(username: str, password: str, role: str) -> None:
                     username,
                     hash_password(password),
                     role,
-                    datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                    datetime.now(UTC).isoformat(timespec="seconds"),
                 ),
             )
             connection.commit()

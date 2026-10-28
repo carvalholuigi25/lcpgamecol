@@ -9,6 +9,8 @@ const loginStatus = document.getElementById("login-status");
 const appStatus = document.getElementById("app-status");
 const gamesContainer = document.getElementById("games");
 const count = document.getElementById("count");
+const gamesEmpty = document.getElementById("games-empty");
+const pagination = document.querySelector(".pagination");
 const searchInput = document.getElementById("search");
 const detailsDialog = document.getElementById("game-details");
 // Own modal dialog so the lightbox stacks above (and stays interactive over) the details dialog.
@@ -274,6 +276,8 @@ function renderGames() {
     count: items.length,
   });
   gamesContainer.innerHTML = items.map(gameCard).join("");
+  gamesEmpty.hidden = items.length > 0;
+  pagination.hidden = items.length === 0;
 }
 
 function replaceSpaces(str) {
@@ -839,6 +843,7 @@ function showLogin() {
   games = [];
   resetPlatformSwitch();
   gamesContainer.replaceChildren();
+  gamesEmpty.hidden = true;
   count.textContent = "";
   if(!loginStatus.classList.contains("hidden")) {
     loginStatus.classList.add("hidden");

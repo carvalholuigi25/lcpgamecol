@@ -24,7 +24,7 @@ import sys
 import types
 from contextlib import closing
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Union, get_args, get_origin
 
@@ -328,7 +328,7 @@ def make_migration(
     path = directory / f"{number:04d}_{_slug(name)}.sql"
     header = [
         f"-- Migration {path.stem}",
-        f"-- Generated {datetime.now(timezone.utc):%Y-%m-%d %H:%M:%S} UTC by backend/database/migrate.py",
+        f"-- Generated {datetime.now(UTC):%Y-%m-%d %H:%M:%S} UTC by backend/database/migrate.py",
         "--",
         *(f"-- {line}" for note in notes for line in note.splitlines()),
     ]
@@ -393,7 +393,7 @@ def apply_migrations(
                 raise MigrationError(f"{path.name}: leaves broken foreign keys: {violations[:5]}")
             connection.execute(
                 f"INSERT INTO {MIGRATIONS_TABLE} (name, applied_at) VALUES (?, ?)",  # constant table name  # nosec B608
-                (path.stem, datetime.now(timezone.utc).isoformat()),
+                (path.stem, datetime.now(UTC).isoformat()),
             )
             connection.commit()
         except BaseException:

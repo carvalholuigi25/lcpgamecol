@@ -66,7 +66,7 @@ fi
 import html
 import json
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 from pathlib import Path
 
 
@@ -157,7 +157,7 @@ branch_coverage = (
     if total_branches
     else "N/A"
 )
-generated = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+generated = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
 
 document = f"""<!doctype html>
 <html lang="en">
