@@ -15,7 +15,16 @@ From the project folder, create and activate a Python environment, install the P
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
+python -m pip install "msgpack>=1.2.3"
 npm install
+```
+
+The second `pip install` replaces the vulnerable `msgpack` version that `signalrcore` pins. pip then reports that `signalrcore` requires `msgpack==1.1.2`; the test that uses `signalrcore` still passes, so you can ignore the warning.
+
+The security audit (`npm run security`) also needs Semgrep. Semgrep pins vulnerable versions of `mcp` and `opentelemetry-api`, so install it in its own environment instead of the project's:
+
+```powershell
+uv tool install semgrep==1.182.1
 ```
 
 Create your local configuration from the example:
@@ -113,7 +122,7 @@ People can create their own accounts from the sign-in panel, or with `POST /auth
 
 Failed sign-ins lock a username for each client after `LOGIN_MAX_ATTEMPTS` attempts (3 by default) for `LOGIN_LOCKOUT_SECONDS` seconds. Usernames are not case-sensitive for this lockout. While a username is locked, its password is not checked. Unknown usernames take as long to check as real ones, so response times do not reveal which accounts exist.
 
-When a request is authenticated by the browser cookie, the server rejects state-changing requests (anything other than `GET`, `HEAD`, or `OPTIONS`) whose `Origin` or `Referer` header comes from a site other than the app or a `CORS_ORIGINS` entry. Responses under `/auth/` are sent with `Cache-Control: no-store`. If `JWT_SECRET` is missing or shorter than 32 characters, the app logs a warning at startup.
+When a request is authenticated by the browser cookie, the server rejects state-changing requests (anything other than `GET`, `HEAD`, or `OPTIONS`) whose `Origin` or `Referer` header comes from a site other than the app or a `CORS_ORIGINS` entry. Responses under `/auth/` are sent with `Cache-Control: no-store`. If `JWT_SECRET` is missing, the app signs tokens with a random secret generated at startup (so sessions end on every restart) and logs a warning; it also warns when the secret is shorter than 32 characters.
 
 Access tokens expire after 30 minutes by default. Refresh tokens expire after 7 days. Set `TOKEN_EXPIRE_SECONDS` and `REFRESH_TOKEN_EXPIRE_SECONDS` to change those durations. Exchange a valid refresh token at `POST /auth/refresh`, and use `POST /auth/logout` to clear the browser's authentication cookie.
 

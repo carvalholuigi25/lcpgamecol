@@ -51,7 +51,14 @@ def tool_command(name: str) -> list[str] | None:
         if candidate.exists():
             return [str(candidate)]
     installed = shutil.which(name)
-    return [installed] if installed else None
+    if installed:
+        return [installed]
+    # Semgrep pins vulnerable packages, so it is installed apart with `uv tool install`
+    uv_bin = Path(os.getenv("UV_TOOL_BIN_DIR") or Path.home() / ".local" / "bin")
+    for candidate in (uv_bin / f"{name}.exe", uv_bin / name):
+        if candidate.exists():
+            return [str(candidate)]
+    return None
 
 
 def utf8_env() -> dict:
@@ -100,7 +107,7 @@ def run_bandit(args, output_dir: Path) -> dict:
 def run_semgrep(args, output_dir: Path) -> dict:
     command = tool_command("semgrep")
     if command is None:
-        return {"tool": "semgrep", "error": "Semgrep not found. Run `pip install semgrep`."}
+        return {"tool": "semgrep", "error": "Semgrep not found. Run `uv tool install semgrep==1.182.1`."}
 
     report_path = output_dir / "semgrep.json"
     command += ["scan", "--json", f"--output={report_path}", "--metrics=off", "--quiet"]

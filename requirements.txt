@@ -1,6 +1,6 @@
 fastapi
 uvicorn[standard]
-anyio<4.13
+anyio>=4.14.2
 python-multipart
 PyJWT
 httpx2
@@ -9,5 +9,4 @@ pytest-cov
 signalrcore
 lighthouse-python-plus
 bandit
-semgrep==1.182.1  # newer releases have no Windows wheel
 pip-audit

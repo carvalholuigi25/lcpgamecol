@@ -36,7 +36,7 @@ def _own_profile(username: str) -> dict:
             FROM user_wishlist_games w JOIN games g ON g.id = w.game_id
             WHERE w.username = ?
             ORDER BY w.added_at, g.id
-            """,
+            """,  # constant column list  # nosec B608
             (username,),
         ).fetchall()
     return {

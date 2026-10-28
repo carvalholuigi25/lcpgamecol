@@ -116,10 +116,13 @@ def slugify(page: str) -> str:
 
 
 def wait_for_server(url: str, timeout: float) -> bool:
+    # urlopen also follows file:// and custom schemes, so only allow http(s)
+    if urllib.parse.urlparse(url).scheme not in ("http", "https"):
+        raise ValueError(f"Only http(s) URLs can be audited: {url}")
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         try:
-            with urllib.request.urlopen(url, timeout=2):
+            with urllib.request.urlopen(url, timeout=2):  # nosec B310 # nosemgrep: dynamic-urllib-use-detected
                 return True
         except urllib.error.HTTPError:
             return True

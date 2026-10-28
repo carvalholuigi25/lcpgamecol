@@ -126,7 +126,7 @@ def get_igdb_links(
     placeholders = ", ".join("?" for _ in igdb_ids)
     with closing(get_connection()) as connection:
         rows = connection.execute(
-            f"SELECT igdb_id, game_id FROM igdb_games WHERE igdb_id IN ({placeholders})", igdb_ids
+            f"SELECT igdb_id, game_id FROM igdb_games WHERE igdb_id IN ({placeholders})", igdb_ids  # only ? placeholders are interpolated  # nosec B608
         ).fetchall()
     return {str(row["igdb_id"]): row["game_id"] for row in rows}
 

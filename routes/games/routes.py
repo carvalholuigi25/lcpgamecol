@@ -685,7 +685,7 @@ def list_games(
 ) -> list[Game]:
     with closing(get_connection()) as connection:
         rows = connection.execute(
-            f"SELECT * FROM games {game_order_by(sort, order)} LIMIT ? OFFSET ?", (limit, skip)
+            f"SELECT * FROM games {game_order_by(sort, order)} LIMIT ? OFFSET ?", (limit, skip)  # ORDER BY is built from enum whitelists  # nosec B608
         ).fetchall()
     return [game_from_row(row) for row in rows]
 
@@ -700,7 +700,7 @@ def list_games_page(
     with closing(get_connection()) as connection:
         total = connection.execute("SELECT COUNT(*) FROM games").fetchone()[0]
         rows = connection.execute(
-            f"SELECT * FROM games {game_order_by(sort, order)} LIMIT ? OFFSET ?", (limit, skip)
+            f"SELECT * FROM games {game_order_by(sort, order)} LIMIT ? OFFSET ?", (limit, skip)  # ORDER BY is built from enum whitelists  # nosec B608
         ).fetchall()
     return GamePage(
         items=[game_from_row(row) for row in rows],

@@ -174,7 +174,7 @@ def _rebuild_table_sql(table_name: str, table: dict, copied: dict[str, str]) -> 
     sources = ", ".join(copied.values())
     return [
         create_table_sql(new_name, table).replace(" IF NOT EXISTS", "", 1),
-        f"INSERT INTO {new_name} ({targets})\nSELECT {sources} FROM {table_name}",
+        f"INSERT INTO {new_name} ({targets})\nSELECT {sources} FROM {table_name}",  # identifiers come from the checked-in schema  # nosec B608
         f"DROP TABLE {table_name}",
         f"ALTER TABLE {new_name} RENAME TO {table_name}",
     ]
@@ -269,7 +269,7 @@ def diff_schemas(
             if old_values and removed_values and name not in dropped:
                 values = ", ".join(f"'{value}'" for value in removed_values)
                 notes.append(
-                    f"! {table_name}.{name} no longer accepts {values}. Existing rows may need updating, e.g.:\n"
+                    f"! {table_name}.{name} no longer accepts {values}. Existing rows may need updating, e.g.:\n"  # advisory text, never executed  # nosec B608
                     f"--   UPDATE {table_name} SET {name} = NULL WHERE {name} IN ({values});"
                 )
 
@@ -359,7 +359,7 @@ def _applied_migrations(connection: sqlite3.Connection) -> set[str]:
         f"CREATE TABLE IF NOT EXISTS {MIGRATIONS_TABLE} (name TEXT PRIMARY KEY, applied_at TEXT NOT NULL)"
     )
     connection.commit()
-    return {row[0] for row in connection.execute(f"SELECT name FROM {MIGRATIONS_TABLE}")}
+    return {row[0] for row in connection.execute(f"SELECT name FROM {MIGRATIONS_TABLE}")}  # constant table name  # nosec B608
 
 
 def pending_migrations(
@@ -392,7 +392,7 @@ def apply_migrations(
             if violations:
                 raise MigrationError(f"{path.name}: leaves broken foreign keys: {violations[:5]}")
             connection.execute(
-                f"INSERT INTO {MIGRATIONS_TABLE} (name, applied_at) VALUES (?, ?)",
+                f"INSERT INTO {MIGRATIONS_TABLE} (name, applied_at) VALUES (?, ?)",  # constant table name  # nosec B608
                 (path.stem, datetime.now(timezone.utc).isoformat()),
             )
             connection.commit()
