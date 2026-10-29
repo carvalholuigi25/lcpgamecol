@@ -8,6 +8,16 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Italian, Spanish, and Japanese translations for every page. Pick them from the **Language** menu; dates and times follow the chosen language.
+- An **Access control** panel on the Special features page, with an on/off switch for each rule. See **Access control** in the README.
+  - **Geoblock**: block the listed countries, or allow only the listed countries, and optionally block visitors whose country cannot be found.
+  - **VPN checker**: block visitors using a VPN, proxy, or Tor, and optionally hosting providers and data centres. **Check an address** shows the country, VPN and hosting status of any address and whether the current rules would let it in.
+  - **Scheduled lockdown**: close the library every week on chosen days and times, or once between two dates, in a chosen time zone, with an optional message for visitors.
+  - Blocked visitors see a page that says why (`403`, or `503` with `Retry-After` during a lockdown); API clients get a `reason` field. The panel lists the last 50 blocked requests.
+  - Administrators are never blocked, and the dashboard sign-in always stays open.
+  - Countries and VPNs are looked up with ip-api.com by default and cached. New settings: `ACCESS_CONTROL_DISABLED`, `ACCESS_CONTROL_TRUST_PROXY`, `GEOIP_COUNTRY_HEADER`, `IP_LOOKUP_URL`, `IP_LOOKUP_TIMEOUT_SECONDS`, and `IP_LOOKUP_CACHE_SECONDS`.
+  - New endpoints: `GET`/`PUT /admin/access-control` and `GET /admin/access-control/check-ip`.
+  - New dependency: `tzdata`, for time zones on Windows.
 - Two-step sign-in for every account, set up in **My profile → Security**. Choose an authenticator app (scan a QR code) or codes sent by email, and get 10 one-time recovery codes.
   - Sign-in asks for the code after the password, on the library, releases and dashboard sign-in panels. You can also enter a recovery code or, for email, ask for a new code.
   - Turning it off or making new recovery codes asks for the password again. Administrators can turn it off for a user from the user directory.

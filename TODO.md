@@ -15,6 +15,18 @@ Planned work and known gaps. Move items to `CHANGELOG.md` when they ship.
 - [ ] Add a basic xp level + rank system (or gamification).
 - [ ] Add cool personalization for user profile.
 
+## Access control
+
+- [ ] Keep the list of recently blocked requests in the database. Today it is in memory, per server process, and empty after a restart.
+- [ ] Check live connections (`/hubs/library`) against the access rules. Today only HTTP requests are checked.
+- [ ] Support a local GeoIP database (for example MaxMind GeoLite2) as an alternative to the ip-api.com lookup, which is free only for non-commercial use and limited to about 45 lookups per minute.
+- [ ] Let administrators allow specific addresses or accounts through the VPN checker.
+- [ ] Warn signed-in users before a scheduled lockdown starts.
+
+## Translations
+
+- [ ] Have native speakers review the Italian, Spanish, and Japanese translations. Some UI text is built from several fragments, which may not join naturally in every language.
+
 ## Wishlist and favorites
 
 - [ ] Add "My wishlist" and "My favorites" filters to the library.
