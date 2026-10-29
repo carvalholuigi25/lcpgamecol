@@ -1,3 +1,6 @@
+import re
+from datetime import UTC, datetime, timedelta
+from html import escape
 from pathlib import Path
 
 from starlette.responses import HTMLResponse
@@ -48,4 +51,32 @@ def error_page_response(
         )
     return HTMLResponse(
         content=page_content, status_code=status_code, headers=headers
+    )
+
+
+BLOCKED_PAGE_TITLES = {
+    "geoblock": "Not available in your region",
+    "vpn": "VPN or proxy detected",
+    "lockdown": "The library is closed right now",
+}
+
+
+def blocked_page_response(decision, headers: dict[str, str] | None = None) -> HTMLResponse:
+    """The page shown when an access rule (backend.access.rules.Decision) refuses a visitor."""
+    page_content = (ERROR_PAGES_DIRECTORY / "blocked.html").read_text(encoding="utf-8")
+    until = ""
+    if decision.retry_after:
+        until = (datetime.now(UTC) + timedelta(seconds=decision.retry_after)).isoformat()
+    values = {
+        "reason": escape(decision.reason),
+        "status_code": str(decision.status_code),
+        "title": escape(BLOCKED_PAGE_TITLES[decision.reason]),
+        # A message written by an administrator is shown as written, not translated.
+        "message_attributes": 'translate="no"' if decision.custom_message else "",
+        "message": escape(decision.message),
+        "until": escape(until),
+    }
+    page_content = re.sub(r"\{\{(\w+)\}\}", lambda match: values[match[1]], page_content)
+    return HTMLResponse(
+        content=page_content, status_code=decision.status_code, headers=headers
     )

@@ -158,7 +158,7 @@ function renderUploads(uploads) {
   uploadRows.replaceChildren();
   document.getElementById("upload-empty").hidden = uploads.length > 0;
   document.getElementById("upload-count").textContent = window.i18n.t("{count} FILES", { count: uploads.length });
-  const locale = { en: "en-GB", pt: "pt-PT", de: "de-DE", fr: "fr-FR" }[window.i18n.language];
+  const locale = { en: "en-GB", pt: "pt-PT", de: "de-DE", fr: "fr-FR", it: "it-IT", es: "es-ES", ja: "ja-JP" }[window.i18n.language];
 
   for (const upload of uploads) {
     const row = document.createElement("tr");
@@ -292,7 +292,7 @@ async function initSpecialFeatures() {
       { size: formatBytes(uploadLimits.max_bytes) },
     );
     showFeatures(profile.username, profile.role);
-    await loadUploads();
+    await Promise.all([loadUploads(), window.accessControl?.load()]);
   } catch (error) {
     if (featuresView.hidden) showAccess("The server could not be reached.");
     else uploadStatus.textContent = error.message;

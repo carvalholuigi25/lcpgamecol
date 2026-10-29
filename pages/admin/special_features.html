@@ -37,6 +37,7 @@
             <select id="language-selector" aria-label="Language">
               <option value="en">English</option><option value="pt">Português</option>
               <option value="de">Deutsch</option><option value="fr">Français</option>
+              <option value="it">Italiano</option><option value="es">Español</option><option value="ja">日本語</option>
             </select>
           </label>
           <span id="account-name" class="account-name"></span>
@@ -85,11 +86,21 @@
             <strong>Users</strong>
             <span>See every account, its profile, and favorite games.</span>
           </a>
-          <div class="feature-card feature-card-placeholder">
+          <a class="feature-card" href="#geoblock-card">
             <span class="metric-mark" aria-hidden="true">03</span>
-            <strong>More tools soon</strong>
-            <span>New admin features will appear here.</span>
-          </div>
+            <strong>Geoblock</strong>
+            <span>Allow or block visitors by country.</span>
+          </a>
+          <a class="feature-card" href="#vpn-card">
+            <span class="metric-mark" aria-hidden="true">04</span>
+            <strong>VPN checker</strong>
+            <span>Check any address and block VPNs and proxies.</span>
+          </a>
+          <a class="feature-card" href="#lockdown-card">
+            <span class="metric-mark" aria-hidden="true">05</span>
+            <strong>Scheduled lockdown</strong>
+            <span>Close the library at set times.</span>
+          </a>
         </section>
 
         <section id="upload-panel" class="records-panel upload-panel" aria-labelledby="upload-title">
@@ -141,6 +152,117 @@
           </div>
         </section>
 
+        <section id="access-panel" class="records-panel access-panel" aria-labelledby="access-control-title">
+          <div class="panel-heading">
+            <div><p class="kicker">ACCESS CONTROL</p><h2 id="access-control-title">Who can reach the library</h2></div>
+            <span class="chart-note">ADMIN ONLY</span>
+          </div>
+          <p class="access-intro">Rules apply to every page and to the API. Administrators are never blocked, and the dashboard sign-in always stays open.</p>
+          <p id="access-server-note" class="access-warning" hidden>The server has turned these rules off (ACCESS_CONTROL_DISABLED). Changes are saved but not applied.</p>
+
+          <div class="access-grid">
+            <article id="geoblock-card" class="access-card" aria-labelledby="geoblock-title">
+              <header class="access-card-heading">
+                <h3 id="geoblock-title">Geoblock</h3>
+                <button id="geoblock-toggle" class="access-switch" type="button" role="switch" aria-checked="false" aria-labelledby="geoblock-title" data-section="geoblock">
+                  <span class="access-switch-track" aria-hidden="true"><span></span></span>
+                  <span class="access-switch-label">Off</span>
+                </button>
+              </header>
+              <div class="record-fields access-fields">
+                <label class="field-wide">Countries
+                  <select id="geoblock-mode">
+                    <option value="block">Block the listed countries</option>
+                    <option value="allow">Allow only the listed countries</option>
+                  </select>
+                </label>
+                <label class="field-wide">Add a country
+                  <span class="access-inline">
+                    <input id="geoblock-country-input" list="geoblock-country-options" placeholder="Type a country name or code" autocomplete="off" />
+                    <button id="geoblock-country-add" class="secondary-button" type="button">Add</button>
+                  </span>
+                </label>
+                <datalist id="geoblock-country-options"></datalist>
+              </div>
+              <ul id="geoblock-countries" class="access-chips" aria-label="Listed countries"></ul>
+              <p id="geoblock-empty" class="empty-note">No countries listed yet.</p>
+              <label class="setting-option"><input id="geoblock-block-unknown" type="checkbox" /><span>Also block visitors whose country cannot be found</span></label>
+            </article>
+
+            <article id="vpn-card" class="access-card" aria-labelledby="vpn-title">
+              <header class="access-card-heading">
+                <h3 id="vpn-title">VPN checker</h3>
+                <button id="vpn-toggle" class="access-switch" type="button" role="switch" aria-checked="false" aria-labelledby="vpn-title" data-section="vpn">
+                  <span class="access-switch-track" aria-hidden="true"><span></span></span>
+                  <span class="access-switch-label">Off</span>
+                </button>
+              </header>
+              <p class="access-card-copy">When on, visitors using a VPN, proxy, or Tor are blocked.</p>
+              <label class="setting-option"><input id="vpn-block-hosting" type="checkbox" /><span>Also block hosting providers and data centres</span></label>
+              <form id="ip-check-form" class="record-fields access-fields">
+                <label class="field-wide">Check an address
+                  <span class="access-inline">
+                    <input id="ip-check-input" placeholder="Leave empty to check your own" autocomplete="off" maxlength="64" />
+                    <button id="ip-check-submit" class="secondary-button" type="submit">Check</button>
+                  </span>
+                </label>
+              </form>
+              <dl id="ip-check-result" class="access-result" hidden></dl>
+            </article>
+
+            <article id="lockdown-card" class="access-card" aria-labelledby="lockdown-title">
+              <header class="access-card-heading">
+                <h3 id="lockdown-title">Scheduled lockdown</h3>
+                <button id="lockdown-toggle" class="access-switch" type="button" role="switch" aria-checked="false" aria-labelledby="lockdown-title" data-section="lockdown">
+                  <span class="access-switch-track" aria-hidden="true"><span></span></span>
+                  <span class="access-switch-label">Off</span>
+                </button>
+              </header>
+              <p id="lockdown-state" class="access-state" role="status"></p>
+              <div class="record-fields access-fields">
+                <label class="field-wide">Time zone<select id="lockdown-timezone"></select></label>
+                <label class="field-wide">Message for visitors<textarea id="lockdown-message" rows="2" maxlength="300" placeholder="The library is closed for maintenance. Please come back later."></textarea></label>
+              </div>
+              <ul id="lockdown-windows" class="access-windows" aria-label="Lockdown times"></ul>
+              <p id="lockdown-empty" class="empty-note">No lockdown times yet.</p>
+              <fieldset class="access-window-form">
+                <legend>Add a lockdown time</legend>
+                <div class="record-fields access-fields">
+                  <label class="field-wide">Repeats
+                    <select id="window-kind">
+                      <option value="weekly">Every week</option>
+                      <option value="once">Once</option>
+                    </select>
+                  </label>
+                  <div id="window-days" class="access-days field-wide" role="group" aria-label="Days"></div>
+                  <label data-window-kind="weekly">Starts<input id="window-start" type="time" value="22:00" /></label>
+                  <label data-window-kind="weekly">Ends<input id="window-end" type="time" value="06:00" /></label>
+                  <label data-window-kind="once" hidden>Starts<input id="window-starts-at" type="datetime-local" /></label>
+                  <label data-window-kind="once" hidden>Ends<input id="window-ends-at" type="datetime-local" /></label>
+                </div>
+                <button id="window-add" class="secondary-button" type="button">Add time</button>
+              </fieldset>
+            </article>
+          </div>
+
+          <div class="upload-actions access-actions">
+            <button id="access-save" class="primary-button" type="button">Save changes</button>
+            <p id="access-status" class="records-status" role="status" aria-live="polite"></p>
+          </div>
+
+          <div class="upload-list-heading">
+            <h3>Recently blocked</h3>
+            <span id="access-updated" class="chart-note"></span>
+          </div>
+          <div class="recent-table-wrap upload-table-wrap">
+            <table>
+              <thead><tr><th scope="col">TIME</th><th scope="col">RULE</th><th scope="col">ADDRESS</th><th scope="col">COUNTRY</th><th scope="col">PAGE</th></tr></thead>
+              <tbody id="access-blocks"></tbody>
+            </table>
+            <p id="access-blocks-empty" class="empty-note">Nobody has been blocked since the server started.</p>
+          </div>
+        </section>
+
         <footer class="page-footer"><span>LCPGAMECOL / SPECIAL FEATURES</span><span>ADMIN TOOLS</span></footer>
       </section>
       <div id="toast-region" class="toast-region" role="status" aria-live="polite" aria-atomic="true"></div>
@@ -153,5 +275,6 @@
     <script src="/public/scripts/realtime.js"></script>
     <script src="/public/scripts/inbox.js"></script>
     <script src="/public/scripts/special_features.js"></script>
+    <script src="/public/scripts/access_control.js"></script>
   </body>
 </html>

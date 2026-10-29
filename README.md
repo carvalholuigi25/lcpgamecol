@@ -91,7 +91,8 @@ The seed data is defined in `backend/database/seed.sql`; running the seeder more
 - Send feedback from the feedback page. Administrators are notified, can set its status and reply, and replies are emailed to users who added an address to their profile.
 - Get notifications (bell) and direct messages (envelope) at the top of the sidebar on every page, with live unread counts. Messages to users with an email address are also emailed.
 - View game screenshots in an image gallery and save dashboard preferences in the browser.
-- Use the library and dashboard in English, Portuguese, German, or French.
+- Use the library and dashboard in English, Portuguese, German, French, Italian, Spanish, or Japanese.
+- Control who can reach the library from the Special features page (admin only): block or allow countries, block VPNs and proxies, and close the library at scheduled times.
 - Receive custom HTML error pages for common HTTP errors; API clients retain API-style error responses.
 - Optionally search IGDB and view upcoming game releases by configuring IGDB credentials.
 
@@ -196,6 +197,31 @@ Administrators can upload PNG, JPEG, GIF, WebP, and PDF files from the Special f
 - Downloads are sent as attachments with `Content-Security-Policy: default-src 'none'; img-src 'self'; sandbox`, `X-Content-Type-Options: nosniff`, and `Cache-Control: private, no-store`. Only images can be previewed inline.
 
 The `uploads/` folder is ignored by Git.
+
+## Access control
+
+Administrators manage three rules in the **Access control** panel of the Special features page (or with `GET`/`PUT /admin/access-control`). Each has an on/off switch that saves immediately; other edits are saved with **Save changes**.
+
+- **Geoblock**: block the listed countries, or allow only the listed countries. Visitors whose country cannot be found (the lookup failed) are let in unless **Also block visitors whose country cannot be found** is on.
+- **VPN checker**: block visitors using a VPN, proxy, or Tor, and optionally hosting providers and data centres. **Check an address** (`GET /admin/access-control/check-ip?ip=...`) looks up any address and shows whether the current rules would let it in.
+- **Scheduled lockdown**: close the library weekly (chosen days, from one time to another; an end before the start runs past midnight, and the same start and end closes the whole day) or once (between two dates), in a chosen time zone, with an optional message for visitors.
+
+Blocked visitors get a page explaining why (`403` for geoblock and VPN, `503` with `Retry-After` during a lockdown); API clients get `{"detail": ..., "reason": "geoblock" | "vpn" | "lockdown"}`. The panel lists the last 50 blocked requests since the server started.
+
+Administrators are never blocked, and static files and the sign-in endpoints stay reachable, so an administrator can always sign in at `/admin`. Private and local addresses are never looked up or blocked. Live updates over `/hubs/library` are not checked.
+
+Countries and VPNs are looked up with an IP intelligence service, by default [ip-api.com](https://ip-api.com) (free for non-commercial use, over HTTP, about 45 lookups per minute). Results are cached for `IP_LOOKUP_CACHE_SECONDS` (1 hour); failed lookups are retried after a minute. Settings:
+
+| Setting | Default | Purpose |
+| --- | --- | --- |
+| `ACCESS_CONTROL_DISABLED` | `false` | `true` turns every rule off, for example if you locked yourself out. |
+| `ACCESS_CONTROL_TRUST_PROXY` | `false` | Use the first `X-Forwarded-For` address. Only turn this on behind your own reverse proxy. |
+| `GEOIP_COUNTRY_HEADER` | (empty) | A header with the visitor's country set by your CDN or proxy, such as `CF-IPCountry`. Geoblock then needs no lookup. |
+| `IP_LOOKUP_URL` | ip-api.com | Lookup URL with `{ip}`. The answer must use ip-api.com's `status`, `countryCode`, `proxy`, and `hosting` fields. |
+| `IP_LOOKUP_TIMEOUT_SECONDS` | `3` | Lookup timeout. |
+| `IP_LOOKUP_CACHE_SECONDS` | `3600` | How long a lookup is reused. |
+
+Rules are stored in the `access_settings` table and reread at most every 5 seconds, so every server worker picks up changes.
 
 ## Database migrations
 

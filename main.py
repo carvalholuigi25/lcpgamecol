@@ -30,6 +30,7 @@ from backend.auth.auth import (
     issue_session,
     register_user,
 )
+from backend.access.middleware import AccessControlMiddleware
 from backend.auth import two_factor
 from backend.auth.routes import router as account_router
 from backend.auth.rate_limit import RateLimitMiddleware
@@ -115,6 +116,8 @@ app.add_middleware(
 app.add_middleware(SecurityPolicyMiddleware)
 app.add_middleware(UploadBodyLimitMiddleware)
 app.add_middleware(GZipMiddleware, minimum_size=1024)
+# Runs after the rate limit (added last, so outermost) so blocked visitors are rate limited too.
+app.add_middleware(AccessControlMiddleware)
 app.add_middleware(RateLimitMiddleware)
 app.mount(
     "/nmodules",

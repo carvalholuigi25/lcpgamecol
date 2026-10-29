@@ -4,6 +4,7 @@ anyio>=4.14.2
 python-multipart
 PyJWT
 segno
+tzdata
 httpx2
 pytest
 pytest-cov

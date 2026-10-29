@@ -244,6 +244,14 @@ def initialize_database() -> None:
                 sent_at INTEGER NULL,
                 completed_at INTEGER NULL
             );
+
+            -- Geoblock, VPN and lockdown rules, stored as one JSON document.
+            CREATE TABLE IF NOT EXISTS access_settings (
+                name TEXT PRIMARY KEY,
+                value TEXT NOT NULL,
+                updated_by TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
             """
         )
         game_columns = {
