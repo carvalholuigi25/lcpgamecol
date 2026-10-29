@@ -1,3 +1,4 @@
+@use "sass:meta";
 @import url("https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Press+Start+2P&display=swap");
 
 @keyframes loading-spin {
@@ -1205,137 +1206,7 @@ td a {
   progress { display: block; width: 100%; height: 9px; accent-color: var(--orange); }
 }
 
-// --- Page-links sidebar ---------------------------------------------------------
-
-:root {
-  --sidebar-width: 232px;
-  --sidebar-collapsed-width: 64px;
-}
-
-.topbar-start {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.admin-sidebar {
-  position: fixed;
-  z-index: 900;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: var(--sidebar-width);
-  overflow-x: hidden;
-  overflow-y: auto;
-  padding: 20px 12px;
-  border-right: 1px solid var(--line);
-  background: var(--surface);
-  transition: width 0.2s ease, transform 0.2s ease;
-}
-
-.sidebar-nav {
-  display: grid;
-  gap: 3px;
-}
-
-.sidebar-group {
-  margin: 18px 10px 6px;
-  color: var(--muted);
-  font: 500 0.6rem var(--mono);
-  letter-spacing: 0.1em;
-  white-space: nowrap;
-
-  &:first-child { margin-top: 58px; }
-}
-
-.sidebar-nav a {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 40px;
-  padding: 0 12px;
-  border-radius: 12px;
-  color: var(--muted);
-  text-decoration: none;
-  font-size: 0.83rem;
-  white-space: nowrap;
-
-  svg {
-    flex: none;
-    width: 18px;
-    fill: none;
-    stroke: currentColor;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    stroke-width: 1.7;
-  }
-
-  &:hover,
-  &:focus-visible {
-    background: var(--green-soft);
-    color: var(--green);
-  }
-
-  &.active {
-    background: var(--green-soft);
-    color: var(--green);
-    font-weight: 600;
-    box-shadow: inset 3px 0 0 var(--green);
-  }
-}
-
-.sidebar-backdrop {
-  position: fixed;
-  z-index: 850;
-  inset: 0;
-  background: rgba(10, 14, 12, 0.45);
-}
-
-body.has-sidebar {
-  padding-left: var(--sidebar-width);
-  transition: padding-left 0.2s ease;
-}
-
-body.has-sidebar.sidebar-collapsed {
-  padding-left: var(--sidebar-collapsed-width);
-
-  .admin-sidebar { width: var(--sidebar-collapsed-width); }
-  .sidebar-nav a { justify-content: center; padding: 0; }
-  .sidebar-nav a span { display: none; }
-  .sidebar-group { height: 1px; margin: 12px 8px; overflow: hidden; background: var(--line); color: transparent; }
-  .sidebar-group:first-child { margin-top: 64px; }
-}
-
-@media (max-width: 860px) {
-  body.has-sidebar,
-  body.has-sidebar.sidebar-collapsed {
-    padding-left: 0;
-  }
-
-  .admin-sidebar,
-  body.has-sidebar.sidebar-collapsed .admin-sidebar {
-    width: min(280px, 82vw);
-    transform: translateX(-100%);
-    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.18);
-  }
-
-  body.sidebar-collapsed .sidebar-nav a { justify-content: flex-start; padding: 0 12px; }
-  body.sidebar-collapsed .sidebar-nav a span { display: inline; }
-  body.sidebar-collapsed .sidebar-group { height: auto; margin: 18px 10px 6px; background: none; color: var(--muted); }
-  body.sidebar-collapsed .sidebar-group:first-child { margin-top: 8px; }
-  .sidebar-group:first-child { margin-top: 8px; }
-
-  body.sidebar-open .admin-sidebar {
-    transform: none;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .admin-sidebar,
-  body.has-sidebar {
-    transition: none;
-  }
-}
+// The page-links sidebar is in _sidebar.scss, shared with the library pages.
 
 // --- Registration ------------------------------------------------------------------
 
@@ -2329,3 +2200,198 @@ body[data-theme="liquid-glass"] {
 @media (prefers-reduced-motion: reduce) {
   body[data-theme="liquid-glass"]::before { animation: none; }
 }
+
+// Feedback page (/feedback)
+.feedback-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+
+  > .records-panel { margin-top: 0; }
+
+  @media (max-width: 900px) { grid-template-columns: minmax(0, 1fr); }
+}
+.feedback-form .record-fields { margin-top: 16px; }
+.feedback-list {
+  display: grid;
+  gap: 12px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.feedback-card {
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line);
+
+  &[data-status="open"] { border-left-color: var(--orange); }
+  &[data-status="in_progress"] { border-left-color: var(--yellow); }
+  &[data-status="answered"] { border-left-color: var(--green); }
+}
+.feedback-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.feedback-subject {
+  margin-right: auto;
+  font-size: 0.95rem;
+  overflow-wrap: anywhere;
+}
+.feedback-meta {
+  margin: 4px 0 8px;
+  color: var(--muted);
+  font: 400 0.7rem var(--mono);
+  overflow-wrap: anywhere;
+}
+.feedback-text {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.feedback-reply {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-left: 2px solid var(--green);
+  background: var(--green-soft);
+
+  .kicker { margin-bottom: 4px; }
+}
+.feedback-manage {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--line);
+
+  .record-fields { margin-bottom: 6px; }
+}
+.role-badge.status-open { border-color: var(--orange); color: var(--orange); }
+.role-badge.status-in_progress { border-color: var(--yellow); color: var(--ink); }
+.role-badge.status-answered { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+
+// Account access tools in the user directory dialog
+.user-access-tools {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--line);
+
+  h3 { margin: 0 0 10px; }
+}
+.user-reset-result {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+
+  &[hidden] { display: none; }
+
+  input {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--ink);
+    font: 0.75rem var(--mono);
+  }
+}
+
+// Two-step sign-in settings (Security section of /profile)
+.two-factor-view { margin-top: 14px; }
+.two-factor-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.two-factor-option {
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  strong { font-size: 0.92rem; }
+  span { color: var(--muted); font-size: 0.78rem; line-height: 1.45; }
+
+  &:hover:not(:disabled),
+  &:focus-visible { border-color: var(--green); background: var(--green-soft); }
+  &:disabled { cursor: not-allowed; opacity: 0.55; }
+}
+.two-factor-form {
+  display: grid;
+  gap: 12px;
+  max-width: 640px;
+}
+.two-factor-field {
+  display: grid;
+  gap: 6px;
+  max-width: 260px;
+  color: var(--muted);
+  font: 500 0.61rem var(--mono);
+  text-transform: uppercase;
+
+  input {
+    padding: 9px 12px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--ink);
+    font: 500 1.05rem var(--mono);
+    letter-spacing: 0.18em;
+    text-transform: none;
+  }
+}
+.two-factor-setup {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 20px;
+}
+.two-factor-qr {
+  width: 180px;
+  height: 180px;
+  border-radius: 10px;
+  background: #fff;
+}
+.two-factor-steps {
+  display: grid;
+  flex: 1;
+  gap: 8px;
+  min-width: 220px;
+  font-size: 0.85rem;
+
+  p { margin: 0; }
+  a { color: var(--green); font-size: 0.8rem; }
+}
+.two-factor-key {
+  padding: 8px 10px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  font: 500 0.85rem var(--mono);
+  letter-spacing: 0.06em;
+  overflow-wrap: anywhere;
+}
+.two-factor-summary { margin: 0 0 12px; font-size: 0.86rem; }
+.two-factor-warning { color: var(--orange); font-weight: 600; }
+.recovery-codes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+  margin: 12px 0;
+  padding: 14px 14px 14px 34px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  font: 500 0.9rem var(--mono);
+}
+
+@include meta.load-css("sidebar");
+@include meta.load-css("inbox");

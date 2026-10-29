@@ -5,7 +5,8 @@ pick made from the library shows up on the user's profile and the other way roun
 """
 
 from contextlib import closing
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
@@ -15,6 +16,7 @@ from backend.realtime.hub import hub
 from routes.admin.users import FAVORITE_GAMES_MAX
 
 router = APIRouter(tags=["user lists"])
+CURRENT_PRINCIPAL = Depends(get_current_principal)
 
 
 def _require_game(connection, game_id: int) -> None:
@@ -42,7 +44,7 @@ def _changed(connection, principal: Principal, game_id: int) -> dict:
 
 
 @router.get("/users/me/game-lists")
-def get_my_game_lists(principal: Principal = Depends(get_current_principal)) -> dict:
+def get_my_game_lists(principal: Principal = CURRENT_PRINCIPAL) -> dict:
     with closing(get_connection()) as connection:
         wishlist = connection.execute(
             "SELECT game_id FROM user_wishlist_games WHERE username = ? ORDER BY added_at, game_id",
@@ -60,18 +62,18 @@ def get_my_game_lists(principal: Principal = Depends(get_current_principal)) -> 
 
 
 @router.put("/games/{game_id}/wishlist")
-def add_to_wishlist(game_id: int, principal: Principal = Depends(get_current_principal)) -> dict:
+def add_to_wishlist(game_id: int, principal: Principal = CURRENT_PRINCIPAL) -> dict:
     with closing(get_connection()) as connection:
         _require_game(connection, game_id)
         connection.execute(
             "INSERT OR IGNORE INTO user_wishlist_games (username, game_id, added_at) VALUES (?, ?, ?)",
-            (principal.username, game_id, datetime.now(timezone.utc).isoformat(timespec="seconds")),
+            (principal.username, game_id, datetime.now(UTC).isoformat(timespec="seconds")),
         )
         return _changed(connection, principal, game_id)
 
 
 @router.delete("/games/{game_id}/wishlist")
-def remove_from_wishlist(game_id: int, principal: Principal = Depends(get_current_principal)) -> dict:
+def remove_from_wishlist(game_id: int, principal: Principal = CURRENT_PRINCIPAL) -> dict:
     with closing(get_connection()) as connection:
         _require_game(connection, game_id)
         connection.execute(
@@ -82,7 +84,9 @@ def remove_from_wishlist(game_id: int, principal: Principal = Depends(get_curren
 
 
 @router.put("/games/{game_id}/favorite")
-def add_to_favorites(game_id: int, principal: Principal = Depends(get_current_principal)) -> dict:
+def add_to_favorites(
+    game_id: int, principal: Annotated[Principal, Depends(get_current_principal)]
+) -> dict:
     with closing(get_connection()) as connection:
         _require_game(connection, game_id)
         if not _list_state(connection, principal.username, game_id)["favorite"]:
@@ -103,7 +107,9 @@ def add_to_favorites(game_id: int, principal: Principal = Depends(get_current_pr
 
 
 @router.delete("/games/{game_id}/favorite")
-def remove_from_favorites(game_id: int, principal: Principal = Depends(get_current_principal)) -> dict:
+def remove_from_favorites(
+    game_id: int, principal: Annotated[Principal, Depends(get_current_principal)]
+) -> dict:
     with closing(get_connection()) as connection:
         _require_game(connection, game_id)
         connection.execute(

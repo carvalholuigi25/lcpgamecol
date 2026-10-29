@@ -37,12 +37,12 @@ function showAccess(message) {
   window.adminSidebar?.setAvailable(false);
 }
 
-function showUsers(username) {
+function showUsers(username, role) {
   accessView.hidden = true;
   usersView.hidden = false;
   accountName.textContent = username;
   logoutButton.hidden = false;
-  window.adminSidebar?.setAvailable(true);
+  window.adminSidebar?.setAvailable(true, role);
 }
 
 async function readError(response, fallback) {
@@ -246,6 +246,14 @@ function renderUserPage(user) {
   document.getElementById("user-page-favorite-count").textContent = user.favorite_games.length;
   document.getElementById("user-page-hours").textContent = window.i18n.t("{hours} h", { hours: user.hours_in_favorites });
   document.getElementById("user-page-updated").textContent = formatDate(user.updated_at);
+  document.getElementById("user-page-two-factor").textContent = user.two_factor_enabled ? "On" : "Off";
+  // Configured accounts keep the password from the server settings.
+  const resetButton = document.getElementById("user-reset-link");
+  resetButton.disabled = user.source === "configured";
+  resetButton.title = user.source === "configured" ? "Change this password in the server settings." : "";
+  document.getElementById("user-two-factor-off").hidden = !user.two_factor_enabled;
+  document.getElementById("user-access-status").textContent = "";
+  document.getElementById("user-reset-result").hidden = true;
 
   const favorites = document.getElementById("user-page-favorites");
   favorites.replaceChildren(...user.favorite_games.map((game, index) => {
@@ -429,6 +437,53 @@ logoutButton.addEventListener("click", async () => {
   }
 });
 
+document.getElementById("user-reset-link").addEventListener("click", async (event) => {
+  const status = document.getElementById("user-access-status");
+  const resetButton = event.currentTarget;
+  resetButton.disabled = true;
+  status.textContent = "";
+  try {
+    const response = await fetch(`/admin/users/${encodeURIComponent(activeUser.username)}/password-reset`, { method: "POST" });
+    if (!response.ok) throw new Error(await readError(response, "The reset link could not be created."));
+    const result = await response.json();
+    document.getElementById("user-reset-url").value = result.link;
+    document.getElementById("user-reset-result").hidden = false;
+    status.textContent = window.i18n.t(result.emailed
+      ? "Reset link created and emailed. It works once, for {minutes} minutes."
+      : "Reset link created. Send it to the user yourself; it works once, for {minutes} minutes.",
+    { minutes: Math.round(result.expires_in / 60) });
+  } catch (error) {
+    status.textContent = window.i18n.t(error.message);
+  } finally {
+    resetButton.disabled = false;
+  }
+});
+
+document.getElementById("user-reset-copy").addEventListener("click", async () => {
+  const field = document.getElementById("user-reset-url");
+  try {
+    await navigator.clipboard.writeText(field.value);
+    showToast(window.i18n.t("Reset link copied."));
+  } catch {
+    field.select();
+  }
+});
+
+document.getElementById("user-two-factor-off").addEventListener("click", async () => {
+  const status = document.getElementById("user-access-status");
+  const prompt = window.i18n.t("Turn off two-step sign-in for {name}? Only do this once you're sure it's really them.", { name: activeUser.username });
+  if (!window.confirm(prompt)) return;
+  try {
+    const response = await fetch(`/admin/users/${encodeURIComponent(activeUser.username)}/two-factor`, { method: "DELETE" });
+    if (!response.ok) throw new Error(await readError(response, "Two-step sign-in could not be turned off."));
+    activeUser.two_factor_enabled = false;
+    renderUserPage(activeUser);
+    showToast(window.i18n.t("Two-step sign-in is off for {name}.", { name: activeUser.username }));
+  } catch (error) {
+    status.textContent = window.i18n.t(error.message);
+  }
+});
+
 async function initUsers() {
   try {
     const profileResponse = await fetch("/users");
@@ -438,7 +493,7 @@ async function initUsers() {
     }
     const profile = await profileResponse.json();
     usersStatus.textContent = "Loading users...";
-    if (await loadUsers()) showUsers(profile.username);
+    if (await loadUsers()) showUsers(profile.username, profile.role);
     usersStatus.textContent = "";
   } catch (error) {
     if (usersView.hidden) showAccess("The server could not be reached.");

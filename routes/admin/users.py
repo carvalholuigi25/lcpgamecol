@@ -7,14 +7,17 @@ both kinds of account can have one.
 
 import re
 from contextlib import closing
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from urllib.parse import urlsplit
 
-from fastapi import APIRouter, HTTPException, Path as PathParam, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import Path as PathParam
 from pydantic import BaseModel, Field, field_validator
 
-from backend.auth import auth
+from backend.auth import auth, password_reset, two_factor
+from backend.mail import mailer
 from backend.database.database import get_connection
+from backend.mail.mailer import email_problem
 from backend.realtime.hub import hub
 
 FAVORITE_GAMES_MAX = 12
@@ -48,6 +51,8 @@ class ProfileUpdate(BaseModel):
     location: str | None = Field(default=None, max_length=80)
     avatar_url: str | None = None
     cover_url: str | None = None
+    # Leaving email out keeps the current address; send null or "" to remove it.
+    email: str | None = None
     favorite_game_ids: list[int] = Field(default_factory=list, max_length=FAVORITE_GAMES_MAX)
 
     @field_validator("display_name", "bio", "location")
@@ -59,6 +64,17 @@ class ProfileUpdate(BaseModel):
     @classmethod
     def check_image_url(cls, value: str | None) -> str | None:
         return validate_image_url(value)
+
+    @field_validator("email")
+    @classmethod
+    def check_email(cls, value: str | None) -> str | None:
+        value = (value or "").strip()
+        if not value:
+            return None
+        problem = email_problem(value)
+        if problem:
+            raise ValueError(problem)
+        return value
 
     @field_validator("favorite_game_ids")
     @classmethod
@@ -115,6 +131,13 @@ def _profiles(usernames: list[str]) -> list[dict]:
                 f"SELECT * FROM user_profiles WHERE lower(username) IN ({placeholders})", keys  # only ? placeholders are interpolated  # nosec B608
             )
         }
+        two_factor_users = {
+            row[0].lower()
+            for row in connection.execute(
+                f"SELECT username FROM user_two_factor WHERE enabled_at IS NOT NULL AND lower(username) IN ({placeholders})",  # only ? placeholders are interpolated  # nosec B608
+                keys,
+            )
+        }
         favorites: dict[str, list[dict]] = {}
         for row in connection.execute(
             f"""
@@ -141,6 +164,8 @@ def _profiles(usernames: list[str]) -> list[dict]:
                 "location": profile["location"] if profile else None,
                 "avatar_url": profile["avatar_url"] if profile else None,
                 "cover_url": profile["cover_url"] if profile else None,
+                "email": profile["email"] if profile else None,
+                "two_factor_enabled": key in two_factor_users,
                 "updated_at": profile["updated_at"] if profile else None,
                 "favorite_games": favorite_games,
                 "hours_in_favorites": round(sum(float(game["hours_played"]) for game in favorite_games), 1),
@@ -204,17 +229,20 @@ def save_profile(username: str, body: ProfileUpdate) -> dict:
 
         connection.execute(
             """
-            INSERT INTO user_profiles (username, display_name, bio, location, avatar_url, cover_url, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO user_profiles (username, display_name, bio, location, avatar_url, cover_url, email, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT (username) DO UPDATE SET
                 display_name = excluded.display_name, bio = excluded.bio,
                 location = excluded.location, avatar_url = excluded.avatar_url,
-                cover_url = excluded.cover_url, updated_at = excluded.updated_at
+                cover_url = excluded.cover_url,
+                email = CASE WHEN ? THEN excluded.email ELSE user_profiles.email END,
+                updated_at = excluded.updated_at
             """,
             (
                 account["username"], body.display_name, body.bio, body.location,
-                body.avatar_url, body.cover_url,
-                datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                body.avatar_url, body.cover_url, body.email,
+                datetime.now(UTC).isoformat(timespec="seconds"),
+                "email" in body.model_fields_set,
             ),
         )
         if favorite_ids is not None:
@@ -234,3 +262,43 @@ def update_user_profile(
     body: ProfileUpdate, username: str = PathParam(pattern=USERNAME_PATH_PATTERN)
 ) -> dict:
     return save_profile(username, body)
+
+
+@router.post("/{username}/password-reset")
+def create_password_reset_link(
+    background_tasks: BackgroundTasks,
+    username: str = PathParam(pattern=USERNAME_PATH_PATTERN),
+    principal: auth.Principal = Depends(auth.require_admin),
+) -> dict:
+    """Create a one-time reset link for a registered user, and email it if they have an address."""
+    account = _get_account(username)
+    target = password_reset.resettable_username(account["username"])
+    if target is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This account is configured in AUTH_USERS; change its password in the server settings.",
+        )
+    token = password_reset.create_token(target, created_by=principal.username)
+    emailed = bool(mailer.get_email_address(target)) and two_factor.email_delivery_enabled()
+    if emailed:
+        background_tasks.add_task(password_reset.email_link, target, token)
+    return {
+        "link": password_reset.reset_link(token),
+        "expires_in": password_reset.PASSWORD_RESET_TTL_SECONDS,
+        "emailed": emailed,
+    }
+
+
+@router.delete("/{username}/two-factor", status_code=status.HTTP_204_NO_CONTENT)
+def turn_off_two_factor(
+    username: str = PathParam(pattern=USERNAME_PATH_PATTERN),
+    principal: auth.Principal = Depends(auth.require_admin),
+) -> None:
+    """For users who lost both their device and their recovery codes."""
+    account = _get_account(username)
+    two_factor.disable(account["username"])
+    # Imported here: notifications imports this module.
+    from routes.users.notifications import notify
+
+    notify(account["username"], "security", "Two-factor sign-in was turned off by an administrator",
+           f"{principal.username} turned it off. Turn it on again from your profile.")

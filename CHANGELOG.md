@@ -8,6 +8,32 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Two-step sign-in for every account, set up in **My profile → Security**. Choose an authenticator app (scan a QR code) or codes sent by email, and get 10 one-time recovery codes.
+  - Sign-in asks for the code after the password, on the library, releases and dashboard sign-in panels. You can also enter a recovery code or, for email, ask for a new code.
+  - Turning it off or making new recovery codes asks for the password again. Administrators can turn it off for a user from the user directory.
+  - `POST /auth/token` now answers `{"two_factor_required": true, "challenge_token": ..., "method": ...}` for these accounts. Finish with `POST /auth/two-factor/verify` (`POST /auth/two-factor/resend` emails a new code).
+  - New endpoints: `GET /users/me/two-factor`, and `POST` on `/users/me/two-factor/setup`, `/enable`, `/disable` and `/recovery-codes`, plus `DELETE /admin/users/{username}/two-factor`.
+  - New dependency: `segno`, for the QR code.
+- A **Forgot your password?** page at `/reset-password`, linked from every sign-in panel. It emails a one-time link (valid for 1 hour) to the address on the profile.
+  - Administrators can create a link from the user directory, for users without an email address.
+  - Changing the password with a link signs the account out everywhere, and the user gets a notification and an email about it.
+  - New endpoints: `POST /auth/password-reset/request`, `GET /auth/password-reset/check`, `POST /auth/password-reset/confirm`, and `POST /admin/users/{username}/password-reset`.
+  - New settings: `PASSWORD_RESET_TTL_SECONDS`, `PASSWORD_RESET_MAX_PER_CLIENT`, and `PASSWORD_RESET_WINDOW_SECONDS`.
+- The user directory shows whether each user has two-step sign-in on (`two_factor_enabled` in `/admin/users`).
+- A **Feedback** page at `/feedback` for every signed-in user, linked from the library, the releases page, the profile page, and the administrator sidebar.
+  - Send a bug report, idea, question, praise, or other feedback, optionally with the page it is about, and follow its status and replies.
+  - Administrators get an **All feedback** panel (`/feedback#manage`) to filter by status, change the status, reply, and delete. New feedback notifies every administrator.
+  - Replies notify the user and are emailed to them when their profile has an email address. The panel shows whether each reply was emailed.
+  - New endpoints: `POST /feedback`, `GET /feedback/mine`, and for administrators `GET /admin/feedback`, `PUT` and `DELETE` on `/admin/feedback/{feedback_id}`.
+- Notifications and messages buttons at the top of the sidebar on every page, with unread badges that update live.
+  - The bell lists notifications (feedback replies and status changes, new messages, and new feedback for administrators). Open one to go where it points, delete it, or mark all as read.
+  - The envelope opens your inbox and sent messages. Write to any account, read, reply, and delete; a deleted message disappears only for you.
+  - Links such as `/profile?inbox=messages` open the dialog directly; emails use them.
+  - New endpoints: `GET /notifications`, `POST /notifications/read-all`, `POST /notifications/{id}/read`, `DELETE /notifications/{id}`, `GET`/`POST /messages`, `GET /messages/recipients`, `POST /messages/{id}/read`, and `DELETE /messages/{id}`.
+  - New live events: `notificationsChanged` and `messagesChanged` (sent only to their owner) and `feedbackChanged`.
+- Optional email over SMTP (`SMTP_HOST` and related settings), or to `.eml` files in `MAIL_OUTBOX_DIR` while developing. See **Email** in the README.
+- An **Email for notifications** field on your profile. `PUT /users/me/profile` and `PUT /admin/users/{username}` accept `email`; leaving it out keeps the current address.
+- `scripts/audit_report.py` (`npm run audit-report`) turns Lighthouse and security audit results into HTML pages: one per run and an index of every run with trends. Both audit scripts now write these pages after each run (`--no-html` to skip). Lighthouse summaries now also store the score of every audited category.
 - Game details in the library now have **Add to wishlist** and **Add to favorites** buttons for every signed-in user, and **Edit** and **Delete** buttons for administrators.
   - Wishlists and favorites are kept per user. Favorites are the same list administrators see in the user directory (up to 12 games).
   - **Edit** opens the administrator dashboard with that game ready to edit (`/admin?edit-game=<id>`).
@@ -33,12 +59,16 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- The sidebar is now on every page for every signed-in user, including the library and releases pages. Notifications, Messages and Feedback are at the top, in a new **Activity** group, instead of in the page header. Administrators also see the dashboard and tools links. The links are built by `sidebar.js`, so pages only include an empty `<aside id="admin-sidebar">`.
+- When the sidebar is shown, the top bar of the administrator, profile and feedback pages no longer repeats its links.
 - `GET /users` now returns the signed-in user's `role` as well as their `username`.
 - The **Liquid glass** theme was redesigned for the library and the administrator pages: translucent panels over a slowly moving colour background, light edges on panels, glass-style buttons and inputs, and a see-through details dialog. It falls back to solid panels when the browser can't blur the background or the system asks for reduced transparency, and it stops animating when reduced motion is requested.
 - Automatic and live dashboard refreshes no longer discard unsaved changes in the game or achievement forms, and they keep the selected game.
 
 ### Fixed
 
+- The administrator top bar no longer overlaps "API" and "Language" on wide screens, and no longer runs off the side of the screen on phones, where the notifications, messages and log out buttons could not be reached.
+- On the library pages, the theme menu no longer spills past the right edge of the page.
 - On narrow screens, the upcoming releases filter now wraps onto several rows instead of squeezing every field into one.
 - Labels in `aria-label`, `title`, `placeholder`, and `alt` attributes that scripts change after the page loads (for example, a button switching between "Add to wishlist" and "Remove from wishlist") are now translated. Before, the translator restored the first label it had seen.
 - Release details on the upcoming releases page asked for achievements using the IGDB id. They found nothing, or the achievements of an unrelated library game that happened to have the same id. They now show the achievements of the release's library copy, update live, and explain how to track achievements when the release is not in the library yet.

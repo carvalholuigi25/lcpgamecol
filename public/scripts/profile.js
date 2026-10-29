@@ -41,8 +41,7 @@ function showProfile(principal) {
   profileView.hidden = false;
   accountName.textContent = principal.username;
   logoutButton.hidden = false;
-  // The page links only lead somewhere useful for administrators.
-  window.adminSidebar?.setAvailable(principal.role === "admin");
+  window.adminSidebar?.setAvailable(true, principal.role);
 }
 
 async function readError(response, fallback) {
@@ -271,7 +270,7 @@ async function loadUploadedImages() {
 }
 
 editButton.addEventListener("click", () => {
-  for (const field of ["display_name", "location", "bio", "avatar_url", "cover_url"]) {
+  for (const field of ["display_name", "location", "email", "bio", "avatar_url", "cover_url"]) {
     profileForm.elements[field].value = profile[field] || "";
   }
   setEditing(true);
@@ -299,6 +298,7 @@ profileForm.addEventListener("submit", async (event) => {
       bio: values.get("bio"),
       avatar_url: values.get("avatar_url"),
       cover_url: values.get("cover_url"),
+      email: values.get("email"),
     });
     if (!response.ok) throw new Error(await readError(response, "The profile could not be saved."));
     profile = await response.json();
@@ -306,6 +306,8 @@ profileForm.addEventListener("submit", async (event) => {
     setEditing(false);
     editButton.focus();
     showToast(window.i18n.t("Your profile was saved."));
+    // A new email address can make email codes available in the Security section.
+    document.dispatchEvent(new CustomEvent("profilesaved"));
   } catch (error) {
     profileStatus.textContent = window.i18n.t(error.message);
   } finally {

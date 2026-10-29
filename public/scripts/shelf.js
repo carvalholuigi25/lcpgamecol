@@ -9,6 +9,8 @@ const loginStatus = document.getElementById("login-status");
 const appStatus = document.getElementById("app-status");
 const gamesContainer = document.getElementById("games");
 const count = document.getElementById("count");
+const gamesEmpty = document.getElementById("games-empty");
+const pagination = document.querySelector(".pagination");
 const searchInput = document.getElementById("search");
 const detailsDialog = document.getElementById("game-details");
 // Own modal dialog so the lightbox stacks above (and stays interactive over) the details dialog.
@@ -274,6 +276,8 @@ function renderGames() {
     count: items.length,
   });
   gamesContainer.innerHTML = items.map(gameCard).join("");
+  gamesEmpty.hidden = items.length > 0;
+  pagination.hidden = items.length === 0;
 }
 
 function replaceSpaces(str) {
@@ -821,10 +825,14 @@ function showApp(profile) {
   usernameDisplay.textContent = username;
   userMenu.hidden = false;
   loginStatus.textContent = "";
+  window.adminSidebar?.setAvailable(true, profile.role);
+  window.inbox?.start();
 }
 
 function showLogin() {
   currentProfile = null;
+  window.inbox?.stop();
+  window.adminSidebar?.setAvailable(false);
   myLists = { wishlist: new Set(), favorites: new Set() };
   releaseLinks.clear();
   if (detailsDialog.open) detailsDialog.close();
@@ -839,6 +847,7 @@ function showLogin() {
   games = [];
   resetPlatformSwitch();
   gamesContainer.replaceChildren();
+  gamesEmpty.hidden = true;
   count.textContent = "";
   if(!loginStatus.classList.contains("hidden")) {
     loginStatus.classList.add("hidden");
@@ -959,6 +968,14 @@ function initShelf({ load, reset = () => {}, refresh = null, gameActions = null 
           loginStatus.textContent = "Incorrect username or password.";
         }
         return;
+      }
+      const result = await response.json();
+      if (result.two_factor_required) {
+        loginStatus.textContent = "Waiting for your sign-in code...";
+        if (!(await window.twoFactorLogin.complete(result))) {
+          loginStatus.textContent = "Sign-in cancelled.";
+          return;
+        }
       }
       const profile = await fetchProfile();
       if (!profile) {

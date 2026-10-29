@@ -45,12 +45,12 @@ function showAccess(message) {
   window.adminSidebar?.setAvailable(false);
 }
 
-function showFeatures(username) {
+function showFeatures(username, role) {
   accessView.hidden = true;
   featuresView.hidden = false;
   accountName.textContent = username;
   logoutButton.hidden = false;
-  window.adminSidebar?.setAvailable(true);
+  window.adminSidebar?.setAvailable(true, role);
 }
 
 async function readError(response, fallback) {
@@ -291,7 +291,7 @@ async function initSpecialFeatures() {
       "PNG, JPEG, GIF, WebP, or PDF up to {size}",
       { size: formatBytes(uploadLimits.max_bytes) },
     );
-    showFeatures(profile.username);
+    showFeatures(profile.username, profile.role);
     await loadUploads();
   } catch (error) {
     if (featuresView.hidden) showAccess("The server could not be reached.");

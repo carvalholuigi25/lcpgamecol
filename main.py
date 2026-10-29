@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, Request, Response
+from fastapi import BackgroundTasks, Depends, FastAPI, Request, Response
 from fastapi.exception_handlers import http_exception_handler
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -23,13 +23,15 @@ from backend.auth.auth import (
     TOKEN_EXPIRE_SECONDS,
     authenticate,
     create_access_token,
-    create_refresh_token,
     get_current_user,
     get_current_user_from_refresh_token,
     get_role_for_username,
     get_trusted_origins,
+    issue_session,
     register_user,
 )
+from backend.auth import two_factor
+from backend.auth.routes import router as account_router
 from backend.auth.rate_limit import RateLimitMiddleware
 from backend.database.database import initialize_database
 from backend.realtime.hub import router as realtime_router
@@ -227,23 +229,19 @@ def login(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     response: Response,
     request: Request,
-) -> dict[str, str]:
+    background_tasks: BackgroundTasks,
+) -> dict:
+    """Sign in. With two-factor sign-in on, this returns a challenge instead of tokens;
+    finish with POST /auth/two-factor/verify."""
     client_id = request.client.host if request.client else "unknown"
     principal = authenticate(form_data, client_id)
-    token = create_access_token(principal.username, principal.role)
-    response.set_cookie(
-        key=AUTH_COOKIE_NAME,
-        value=token,
-        max_age=TOKEN_EXPIRE_SECONDS,
-        httponly=True,
-        secure=AUTH_COOKIE_SECURE,
-        samesite="lax",
-    )
-    return {
-        "access_token": token,
-        "refresh_token": create_refresh_token(principal.username),
-        "token_type": "bearer",
-    }
+    method = two_factor.enabled_method(principal.username)
+    if method:
+        challenge, code = two_factor.create_challenge(principal, method)
+        if code:
+            background_tasks.add_task(two_factor.send_challenge_code, principal.username, code)
+        return challenge
+    return issue_session(response, principal)
 
 
 @app.post("/auth/register", status_code=201, tags=["authentication"])
@@ -318,6 +316,16 @@ def read_profile_page() -> FileResponse:
     return FileResponse(PAGES_DIRECTORY / "users" / "profile.html", media_type="text/html")
 
 
+@app.get("/reset-password", include_in_schema=False)
+def read_reset_password_page() -> FileResponse:
+    return FileResponse(PAGES_DIRECTORY / "users" / "reset_password.html", media_type="text/html")
+
+
+@app.get("/feedback", include_in_schema=False)
+def read_feedback_page() -> FileResponse:
+    return FileResponse(PAGES_DIRECTORY / "users" / "feedback.html", media_type="text/html")
+
+
 @app.get("/admin", include_in_schema=False)
 def read_admin_page() -> FileResponse:
     return FileResponse(PAGES_DIRECTORY / "admin" / "admin.html", media_type="text/html")
@@ -340,3 +348,4 @@ def read_health_root(_username: str = Depends(get_current_user)) -> dict[str, st
 
 app.include_router(router)
 app.include_router(realtime_router)
+app.include_router(account_router)

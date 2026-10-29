@@ -18,7 +18,12 @@ def __getattr__(name: str):
     from routes.games.igdb_imports import router as igdb_imports_router
     from routes.games.lists import router as game_lists_router
     from routes.games.routes import router as games_router
+    from routes.users.feedback import admin_router as feedback_admin_router
+    from routes.users.feedback import router as feedback_router
+    from routes.users.messages import router as messages_router
+    from routes.users.notifications import router as notifications_router
     from routes.users.profile import router as profile_router
+    from routes.users.two_factor import router as two_factor_router
 
     router = APIRouter(dependencies=[Depends(get_current_user)])
     router.add_api_route(
@@ -28,6 +33,11 @@ def __getattr__(name: str):
         tags=["users"],
     )
     router.include_router(profile_router)
+    router.include_router(two_factor_router)
+    router.include_router(notifications_router)
+    router.include_router(messages_router)
+    router.include_router(feedback_router)
+    router.include_router(feedback_admin_router)
     router.include_router(games_router)
     router.include_router(game_lists_router)
     router.include_router(igdb_imports_router)

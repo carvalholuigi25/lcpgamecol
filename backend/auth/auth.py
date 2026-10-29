@@ -1,11 +1,13 @@
 import logging
 import os
 import secrets
+import sqlite3
 import threading
 import time
 from collections import deque
+from contextlib import closing
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from urllib.parse import urlsplit
 
 import jwt
@@ -14,6 +16,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jwt.exceptions import InvalidTokenError
 
 from backend.auth import users
+from backend.database import database
 
 TOKEN_EXPIRE_SECONDS = int(os.getenv("TOKEN_EXPIRE_SECONDS", "1800"))
 REFRESH_TOKEN_EXPIRE_SECONDS = int(
@@ -81,6 +84,8 @@ _monotonic = time.monotonic
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token", auto_error=False)
 refresh_token_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token", auto_error=False)
+_oauth2_dependency = Depends(oauth2_scheme)
+_refresh_token_dependency = Depends(refresh_token_scheme)
 
 
 @dataclass(frozen=True)
@@ -93,11 +98,11 @@ def _create_token(
     username: str, token_type: str, expires_in: int, role: str | None = None
 ) -> str:
     claims = {
-        "iat": datetime.now(timezone.utc),
+        "iat": datetime.now(UTC),
         "jti": secrets.token_urlsafe(12),
         "sub": username,
         "type": token_type,
-        "exp": datetime.now(timezone.utc) + timedelta(seconds=expires_in),
+        "exp": datetime.now(UTC) + timedelta(seconds=expires_in),
     }
     if role is not None:
         claims["role"] = role
@@ -110,6 +115,71 @@ def create_access_token(username: str, role: str) -> str:
 
 def create_refresh_token(username: str) -> str:
     return _create_token(username, "refresh", REFRESH_TOKEN_EXPIRE_SECONDS)
+
+
+def issue_session(response, principal: Principal) -> dict[str, str]:
+    """Set the auth cookie on a response and return the token pair for API clients."""
+    token = create_access_token(principal.username, principal.role)
+    response.set_cookie(
+        key=AUTH_COOKIE_NAME,
+        value=token,
+        max_age=TOKEN_EXPIRE_SECONDS,
+        httponly=True,
+        secure=AUTH_COOKIE_SECURE,
+        samesite="lax",
+    )
+    return {
+        "access_token": token,
+        "refresh_token": create_refresh_token(principal.username),
+        "token_type": "bearer",  # a token type, not a secret  # nosec B105
+    }
+
+
+def sessions_valid_after(username: str) -> int:
+    """Epoch second before which this user's tokens are no longer accepted."""
+    if not os.path.exists(database.DATABASE_PATH):
+        return 0
+    try:
+        with closing(database.get_connection()) as connection:
+            row = connection.execute(
+                "SELECT sessions_valid_after FROM user_security WHERE username = ?", (username,)
+            ).fetchone()
+    except sqlite3.OperationalError:
+        return 0
+    return row[0] if row else 0
+
+
+def revoke_sessions(username: str) -> None:
+    """Sign a user out everywhere: tokens issued before now stop working."""
+    with closing(database.get_connection()) as connection:
+        connection.execute(
+            """
+            INSERT INTO user_security (username, sessions_valid_after) VALUES (?, ?)
+            ON CONFLICT (username) DO UPDATE SET sessions_valid_after = excluded.sessions_valid_after
+            """,
+            (username, int(time.time())),
+        )
+        connection.commit()
+
+
+def _issued_before_revocation(claims: dict) -> bool:
+    issued_at = claims.get("iat")
+    return isinstance(issued_at, (int, float)) and issued_at < sessions_valid_after(claims["sub"])
+
+
+def check_password(username: str, password: str) -> bool:
+    """Confirm the password of a signed-in user (for sensitive account changes)."""
+    credentials = _find_credentials(username)
+    if credentials is None:
+        _verify_unknown_user(password)
+        return False
+    return _password_matches(password, credentials[1])
+
+
+def clear_login_lockouts(username: str) -> None:
+    with _login_attempts_lock:
+        for key in [key for key in _login_attempts if key[0] == username.lower()]:
+            _login_attempts.pop(key, None)
 
 
 def _find_credentials(username: str) -> tuple[str, str, str] | None:
@@ -298,13 +368,15 @@ def _decode_access_token(token: str) -> Principal:
             raise credentials_exception
         if not isinstance(claims["sub"], str) or claims.get("role") not in VALID_ROLES:
             raise credentials_exception
+        if _issued_before_revocation(claims):
+            raise credentials_exception
         return Principal(username=claims["sub"], role=claims["role"])
     except (InvalidTokenError, KeyError, TypeError):
         raise credentials_exception from None
 
 
 def get_current_principal(
-    bearer_token: str | None = Depends(oauth2_scheme),
+    bearer_token: str | None = _oauth2_dependency,
     request: Request = None,
 ) -> Principal:
     token = bearer_token or (request.cookies.get(AUTH_COOKIE_NAME) if request else None)
@@ -326,8 +398,11 @@ def get_current_principal(
     return _decode_access_token(token)
 
 
+_current_principal_dependency = Depends(get_current_principal)
+
+
 def get_current_user(
-    bearer_token: str | None = Depends(oauth2_scheme),
+    bearer_token: str | None = _oauth2_dependency,
     request: Request = None,
 ) -> str:
     return get_current_principal(bearer_token, request).username
@@ -336,7 +411,7 @@ def get_current_user(
 def require_role(*allowed_roles: str):
     """Dependency factory: restrict a route to principals with one of the given roles."""
 
-    def dependency(principal: Principal = Depends(get_current_principal)) -> Principal:
+    def dependency(principal: Principal = _current_principal_dependency) -> Principal:
         if principal.role not in allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -351,7 +426,7 @@ require_admin = require_role(ROLE_ADMIN)
 
 
 def get_current_user_from_refresh_token(
-    token: str | None = Depends(refresh_token_scheme),
+    token: str | None = _refresh_token_dependency,
 ) -> str:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -369,6 +444,8 @@ def get_current_user_from_refresh_token(
             options={"require": ["sub", "exp", "type"]},
         )
         if claims["type"] != "refresh" or not isinstance(claims["sub"], str):
+            raise credentials_exception
+        if _issued_before_revocation(claims):
             raise credentials_exception
         return claims["sub"]
     except (InvalidTokenError, KeyError, TypeError):
