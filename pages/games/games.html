@@ -17,6 +17,8 @@
       <span class="loading-spinner" aria-hidden="true"></span>
       <span>Loading page...</span>
     </div>
+    <aside id="admin-sidebar" class="admin-sidebar" aria-label="Page links" hidden></aside>
+    <div id="sidebar-backdrop" class="sidebar-backdrop" hidden></div>
     <main>
       <header>
         <div>
@@ -65,6 +67,9 @@
         <div class="header-actions">
           <div id="user-menu" class="user-menu" hidden>
             <div class="user-info">
+              <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-controls="admin-sidebar" aria-expanded="true" aria-label="Hide page links" title="Hide page links" hidden>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+              </button>
               <span id="user-avatar" class="user-avatar hidden" aria-hidden="true"></span>
               <span id="username-display" class="username-display"></span>
               <span class="realtime-status" data-realtime-status role="status" hidden></span>
@@ -142,6 +147,7 @@
         </form>
         <p class="status" data-register-status role="status" aria-live="polite"></p>
         <button id="auth-switch" class="link-button" type="button">New here? Create an account</button>
+        <a class="link-button forgot-password-link" href="/reset-password">Forgot your password?</a>
         <p id="login-status" class="status hidden" role="status"></p>
         <div class="login-lockout" data-lockout hidden>
           <p data-lockout-message></p>
@@ -326,7 +332,10 @@
     <script defer src="/public/scripts/functions.js"></script>
     <script defer src="/nmodules/@microsoft/signalr/dist/browser/signalr.min.js"></script>
     <script defer src="/public/scripts/realtime.js"></script>
+    <script defer src="/public/scripts/sidebar.js"></script>
+    <script defer src="/public/scripts/inbox.js"></script>
     <script defer src="/public/scripts/register.js"></script>
+    <script defer src="/public/scripts/two_factor_login.js"></script>
     <script defer src="/public/scripts/shelf.js"></script>
     <script defer src="/public/scripts/games.js"></script>
   </body>

@@ -11,8 +11,6 @@ Planned work and known gaps. Move items to `CHANGELOG.md` when they ship.
 
 ## Features
 
-- [ ] Implement feedback page.
-- [ ] Implement notifications and messages icon with their dialogs.
 - [ ] Implement review system with moderation filters & commands.
 - [ ] Add a basic xp level + rank system (or gamification).
 - [ ] Add cool personalization for user profile.

@@ -4,8 +4,8 @@ Bandit checks the Python sources for common security issues; Semgrep runs
 registry rulesets (Python, FastAPI, secrets, ...) across Python, JS and HTML;
 pip-audit checks the installed Python dependencies for known vulnerabilities.
 Findings from all tools are normalised to a single severity scale and printed
-as one summary. Raw tool output and a summary.json are written to
-tests/reports/security/<timestamp>/.
+as one summary. Raw tool output, a summary.json and a report.html (see
+scripts/audit_report.py) are written to tests/reports/security/<timestamp>/.
 
 Examples:
     python scripts/security_audit.py
@@ -24,6 +24,8 @@ import sys
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
+
+import audit_report
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 DEFAULT_OUTPUT_DIR = ROOT_DIR / "tests" / "reports" / "security"
@@ -273,6 +275,7 @@ def parse_args() -> argparse.Namespace:
                         help="Exit with code 1 if any finding is at or above this severity")
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--max-findings", type=int, default=50, help="Findings to print (default: %(default)s)")
+    parser.add_argument("--no-html", action="store_true", help="Skip the report.html page and the reports index")
     return parser.parse_args()
 
 

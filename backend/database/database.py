@@ -153,6 +153,97 @@ def initialize_database() -> None:
                 PRIMARY KEY (username, game_id),
                 FOREIGN KEY (game_id) REFERENCES games (id) ON DELETE CASCADE
             );
+
+            CREATE TABLE IF NOT EXISTS feedback (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL COLLATE NOCASE,
+                category TEXT NOT NULL,
+                subject TEXT NOT NULL,
+                message TEXT NOT NULL,
+                page_url TEXT NULL,
+                status TEXT NOT NULL DEFAULT 'open',
+                reply TEXT NULL,
+                replied_by TEXT NULL,
+                replied_at TEXT NULL,
+                email_status TEXT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS notifications (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL COLLATE NOCASE,
+                kind TEXT NOT NULL,
+                title TEXT NOT NULL,
+                body TEXT NULL,
+                link TEXT NULL,
+                created_at TEXT NOT NULL,
+                read_at TEXT NULL
+            );
+            CREATE INDEX IF NOT EXISTS notifications_by_user ON notifications (username, read_at);
+
+            -- Each side hides a message on its own; the row goes once both have.
+            CREATE TABLE IF NOT EXISTS messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sender TEXT NOT NULL COLLATE NOCASE,
+                recipient TEXT NOT NULL COLLATE NOCASE,
+                subject TEXT NOT NULL,
+                body TEXT NOT NULL,
+                reply_to INTEGER NULL,
+                created_at TEXT NOT NULL,
+                read_at TEXT NULL,
+                sender_deleted BOOLEAN NOT NULL DEFAULT 0,
+                recipient_deleted BOOLEAN NOT NULL DEFAULT 0,
+                FOREIGN KEY (reply_to) REFERENCES messages (id) ON DELETE SET NULL
+            );
+            CREATE INDEX IF NOT EXISTS messages_by_recipient ON messages (recipient, read_at);
+            CREATE INDEX IF NOT EXISTS messages_by_sender ON messages (sender);
+
+            -- Tokens issued before sessions_valid_after (epoch seconds) are rejected.
+            CREATE TABLE IF NOT EXISTS user_security (
+                username TEXT PRIMARY KEY COLLATE NOCASE,
+                sessions_valid_after INTEGER NOT NULL DEFAULT 0
+            );
+
+            -- Only a SHA-256 of each reset token is stored.
+            CREATE TABLE IF NOT EXISTS password_resets (
+                token_hash TEXT PRIMARY KEY,
+                username TEXT NOT NULL COLLATE NOCASE,
+                created_by TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                expires_at INTEGER NOT NULL,
+                used_at TEXT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS user_two_factor (
+                username TEXT PRIMARY KEY COLLATE NOCASE,
+                method TEXT NULL,
+                secret TEXT NULL,
+                enabled_at TEXT NULL,
+                pending_method TEXT NULL,
+                pending_secret TEXT NULL,
+                last_totp_step INTEGER NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS two_factor_recovery_codes (
+                username TEXT NOT NULL COLLATE NOCASE,
+                code_hash TEXT NOT NULL,
+                used_at TEXT NULL,
+                PRIMARY KEY (username, code_hash)
+            );
+
+            -- One row per sign-in challenge or email setup code.
+            CREATE TABLE IF NOT EXISTS two_factor_challenges (
+                id TEXT PRIMARY KEY,
+                username TEXT NOT NULL COLLATE NOCASE,
+                method TEXT NOT NULL,
+                code_hash TEXT NULL,
+                expires_at INTEGER NOT NULL,
+                attempts INTEGER NOT NULL DEFAULT 0,
+                sends INTEGER NOT NULL DEFAULT 0,
+                sent_at INTEGER NULL,
+                completed_at INTEGER NULL
+            );
             """
         )
         game_columns = {
@@ -169,6 +260,11 @@ def initialize_database() -> None:
         ):
             if column not in game_columns:
                 connection.execute(f"ALTER TABLE games ADD COLUMN {column} TEXT NULL")
+        profile_columns = {
+            row["name"] for row in connection.execute("PRAGMA table_info(user_profiles)")
+        }
+        if "email" not in profile_columns:
+            connection.execute("ALTER TABLE user_profiles ADD COLUMN email TEXT NULL")
         connection.execute(
             """
             UPDATE games SET esrb = CASE esrb

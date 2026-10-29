@@ -2,8 +2,8 @@
 
 Uses lighthouse-python-plus to drive the Lighthouse CLI (installed locally as a
 dev dependency via npm) and prints a per-page summary of scores and Core Web
-Vitals. HTML/JSON reports and a summary.json are written to
-tests/reports/lighthouse/<timestamp>/.
+Vitals. HTML/JSON reports, a summary.json and a report.html (see scripts/audit_report.py)
+are written to tests/reports/lighthouse/<timestamp>/.
 
 Examples:
     python scripts/lighthouse_audit.py
@@ -30,6 +30,8 @@ from uuid import uuid4
 
 from lighthouse import LighthouseRunner
 from lighthouse.report import LighthouseReport
+
+import audit_report
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 LOCAL_LIGHTHOUSE_CLI = ROOT_DIR / "node_modules" / "lighthouse" / "cli" / "index.js"
@@ -143,6 +145,7 @@ def start_server(base_url: str) -> subprocess.Popen:
 
 def audit_page(url: str, page: str, form_factor: str, args, output_dir: Path) -> dict:
     scores, timings, cls_values = [], {key: [] for key in TIMINGS}, []
+    category_scores = {category: [] for category in args.categories}
     failed = {}
 
     for run in range(1, args.repeats + 1):
@@ -161,6 +164,8 @@ def audit_page(url: str, page: str, form_factor: str, args, output_dir: Path) ->
             raise RuntimeError(f"No report produced for {url} ({form_factor})")
 
         scores.append(report.score.get("performance") or 0)
+        for category in args.categories:
+            category_scores[category].append(report.score.get(category) or 0)
         for key, value in report.timings.items():
             timings[key].append(value.total_seconds() * 1000)
 
@@ -177,6 +182,7 @@ def audit_page(url: str, page: str, form_factor: str, args, output_dir: Path) ->
         "form_factor": form_factor,
         "runs": args.repeats,
         "performance": round(mean(scores) * 100),
+        "scores": {category: round(mean(values) * 100) for category, values in category_scores.items()},
         "metrics_ms": {METRIC_LABELS[k]: round(mean(v)) for k, v in timings.items() if v},
         "cls": round(mean(cls_values), 3) if cls_values else None,
         "failed_audits": failed,
@@ -231,6 +237,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--min-score", type=int, help="Exit with code 1 if any performance score (0-100) is below this")
     parser.add_argument("--start-server", action="store_true", help="Start uvicorn for the duration of the audit")
     parser.add_argument("--verbose", action="store_true", help="Show Lighthouse CLI output")
+    parser.add_argument("--no-html", action="store_true", help="Skip the report.html page and the reports index")
     args = parser.parse_args()
     if "performance" not in args.categories:
         args.categories.insert(0, "performance")

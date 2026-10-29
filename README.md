@@ -61,6 +61,8 @@ The app is available at:
 - Games library: <http://127.0.0.1:8000/library>
 - Upcoming releases: <http://127.0.0.1:8000/library/releases>
 - Your profile (any signed-in user): <http://127.0.0.1:8000/profile>
+- Feedback (any signed-in user; administrators also answer it here): <http://127.0.0.1:8000/feedback>
+- Reset a forgotten password: <http://127.0.0.1:8000/reset-password>
 - Administrator dashboard: <http://127.0.0.1:8000/admin>
 - Special features (admin tools such as file upload): <http://127.0.0.1:8000/admin/special-features>
 - Interactive API docs (Swagger UI): <http://127.0.0.1:8000/docs>
@@ -81,11 +83,13 @@ The seed data is defined in `backend/database/seed.sql`; running the seeder more
 - Create, browse, search, update, and delete games and achievements through the API.
 - Browse and search the game library, view release information, and manage collection data through the browser pages.
 - Review collection statistics in the administrator dashboard. Dashboard data and write operations require the `admin` role.
-- Move between dashboard sections and admin pages using the sidebar. The menu button in the top bar shows or hides it; on wide screens it collapses to icons, and on small screens it opens as an overlay.
+- Move between pages with the sidebar, on every page once you're signed in. Its **Activity** group at the top has notifications, messages, and feedback; administrators also see the dashboard and tools groups. The menu button shows or hides it; on wide screens it collapses to icons, and on small screens it opens as an overlay.
 - Upload images and PDFs safely from the Special features page (admin only).
 - Create a viewer account from the library or dashboard sign-in panel.
 - Add games to your own wishlist and favorites from the game details. Administrators also get **Edit** and **Delete** buttons there.
 - See changes as they happen: the library and dashboard update by themselves through a SignalR hub at `/hubs/library`. Python clients can subscribe with `signalrcore`; run a single server worker, because live connections are kept in memory.
+- Send feedback from the feedback page. Administrators are notified, can set its status and reply, and replies are emailed to users who added an address to their profile.
+- Get notifications (bell) and direct messages (envelope) at the top of the sidebar on every page, with live unread counts. Messages to users with an email address are also emailed.
 - View game screenshots in an image gallery and save dashboard preferences in the browser.
 - Use the library and dashboard in English, Portuguese, German, or French.
 - Receive custom HTML error pages for common HTTP errors; API clients retain API-style error responses.
@@ -117,6 +121,23 @@ People can create their own accounts from the sign-in panel, or with `POST /auth
 - Passwords must be at least `PASSWORD_MIN_LENGTH` characters long (12 by default) and no longer than 128 characters. They must mix letters with numbers, spaces, or symbols, must not contain the username, and are rejected if they are common or predictable.
 - Each client IP can make up to `REGISTRATION_MAX_PER_CLIENT` registration attempts per `REGISTRATION_WINDOW_SECONDS` window (5 per hour by default).
 - Set `AUTH_REGISTRATION_ENABLED=false` to turn registration off.
+
+### Two-step sign-in
+
+Any signed-in user can turn on two-step sign-in in **My profile → Security** and choose how to get codes:
+
+- **Authenticator app** (TOTP, RFC 6238): scan the QR code with Google Authenticator, Microsoft Authenticator, 1Password, Authy, or a similar app. Works without email.
+- **Email code**: a 6-digit code is emailed at each sign-in. Needs an email address on the profile and email set up on the server (see **Email**).
+
+Turning it on shows 10 one-time recovery codes, for when the phone or mailbox is unavailable. Turning it off, or making new recovery codes, asks for the password again.
+
+With two-step sign-in on, `POST /auth/token` answers `{"two_factor_required": true, "challenge_token": "...", "method": "totp" | "email"}` instead of tokens. Send the code (or a recovery code) with the challenge to `POST /auth/two-factor/verify` to get the tokens and cookie; `POST /auth/two-factor/resend` emails a new code. A challenge lasts 10 minutes and allows 5 wrong codes. An administrator can turn it off for a user who lost both their device and their recovery codes, from the user directory.
+
+### Forgotten passwords
+
+The **Forgot your password?** link on the sign-in panels opens `/reset-password`. People enter their username or email, and get a one-time link by email (when their profile has an address). The answer is the same whether or not the account exists. Links expire after `PASSWORD_RESET_TTL_SECONDS` (1 hour by default), and each client can ask `PASSWORD_RESET_MAX_PER_CLIENT` times per `PASSWORD_RESET_WINDOW_SECONDS` (5 per hour by default). Only a hash of each link is stored.
+
+Administrators can also create a link from the user directory (**Account access → Create reset link**) and pass it on themselves. Setting a new password signs the account out everywhere: access and refresh tokens issued earlier stop working. Accounts configured in `AUTH_USERS` change their password in the server settings instead.
 
 ### Session security
 
@@ -195,6 +216,32 @@ npm run db:migrate
 ```
 
 New required fields need a default so existing rows can be migrated. Changes to field types, defaults, or optionality rebuild the affected table while preserving existing rows. When enum values are removed, review and apply any data updates called out in the generated migration.
+
+## Email
+
+Email is optional; without it, replies and messages are only shown in the app. Set these in `config.env`:
+
+| Setting | Meaning |
+| --- | --- |
+| `SMTP_HOST`, `SMTP_PORT` | Mail server (port 587 by default). |
+| `SMTP_SECURITY` | `starttls` (default), `ssl` (usually port 465), or `none` for a local relay. |
+| `SMTP_USERNAME`, `SMTP_PASSWORD` | Sign-in for the mail server, if it needs one. |
+| `MAIL_FROM` | Sender, for example `lcpgamecol <no-reply@example.com>`. |
+| `APP_BASE_URL` | Address used for links in emails (default `http://127.0.0.1:8000`). |
+| `MAIL_OUTBOX_DIR` | With no `SMTP_HOST`, write each email to this folder as an `.eml` file instead. Useful while developing. |
+
+Users only get email when their profile has an address (**My profile → Edit profile → Email for notifications**).
+
+## Audit reports
+
+`npm run lighthouse` and `npm run security` write their results to `tests/reports/<lighthouse|security>/<timestamp>/`, including a `report.html` page for the run, and update `tests/reports/index.html`, which lists every run with score and findings trends. To rebuild the pages from existing results:
+
+```powershell
+npm run audit-report          # every run, then open tests/reports/index.html
+npm run audit-report -- --kind security --run 20261028-095205 --open
+```
+
+Pass `--no-html` to either audit script to skip the pages.
 
 ## Tests and coverage
 

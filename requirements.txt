@@ -3,6 +3,7 @@ uvicorn[standard]
 anyio>=4.14.2
 python-multipart
 PyJWT
+segno
 httpx2
 pytest
 pytest-cov

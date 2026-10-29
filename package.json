@@ -29,6 +29,7 @@
     "lighthouse-ci": "python scripts/lighthouse_audit.py --start-server --repeats 3 --min-score 90",
     "security": "python scripts/security_audit.py",
     "security-ci": "python scripts/security_audit.py --min-severity medium --fail-on high",
+    "audit-report": "python scripts/audit_report.py",
     "lint": "flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics",
     "lint-fix": "black .",
     "format": "black .",

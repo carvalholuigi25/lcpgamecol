@@ -825,10 +825,14 @@ function showApp(profile) {
   usernameDisplay.textContent = username;
   userMenu.hidden = false;
   loginStatus.textContent = "";
+  window.adminSidebar?.setAvailable(true, profile.role);
+  window.inbox?.start();
 }
 
 function showLogin() {
   currentProfile = null;
+  window.inbox?.stop();
+  window.adminSidebar?.setAvailable(false);
   myLists = { wishlist: new Set(), favorites: new Set() };
   releaseLinks.clear();
   if (detailsDialog.open) detailsDialog.close();
@@ -964,6 +968,14 @@ function initShelf({ load, reset = () => {}, refresh = null, gameActions = null 
           loginStatus.textContent = "Incorrect username or password.";
         }
         return;
+      }
+      const result = await response.json();
+      if (result.two_factor_required) {
+        loginStatus.textContent = "Waiting for your sign-in code...";
+        if (!(await window.twoFactorLogin.complete(result))) {
+          loginStatus.textContent = "Sign-in cancelled.";
+          return;
+        }
       }
       const profile = await fetchProfile();
       if (!profile) {

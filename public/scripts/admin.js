@@ -68,12 +68,12 @@ function showLogin(message = "") {
   window.realtime?.stop();
 }
 
-function showDashboard(username) {
+function showDashboard(username, role) {
   loginView.hidden = true;
   dashboardView.hidden = false;
   accountName.textContent = username;
   logoutButton.hidden = false;
-  window.adminSidebar?.setAvailable(true);
+  window.adminSidebar?.setAvailable(true, role);
   window.realtime?.start();
 }
 
@@ -787,12 +787,20 @@ loginForm.addEventListener("submit", async (event) => {
       }
       return;
     }
+    const result = await response.json();
+    if (result.two_factor_required) {
+      loginStatus.textContent = "Waiting for your sign-in code...";
+      if (!(await window.twoFactorLogin.complete(result))) {
+        loginStatus.textContent = "Sign-in cancelled.";
+        return;
+      }
+    }
     const profile = await fetchProfile();
     if (!profile) {
       loginStatus.textContent = "Your profile could not be loaded.";
       return;
     }
-    showDashboard(profile.username);
+    showDashboard(profile.username, profile.role);
     applyDashboardSettings();
     await loadDashboard();
     openRequestedGame();
@@ -834,7 +842,7 @@ fetchProfile()
       showLogin();
       return;
     }
-    showDashboard(profile.username);
+    showDashboard(profile.username, profile.role);
     applyDashboardSettings();
     return loadDashboard().then(openRequestedGame);
   })

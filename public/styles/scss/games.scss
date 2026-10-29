@@ -1,3 +1,4 @@
+@use "sass:meta";
 // The Press Start 2P font is loaded by preferences.js only when the Cyber Retro theme is active.
 
 // Animated from 0 up to each bar's --rating (set inline by shelf.js).
@@ -256,7 +257,9 @@ button:hover {
   font: 0.75rem/1.45 Arial, sans-serif;
 }
 
-button.link-button {
+button.link-button,
+a.link-button {
+  display: inline-block;
   min-height: 0;
   margin-top: 6px;
   padding: 4px;
@@ -518,6 +521,22 @@ body[data-shelf-state="pending"] {
 
   &:hover,
   &:focus-visible { border-color: var(--accent); color: var(--accent); }
+}
+
+@media (max-width: 640px) {
+  // The sidebar button, name, status and the two buttons don't fit on one line.
+  #user-menu {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .user-actions {
+    flex-shrink: 1;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    min-width: 0;
+    margin-left: auto;
+  }
 }
 
 .grid {
@@ -1540,6 +1559,12 @@ dialog::backdrop {
   z-index: 2;
 }
 
+// Each select sizes its column, so the theme select can't spill past the edge.
+.page-tools .row > [class*="col-"] {
+  flex: none;
+  width: auto;
+}
+
 .page-tools {
   position: absolute;
   top: 0;
@@ -2175,3 +2200,6 @@ html body dialog.lg-dialog {
     inset: 0;
   }
 }
+
+@include meta.load-css("sidebar");
+@include meta.load-css("inbox");

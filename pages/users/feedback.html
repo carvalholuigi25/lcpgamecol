@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f4f5ef" />
+    <title>Feedback / Games Library</title>
+    <link rel="icon" href="/public/images/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/public/styles/css/admin.css" />
+  </head>
+  <body>
+    <div id="page-loader" class="page-loader" role="status" aria-live="polite">
+      <span class="loading-spinner" aria-hidden="true"></span>
+      <span>Loading page...</span>
+    </div>
+    <aside id="admin-sidebar" class="admin-sidebar" aria-label="Page links" hidden></aside>
+    <div id="sidebar-backdrop" class="sidebar-backdrop" hidden></div>
+    <main class="admin-shell">
+      <header class="topbar">
+        <div class="topbar-start">
+          <button id="sidebar-toggle" class="icon-button sidebar-toggle" type="button" aria-controls="admin-sidebar" aria-expanded="true" aria-label="Hide page links" title="Hide page links" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+          </button>
+          <a class="wordmark" href="/library" aria-label="Games Library home">
+            <span class="wordmark-mark" aria-hidden="true">G</span>
+            <span>LCPGAMECOL <small>FEEDBACK</small></span>
+          </a>
+        </div>
+        <nav class="main-nav" aria-label="Main navigation">
+          <a href="/library">Games</a>
+          <a href="/library/releases">Releases</a>
+          <a href="/profile">Profile</a>
+          <a href="/feedback" class="active" aria-current="page">Feedback</a>
+        </nav>
+        <div class="account-area">
+          <label class="language-control" for="language-selector">Language
+            <select id="language-selector" aria-label="Language">
+              <option value="en">English</option><option value="pt">Português</option>
+              <option value="de">Deutsch</option><option value="fr">Français</option>
+            </select>
+          </label>
+          <span id="account-name" class="account-name"></span>
+          <button id="logout-button" class="icon-button" type="button" aria-label="Log out" title="Log out" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3m9-8h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6" /></svg>
+          </button>
+        </div>
+      </header>
+
+      <section id="access-view" class="login-view" aria-labelledby="access-title" hidden>
+        <p class="kicker">FEEDBACK / SIGN IN</p>
+        <h1 id="access-title">Tell us<br />what you think.</h1>
+        <p id="access-message" class="login-copy">Sign in to send feedback.</p>
+        <a class="primary-button" href="/library">Go to sign in <span aria-hidden="true">↗</span></a>
+      </section>
+
+      <section id="feedback-view" hidden>
+        <div class="page-heading">
+          <div>
+            <p class="kicker">LIBRARY / FEEDBACK</p>
+            <h1>Feedback<span class="heading-period">.</span></h1>
+            <p class="heading-copy">Report a bug, suggest an idea, or ask a question. You'll be notified when someone replies.</p>
+          </div>
+          <div class="heading-tools">
+            <time id="live-clock" class="live-clock"></time>
+            <label class="theme-control" for="theme-selector">Theme
+              <select id="theme-selector">
+                <option value="auto">Auto</option><option value="dark">Dark</option>
+                <option value="white">White</option><option value="glassmorphism">Glassmorphism</option>
+                <option value="liquid-glass">Liquid glass</option>
+                <option value="sunsetvibes">Sunset Vibes</option><option value="cyber-retro">Cyber Retro Gaming</option>
+                <option value="rgb">RGB</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <div class="feedback-layout">
+          <section class="records-panel" aria-labelledby="feedback-form-title">
+            <div class="panel-heading">
+              <div><p class="kicker">SEND FEEDBACK</p><h2 id="feedback-form-title">What's on your mind?</h2></div>
+            </div>
+            <form id="feedback-form" class="feedback-form">
+              <div class="record-fields">
+                <label>Type
+                  <select name="category">
+                    <option value="bug">Bug report</option>
+                    <option value="idea">Idea</option>
+                    <option value="question">Question</option>
+                    <option value="praise">Praise</option>
+                    <option value="other" selected>Other</option>
+                  </select>
+                </label>
+                <label>Page (optional)<input name="page_url" maxlength="300" placeholder="/library" autocomplete="off" /></label>
+                <label class="field-wide">Subject<input name="subject" maxlength="120" required autocomplete="off" /></label>
+                <label class="field-wide">Message<textarea name="message" maxlength="4000" rows="6" required></textarea></label>
+              </div>
+              <p id="feedback-email-hint" class="profile-form-hint">Add an email address to <a href="/profile">your profile</a> to also get replies by email.</p>
+              <p id="feedback-form-status" class="records-status" role="status" aria-live="polite"></p>
+              <div class="upload-actions">
+                <button id="feedback-submit" class="primary-button" type="submit">Send feedback</button>
+              </div>
+            </form>
+          </section>
+
+          <section class="records-panel" aria-labelledby="my-feedback-title">
+            <div class="panel-heading">
+              <div><p class="kicker">YOUR FEEDBACK</p><h2 id="my-feedback-title">Sent by you</h2></div>
+              <span id="my-feedback-count" class="chart-note"></span>
+            </div>
+            <p id="my-feedback-status" class="records-status" role="status" aria-live="polite"></p>
+            <ol id="my-feedback" class="feedback-list"></ol>
+            <p id="my-feedback-empty" class="empty-note" hidden>You haven't sent any feedback yet.</p>
+          </section>
+        </div>
+
+        <section id="manage" class="records-panel" aria-labelledby="manage-title" hidden>
+          <div class="panel-heading">
+            <div><p class="kicker">ADMINISTRATORS</p><h2 id="manage-title">All feedback</h2></div>
+            <span id="manage-email-note" class="chart-note"></span>
+          </div>
+          <div id="manage-tabs" class="record-tabs" role="tablist" aria-label="Filter by status">
+            <button class="record-tab active" type="button" role="tab" aria-selected="true" data-status="">All <span data-count=""></span></button>
+            <button class="record-tab" type="button" role="tab" aria-selected="false" data-status="open">Open <span data-count="open"></span></button>
+            <button class="record-tab" type="button" role="tab" aria-selected="false" data-status="in_progress">In progress <span data-count="in_progress"></span></button>
+            <button class="record-tab" type="button" role="tab" aria-selected="false" data-status="answered">Answered <span data-count="answered"></span></button>
+            <button class="record-tab" type="button" role="tab" aria-selected="false" data-status="closed">Closed <span data-count="closed"></span></button>
+          </div>
+          <p id="manage-status" class="records-status" role="status" aria-live="polite"></p>
+          <ol id="manage-list" class="feedback-list"></ol>
+          <p id="manage-empty" class="empty-note" hidden>No feedback here.</p>
+        </section>
+
+        <footer class="page-footer"><span>LCPGAMECOL / FEEDBACK</span><span>LIBRARY</span></footer>
+      </section>
+      <div id="toast-region" class="toast-region" role="status" aria-live="polite" aria-atomic="true"></div>
+    </main>
+    <script src="/public/scripts/loading.js"></script>
+    <script src="/public/scripts/i18n.js"></script>
+    <script src="/public/scripts/preferences.js"></script>
+    <script src="/public/scripts/sidebar.js"></script>
+    <script src="/nmodules/@microsoft/signalr/dist/browser/signalr.min.js"></script>
+    <script src="/public/scripts/realtime.js"></script>
+    <script src="/public/scripts/inbox.js"></script>
+    <script src="/public/scripts/feedback.js"></script>
+  </body>
+</html>
