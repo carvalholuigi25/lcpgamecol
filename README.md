@@ -99,7 +99,7 @@ The seed data is defined in `backend/database/seed.sql`; running the seeder more
 
 API routes require authentication. `POST /auth/token` accepts form fields named `username` and `password`. Its response includes an access token and a refresh token; the access token can be sent as `Authorization: Bearer <access-token>`. Browser sign-in also uses an `HttpOnly` cookie.
 
-By default, `AUTH_USERNAME` and `AUTH_PASSWORD` configure a single administrator account. To configure multiple accounts, set `AUTH_USERS` as a comma-separated list of `username:password:role` entries:
+`AUTH_USERNAME` (default `admin`) and `AUTH_PASSWORD` configure a single administrator account. There is no default password: if neither `AUTH_PASSWORD` nor `AUTH_USERS` is set, the app starts without an administrator account and logs a warning. To configure multiple accounts, set `AUTH_USERS` as a comma-separated list of `username:password:role` entries (entries with an empty password are rejected):
 
 ```text
 AUTH_USERS=admin:use-a-strong-password:admin,readonly:another-strong-password:viewer

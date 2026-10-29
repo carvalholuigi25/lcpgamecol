@@ -29,7 +29,8 @@ AUTH_COOKIE_SECURE = os.getenv("AUTH_COOKIE_SECURE", "false").lower() == "true"
 JWT_SECRET = os.getenv("JWT_SECRET") or secrets.token_urlsafe(32)
 JWT_ALGORITHM = "HS256"
 AUTH_USERNAME = os.getenv("AUTH_USERNAME", "admin")
-AUTH_PASSWORD = os.getenv("AUTH_PASSWORD", "1234")
+# No default password: without AUTH_USERS or AUTH_PASSWORD there is no configured admin.
+AUTH_PASSWORD = os.getenv("AUTH_PASSWORD", "")
 LOGIN_MAX_ATTEMPTS = int(os.getenv("LOGIN_MAX_ATTEMPTS", "3"))
 LOGIN_LOCKOUT_SECONDS = int(os.getenv("LOGIN_LOCKOUT_SECONDS", "60"))
 LOGIN_ATTEMPT_WINDOW_SECONDS = int(os.getenv("LOGIN_ATTEMPT_WINDOW_SECONDS", "300"))
@@ -55,11 +56,18 @@ def _load_users() -> dict[str, tuple[str, str]]:
     """Return {username: (password, role)}.
 
     Configured via AUTH_USERS="user:password:role,user2:password2:role2".
-    Falls back to a single admin user from AUTH_USERNAME/AUTH_PASSWORD.
+    Falls back to a single admin user from AUTH_USERNAME/AUTH_PASSWORD, and to no
+    configured accounts at all when neither sets a password.
     A password may also be a hash from `python -m backend.auth.users hash`.
     """
     raw = os.getenv("AUTH_USERS")
     if not raw:
+        if not AUTH_PASSWORD:
+            logger.warning(
+                "No AUTH_USERS or AUTH_PASSWORD is set, so there is no administrator account; "
+                "set one in config.env."
+            )
+            return {}
         return {AUTH_USERNAME: (AUTH_PASSWORD, ROLE_ADMIN)}
 
     users: dict[str, tuple[str, str]] = {}
@@ -70,6 +78,8 @@ def _load_users() -> dict[str, tuple[str, str]]:
         username, password, role = entry.split(":")
         if role not in VALID_ROLES:
             raise ValueError(f"Invalid role {role!r} for user {username!r}")
+        if not password:
+            raise ValueError(f"User {username!r} in AUTH_USERS has no password")
         users[username] = (password, role)
     return users
 

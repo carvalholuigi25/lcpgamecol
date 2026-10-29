@@ -72,10 +72,25 @@ def test_auth_and_database_live_in_backend_package():
 
 def test_load_users_falls_back_to_single_admin(monkeypatch):
     monkeypatch.delenv("AUTH_USERS", raising=False)
+    monkeypatch.setattr(auth, "AUTH_PASSWORD", "configured-password")
 
     assert auth._load_users() == {
-        auth.AUTH_USERNAME: (auth.AUTH_PASSWORD, auth.ROLE_ADMIN)
+        auth.AUTH_USERNAME: ("configured-password", auth.ROLE_ADMIN)
     }
+
+
+def test_load_users_has_no_admin_without_a_password(monkeypatch):
+    monkeypatch.delenv("AUTH_USERS", raising=False)
+    monkeypatch.setattr(auth, "AUTH_PASSWORD", "")
+
+    assert auth._load_users() == {}
+
+
+def test_load_users_rejects_entries_without_a_password(monkeypatch):
+    monkeypatch.setenv("AUTH_USERS", "alice::admin")
+
+    with pytest.raises(ValueError, match="no password"):
+        auth._load_users()
 
 
 def test_load_users_parses_env_and_skips_blank_entries(monkeypatch):
