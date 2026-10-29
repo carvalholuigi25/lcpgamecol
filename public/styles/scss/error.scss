@@ -112,3 +112,23 @@ a:focus-visible {
   background: #aaa1ff;
   transition: width 250ms linear;
 }
+
+.blocked-admin-note {
+  margin-top: 1.5rem;
+  font-size: 0.85rem;
+
+  a {
+    display: inline;
+    margin: 0;
+    padding: 0;
+    background: none;
+    color: #aaa1ff;
+    text-decoration: underline;
+  }
+
+  a:hover,
+  a:focus-visible {
+    background: none;
+    color: #fff;
+  }
+}

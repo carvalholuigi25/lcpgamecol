@@ -142,10 +142,12 @@ def send_message(
     principal: Principal = Depends(get_current_principal),
 ) -> dict:
     account = _accounts().get(body.recipient.lower())
+    is_send_email_yourself_disabled = False
+
     if account is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     recipient = account["username"]
-    if recipient.lower() == principal.username.lower():
+    if recipient.lower() == principal.username.lower() and is_send_email_yourself_disabled:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You cannot send a message to yourself.")
 
     with closing(get_connection()) as connection:

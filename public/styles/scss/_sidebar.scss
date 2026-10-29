@@ -167,7 +167,7 @@ body.has-sidebar.sidebar-collapsed {
   padding-left: var(--sidebar-collapsed-width);
 
   .admin-sidebar { width: var(--sidebar-collapsed-width); }
-  .sidebar-nav a, .sidebar-button { justify-content: center; padding: 0; }
+  .sidebar-nav a, .sidebar-button { justify-content: center; padding: 0; border-radius: calc(16px + 8px); }
   .sidebar-nav a span, .sidebar-button-label { display: none; }
   .sidebar-group { height: 1px; margin: 12px 8px; overflow: hidden; background: var(--line); color: transparent; }
   .sidebar-section:first-child .sidebar-group { margin-top: 64px; }

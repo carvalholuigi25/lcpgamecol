@@ -47,7 +47,7 @@
   }
 
   function formatDate(value) {
-    const locale = { en: "en-GB", pt: "pt-PT", de: "de-DE", fr: "fr-FR" }[window.i18n.language];
+    const locale = { en: "en-GB", pt: "pt-PT", de: "de-DE", fr: "fr-FR", it: "it-IT", es: "es-ES", ja: "ja-JP" }[window.i18n.language];
     return new Date(value).toLocaleDateString(locale, { dateStyle: "medium" });
   }
 

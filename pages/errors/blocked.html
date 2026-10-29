@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Access unavailable | Games API</title>
+    <link rel="stylesheet" href="/public/styles/css/error.css" />
+  </head>
+  <body>
+    <main class="error-card" data-reason="{{reason}}">
+      <p class="eyebrow">Games API</p>
+      <p class="error-code">{{status_code}}</p>
+      <h1>{{title}}</h1>
+      <p {{message_attributes}}>{{message}}</p>
+      <p id="blocked-until" data-until="{{until}}" hidden></p>
+      <a href="/library">Return to the game library</a>
+      <p class="blocked-admin-note">Administrators can still <a href="/admin">sign in to the dashboard</a>.</p>
+    </main>
+    <script src="/public/scripts/i18n.js"></script>
+    <script>
+      (() => {
+        const until = document.getElementById("blocked-until");
+        if (!until.dataset.until) return;
+        const show = () => {
+          const date = new Date(until.dataset.until);
+          if (Number.isNaN(date.getTime())) return;
+          const formatted = date.toLocaleString(document.documentElement.lang || undefined, {
+            dateStyle: "medium",
+            timeStyle: "short",
+          });
+          until.textContent = window.i18n
+            ? window.i18n.t("Open again from {date}.", { date: formatted })
+            : `Open again from ${formatted}.`;
+          until.hidden = false;
+        };
+        show();
+        document.addEventListener("languagechange", show);
+      })();
+    </script>
+  </body>
+</html>

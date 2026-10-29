@@ -104,7 +104,7 @@ async function loadDashboard() {
     renderDashboard(await response.json());
     if (dirtyRecordForms.size === 0) await loadRecordGames(gameRecordSelect.value || undefined);
     dashboardStatus.textContent = "";
-    const locale = { en: "en-GB", pt: "pt-PT", de: "de-DE", fr: "fr-FR" }[window.i18n.language];
+    const locale = { en: "en-GB", pt: "pt-PT", de: "de-DE", fr: "fr-FR", it: "it-IT", es: "es-ES", ja: "ja-JP" }[window.i18n.language];
     document.getElementById("updated-label").textContent = window.i18n.t("UPDATED {time}", {
       time: new Date().toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" }),
     });

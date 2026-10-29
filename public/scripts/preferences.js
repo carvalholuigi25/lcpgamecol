@@ -1,5 +1,5 @@
 const availableThemes = ["auto", "dark", "white", "glassmorphism", "liquid-glass", "sunsetvibes", "cyber-retro", "rgb"];
-const localeByLanguage = { en: "en-GB", pt: "pt-PT", de: "de-DE", fr: "fr-FR" };
+const localeByLanguage = { en: "en-GB", pt: "pt-PT", de: "de-DE", fr: "fr-FR", it: "it-IT", es: "es-ES", ja: "ja-JP" };
 const themeSelector = document.getElementById("theme-selector");
 const liveClock = document.getElementById("live-clock");
 const lockoutTimers = new WeakMap();
