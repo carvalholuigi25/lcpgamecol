@@ -17,6 +17,7 @@ def __getattr__(name: str):
     from routes.admin import router as admin_router
     from routes.games.igdb_imports import router as igdb_imports_router
     from routes.games.lists import router as game_lists_router
+    from routes.games.reviews import router as game_reviews_router
     from routes.games.routes import router as games_router
     from routes.users.feedback import admin_router as feedback_admin_router
     from routes.users.feedback import router as feedback_router
@@ -40,6 +41,7 @@ def __getattr__(name: str):
     router.include_router(feedback_admin_router)
     router.include_router(games_router)
     router.include_router(game_lists_router)
+    router.include_router(game_reviews_router)
     router.include_router(igdb_imports_router)
     router.include_router(achievements_router)
     router.include_router(admin_router)

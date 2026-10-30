@@ -245,6 +245,29 @@ def initialize_database() -> None:
                 completed_at INTEGER NULL
             );
 
+            -- One review per user and game; comments are free-form and unlimited.
+            CREATE TABLE IF NOT EXISTS game_reviews (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                game_id INTEGER NOT NULL,
+                username TEXT NOT NULL COLLATE NOCASE,
+                rating INTEGER NOT NULL,
+                body TEXT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                UNIQUE (game_id, username),
+                FOREIGN KEY (game_id) REFERENCES games (id) ON DELETE CASCADE
+            );
+
+            CREATE TABLE IF NOT EXISTS game_comments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                game_id INTEGER NOT NULL,
+                username TEXT NOT NULL COLLATE NOCASE,
+                body TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY (game_id) REFERENCES games (id) ON DELETE CASCADE
+            );
+            CREATE INDEX IF NOT EXISTS game_comments_by_game ON game_comments (game_id);
+
             -- Geoblock, VPN and lockdown rules, stored as one JSON document.
             CREATE TABLE IF NOT EXISTS access_settings (
                 name TEXT PRIMARY KEY,
