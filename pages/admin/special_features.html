@@ -144,7 +144,7 @@
             <span id="upload-count" class="chart-note"></span>
           </div>
           <div class="recent-table-wrap upload-table-wrap">
-            <table>
+            <table class="tbl-upload-wrap">
               <thead><tr><th scope="col">FILE</th><th scope="col">TYPE</th><th scope="col">SIZE</th><th scope="col">UPLOADED</th><th scope="col">ACTIONS</th></tr></thead>
               <tbody id="upload-rows"></tbody>
             </table>
@@ -250,9 +250,19 @@
             <p id="access-status" class="records-status" role="status" aria-live="polite"></p>
           </div>
 
+          <div class="upload-list-heading hidden">
+            <h3>Current rules</h3>
+            <span id="access-updated" class="chart-note"></span>
+          </div>
+          <div class="recent-table-wrap upload-table-wrap hidden">
+            <table class="access-rules-table">
+              <thead><tr><th scope="col">RULE</th><th scope="col">STATUS</th><th scope="col">SETTINGS</th></tr></thead>
+              <tbody id="access-rules"></tbody>
+            </table>
+          </div>
+
           <div class="upload-list-heading">
             <h3>Recently blocked</h3>
-            <span id="access-updated" class="chart-note"></span>
           </div>
           <div class="recent-table-wrap upload-table-wrap">
             <table>
