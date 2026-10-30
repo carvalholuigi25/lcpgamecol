@@ -266,11 +266,19 @@ def test_send_read_and_reply_to_a_message(client, viewer_headers, admin_headers,
     assert client.get("/messages", headers=viewer_headers).json()["unread"] == 1
 
 
-def test_messages_reject_unknown_recipients_and_yourself(client, viewer_headers):
+def test_messages_reject_unknown_recipients_and_blank_bodies(client, viewer_headers):
     body = {"subject": "Hi", "body": "Hello"}
     assert client.post("/messages", json={**body, "recipient": "ghost"}, headers=viewer_headers).status_code == 404
-    assert client.post("/messages", json={**body, "recipient": "newplayer"}, headers=viewer_headers).status_code == 400
     assert client.post("/messages", json={**body, "recipient": "boss", "body": "  "}, headers=viewer_headers).status_code == 422
+
+
+@pytest.mark.parametrize("disabled, expected_status", [(True, 400), (False, 201)])
+def test_messages_to_yourself_follow_the_setting(client, monkeypatch, viewer_headers, disabled, expected_status):
+    from routes.users import messages
+
+    monkeypatch.setattr(messages, "SEND_MESSAGE_TO_YOURSELF_DISABLED", disabled)
+    body = {"recipient": "NewPlayer", "subject": "Hi", "body": "Hello"}
+    assert client.post("/messages", json=body, headers=viewer_headers).status_code == expected_status
 
 
 def test_cannot_reply_to_someone_elses_message(client, viewer_headers, admin_headers):

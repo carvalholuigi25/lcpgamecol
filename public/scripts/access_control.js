@@ -151,6 +151,61 @@
         : "";
   }
 
+  // Built from the last saved settings, so unsaved edits in the cards do not show here.
+  function renderRules() {
+    const { geoblock, vpn, lockdown } = state.saved;
+    const countries = geoblock.countries.map(countryName).join(", ");
+    const rules = [
+      {
+        name: "Geoblock",
+        on: geoblock.enabled,
+        details: [
+          countries
+            ? t(geoblock.mode === "block" ? "Blocks {countries}" : "Allows only {countries}", { countries })
+            : "No countries listed yet.",
+          ...(geoblock.block_unknown ? ["Visitors whose country cannot be found are blocked too."] : []),
+        ],
+      },
+      {
+        name: "VPN checker",
+        on: vpn.enabled,
+        details: [vpn.block_hosting ? "VPNs, proxies, Tor, hosting providers and data centres" : "VPNs, proxies and Tor"],
+      },
+      {
+        name: "Scheduled lockdown",
+        on: lockdown.enabled,
+        details: [
+          ...(lockdown.windows.length ? lockdown.windows.map(describeWindow) : ["No lockdown times yet."]),
+          t("Time zone: {zone}", { zone: lockdown.timezone }),
+        ],
+      },
+    ];
+    document.getElementById("access-rules").replaceChildren(
+      ...rules.map((rule) => {
+        const row = document.createElement("tr");
+        const name = document.createElement("td");
+        name.className = "recent-title";
+        name.textContent = rule.name;
+        const status = document.createElement("td");
+        const badge = document.createElement("span");
+        badge.className = `access-rule-status${rule.on ? " is-on" : ""}`;
+        badge.textContent = rule.on ? "On" : "Off";
+        status.append(badge);
+        const details = document.createElement("td");
+        details.append(
+          ...rule.details.map((text) => {
+            const line = document.createElement("span");
+            line.className = "access-rule-detail";
+            line.textContent = text;
+            return line;
+          }),
+        );
+        row.append(name, status, details);
+        return row;
+      }),
+    );
+  }
+
   function renderBlocks() {
     const rows = document.getElementById("access-blocks");
     rows.replaceChildren(
@@ -195,7 +250,13 @@
     renderCountries();
     renderWindows();
     renderLockdownState();
+    renderRules();
     renderBlocks();
+  }
+
+  function receive(body) {
+    state = { ...body, saved: structuredClone(body.settings) };
+    render();
   }
 
   // Unsaved edits live in state.settings; read the plain inputs back before saving.
@@ -220,8 +281,7 @@
         body: JSON.stringify(collectSettings()),
       });
       if (!response.ok) throw new Error(await readProblem(response, "The access rules could not be saved."));
-      state = await response.json();
-      render();
+      receive(await response.json());
       statusLine.textContent = "";
       showToast(successMessage);
       return true;
@@ -238,8 +298,7 @@
     try {
       const response = await fetch("/admin/access-control", { headers: { Accept: "application/json" } });
       if (!response.ok) throw new Error(await readProblem(response, "The access rules could not be loaded."));
-      state = await response.json();
-      render();
+      receive(await response.json());
     } catch (error) {
       statusLine.textContent = error.message;
     }

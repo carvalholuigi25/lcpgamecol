@@ -588,7 +588,13 @@ function showGameDetails(game) {
   window.setStatusLoading(achievementStatus, true);
   if (!detailsDialog.open) detailsDialog.showModal();
   renderTrailer(game.trailer_url);
-  loadGameAchievements(game.id);
+  loadLibraryDetails(game.id);
+}
+
+// Achievements, reviews and comments belong to the library game behind the details.
+function loadLibraryDetails(gameId) {
+  loadGameAchievements(gameId);
+  loadGameDiscussion(gameId);
 }
 
 // gameId is the id of the game shown in the dialog. On the releases page that is an
@@ -691,7 +697,9 @@ function renderDetailsActions(game) {
 
 async function readActionError(response, fallback) {
   try {
-    return (await response.json()).detail || fallback;
+    // Validation errors (422) carry a list of problems instead of a message.
+    const { detail } = await response.json();
+    return typeof detail === "string" ? detail : fallback;
   } catch {
     return fallback;
   }
@@ -723,7 +731,7 @@ async function syncReleaseLinks(ids = games.map((game) => game.id)) {
   for (const id of ids) releaseLinks.set(id, links[id] ?? null);
   renderGames();
   renderActiveDetailsActions();
-  if (openGame && libraryIdOf(openGame) !== openLinkBefore) loadGameAchievements(openGame.id);
+  if (openGame && libraryIdOf(openGame) !== openLinkBefore) loadLibraryDetails(openGame.id);
 }
 
 // Returns the library id for a game, importing an IGDB release first when needed.
@@ -737,7 +745,7 @@ async function ensureLibraryGame(game) {
   }
   const status = await response.json();
   releaseLinks.set(game.id, status.game_id);
-  if (activeDetailsGameId === game.id) loadGameAchievements(game.id);
+  if (activeDetailsGameId === game.id) loadLibraryDetails(game.id);
   return status.game_id;
 }
 
@@ -802,7 +810,7 @@ async function deleteActiveGame(refresh) {
       myLists.favorites.delete(libraryId);
       renderGames();
       renderDetailsActions(game);
-      loadGameAchievements(game.id);
+      loadLibraryDetails(game.id);
       detailsActionsStatus.textContent = window.i18n.t("{title} was removed from the library.", { title: game.title });
       return;
     }

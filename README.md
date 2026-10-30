@@ -87,6 +87,7 @@ The seed data is defined in `backend/database/seed.sql`; running the seeder more
 - Upload images and PDFs safely from the Special features page (admin only).
 - Create a viewer account from the library or dashboard sign-in panel.
 - Add games to your own wishlist and favorites from the game details. Administrators also get **Edit** and **Delete** buttons there.
+- Review games (1 to 5 stars, with optional text) and comment on them from the game details. You can delete what you wrote; administrators can delete any review or comment.
 - See changes as they happen: the library and dashboard update by themselves through a SignalR hub at `/hubs/library`. Python clients can subscribe with `signalrcore`; run a single server worker, because live connections are kept in memory.
 - Send feedback from the feedback page. Administrators are notified, can set its status and reply, and replies are emailed to users who added an address to their profile.
 - Get notifications (bell) and direct messages (envelope) at the top of the sidebar on every page, with live unread counts. Messages to users with an email address are also emailed.

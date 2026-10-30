@@ -297,6 +297,50 @@
             </div>
             <ul id="details-achievements-list"></ul>
           </section>
+          <section class="details-achievements details-discussion" aria-labelledby="details-reviews-title">
+            <div class="details-achievements-heading">
+              <h3 id="details-reviews-title">Reviews</h3>
+              <p id="details-reviews-status" role="status" aria-live="polite"></p>
+            </div>
+            <form class="discussion-form" id="review-form" hidden>
+              <fieldset class="review-stars">
+                <legend>Your rating</legend>
+                <input type="radio" name="rating" value="1" id="review-rating-1" required />
+                <label for="review-rating-1" title="1 out of 5"><i class="bi bi-star-fill" aria-hidden="true"></i><span class="visually-hidden">1 out of 5</span></label>
+                <input type="radio" name="rating" value="2" id="review-rating-2" />
+                <label for="review-rating-2" title="2 out of 5"><i class="bi bi-star-fill" aria-hidden="true"></i><span class="visually-hidden">2 out of 5</span></label>
+                <input type="radio" name="rating" value="3" id="review-rating-3" />
+                <label for="review-rating-3" title="3 out of 5"><i class="bi bi-star-fill" aria-hidden="true"></i><span class="visually-hidden">3 out of 5</span></label>
+                <input type="radio" name="rating" value="4" id="review-rating-4" />
+                <label for="review-rating-4" title="4 out of 5"><i class="bi bi-star-fill" aria-hidden="true"></i><span class="visually-hidden">4 out of 5</span></label>
+                <input type="radio" name="rating" value="5" id="review-rating-5" />
+                <label for="review-rating-5" title="5 out of 5"><i class="bi bi-star-fill" aria-hidden="true"></i><span class="visually-hidden">5 out of 5</span></label>
+              </fieldset>
+              <label class="visually-hidden" for="review-body">Your review</label>
+              <textarea id="review-body" name="body" rows="3" maxlength="2000" placeholder="What did you think? (optional)"></textarea>
+              <div class="discussion-form-actions">
+                <button type="submit">Post review</button>
+                <button class="link-button" type="button" id="review-delete" hidden>Delete my review</button>
+              </div>
+              <p class="discussion-form-status" id="review-form-status" role="status" aria-live="polite"></p>
+            </form>
+            <ul class="discussion-list" id="details-reviews-list"></ul>
+          </section>
+          <section class="details-achievements details-discussion" aria-labelledby="details-comments-title">
+            <div class="details-achievements-heading">
+              <h3 id="details-comments-title">Comments</h3>
+              <p id="details-comments-status" role="status" aria-live="polite"></p>
+            </div>
+            <form class="discussion-form" id="comment-form" hidden>
+              <label class="visually-hidden" for="comment-body">Your comment</label>
+              <textarea id="comment-body" name="body" rows="2" maxlength="1000" required placeholder="Add a comment"></textarea>
+              <div class="discussion-form-actions">
+                <button type="submit">Post comment</button>
+              </div>
+              <p class="discussion-form-status" id="comment-form-status" role="status" aria-live="polite"></p>
+            </form>
+            <ul class="discussion-list" id="details-comments-list"></ul>
+          </section>
         </div>
       </dialog>
 
@@ -340,6 +384,7 @@
     <script defer src="/public/scripts/register.js"></script>
     <script defer src="/public/scripts/two_factor_login.js"></script>
     <script defer src="/public/scripts/shelf.js"></script>
+    <script defer src="/public/scripts/reviews.js"></script>
     <script defer src="/public/scripts/games.js"></script>
   </body>
 </html>

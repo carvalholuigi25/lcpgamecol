@@ -8,6 +8,13 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- **Reviews** and **Comments** sections in the game details, on the library and upcoming releases pages.
+  - Every signed-in user can leave one review per game, with 1 to 5 stars and optional text (up to 2,000 characters). Posting again updates it. The section shows the average rating and the number of reviews.
+  - Comments are free-form (up to 1,000 characters each), newest first.
+  - Authors can delete their own reviews and comments; administrators can delete anyone's.
+  - On the releases page, reviewing or commenting first copies the release into the library, like **Add to wishlist**.
+  - Both sections update live (new events `reviewsChanged` and `commentsChanged`). Deleting a game deletes its reviews and comments.
+  - New endpoints: `GET /games/{game_id}/reviews`, `PUT /games/{game_id}/reviews/mine`, `DELETE /games/{game_id}/reviews/{review_id}`, `GET`/`POST /games/{game_id}/comments`, and `DELETE /games/{game_id}/comments/{comment_id}`.
 - Italian, Spanish, and Japanese translations for every page. Pick them from the **Language** menu; dates and times follow the chosen language.
 - An **Access control** panel on the Special features page, with an on/off switch for each rule. See **Access control** in the README.
   - **Geoblock**: block the listed countries, or allow only the listed countries, and optionally block visitors whose country cannot be found.

@@ -113,6 +113,23 @@ def test_weekly_lockdown_across_midnight(now, active):
     assert (rules.active_lockdown(settings, now) is not None) is active
 
 
+@pytest.mark.parametrize(
+    "now, end",
+    [
+        (datetime(2026, 10, 26, 7, 0, tzinfo=UTC), None),  # Monday, before the start
+        (datetime(2026, 10, 26, 9, 0, tzinfo=UTC), datetime(2026, 10, 27, 8, 0, tzinfo=UTC)),
+        (datetime(2026, 10, 27, 7, 0, tzinfo=UTC), datetime(2026, 10, 27, 8, 0, tzinfo=UTC)),  # Tuesday morning
+        (datetime(2026, 10, 27, 8, 0, tzinfo=UTC), None),  # Tuesday, at the end
+    ],
+)
+def test_weekly_all_day_lockdown_starts_at_its_time(now, end):
+    settings = rules.LockdownSettings(
+        enabled=True,
+        windows=[{"kind": "weekly", "days": [0], "start": "08:00", "end": "08:00"}],
+    )
+    assert rules.active_lockdown(settings, now) == end
+
+
 def test_weekly_lockdown_uses_time_zone():
     settings = rules.LockdownSettings(
         enabled=True,
@@ -189,6 +206,15 @@ def test_geoblock_blocks_listed_country(client, admin_headers, lookups):
 
     recent = client.get("/admin/access-control", headers=admin_headers).json()["recent_blocks"]
     assert recent[0]["reason"] == "geoblock" and recent[0]["country"] == "RU"
+
+
+def test_forged_forwarded_address_is_ignored(client, admin_headers, lookups):
+    answers, _ = lookups
+    answers[PUBLIC_IP] = rules.IpInfo(ip=PUBLIC_IP, country="RU")
+    save(client, admin_headers, geoblock={"enabled": True, "countries": ["RU"]})
+
+    # The visitor sends a private address; the proxy appends the real one.
+    assert visit(client, ip=f"10.0.0.1, {PUBLIC_IP}").status_code == 403
 
 
 def test_country_header_skips_lookup(client, admin_headers, lookups, monkeypatch):

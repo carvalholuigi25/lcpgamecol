@@ -22,7 +22,7 @@ from contextlib import closing
 from dataclasses import asdict, dataclass
 from datetime import UTC, date, datetime, timedelta
 from typing import Literal
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError, available_timezones
 
 import httpx2 as httpx
 from fastapi import Request
@@ -141,6 +141,11 @@ class LockdownSettings(BaseModel):
         try:
             ZoneInfo(value)
         except (ZoneInfoNotFoundError, ValueError):
+            # Windows has no system time zone database, so zoneinfo needs the tzdata package.
+            if not available_timezones():
+                raise ValueError(
+                    "The server has no time zone data. Install the tzdata package and restart it."
+                ) from None
             raise ValueError(f"{value!r} is not a known time zone.") from None
         return value
 
@@ -236,7 +241,9 @@ _lookup_cache: dict[str, tuple[float, IpInfo]] = {}
 
 def client_ip(request: Request) -> str:
     if TRUST_PROXY_HEADERS:
-        forwarded = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+        # Take the last address: the one your proxy added. Earlier ones come from the
+        # visitor and could be forged (e.g. a private address to dodge every rule).
+        forwarded = request.headers.get("x-forwarded-for", "").split(",")[-1].strip()
         if forwarded:
             return forwarded
     return request.client.host if request.client else "unknown"
@@ -337,8 +344,7 @@ def _window_end(window: LockdownWindow, now: datetime) -> datetime | None:
     def at(day: date, moment) -> datetime:
         return datetime.combine(day, moment, tzinfo=now.tzinfo)
 
-    if start == end:
-        return at(today + timedelta(days=1), end) if weekday in window.days else None
+    # An equal start and end is a 24-hour window, so it runs past midnight like start > end.
     if start < end:
         if weekday in window.days and start <= current < end:
             return at(today, end)

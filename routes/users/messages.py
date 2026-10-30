@@ -23,6 +23,7 @@ MESSAGES_LIMIT_MAX = 100
 MESSAGE_SUBJECT_MAX_LENGTH = 120
 MESSAGE_BODY_MAX_LENGTH = 4000
 INBOX_LINK = "/profile?inbox=messages"
+SEND_MESSAGE_TO_YOURSELF_DISABLED = True
 
 router = APIRouter(prefix="/messages", tags=["messages"])
 
@@ -142,12 +143,10 @@ def send_message(
     principal: Principal = Depends(get_current_principal),
 ) -> dict:
     account = _accounts().get(body.recipient.lower())
-    is_send_email_yourself_disabled = False
-
     if account is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     recipient = account["username"]
-    if recipient.lower() == principal.username.lower() and is_send_email_yourself_disabled:
+    if recipient.lower() == principal.username.lower() and SEND_MESSAGE_TO_YOURSELF_DISABLED:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You cannot send a message to yourself.")
 
     with closing(get_connection()) as connection:

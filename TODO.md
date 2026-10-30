@@ -11,7 +11,8 @@ Planned work and known gaps. Move items to `CHANGELOG.md` when they ship.
 
 ## Features
 
-- [ ] Implement review system with moderation filters & commands.
+- [ ] Add moderation filters for reviews and comments (for example, a blocked-words list, reporting, and a moderation queue). Today administrators can only delete them from the game details.
+- [ ] Let users edit their comments, and notify authors when an administrator deletes their review or comment.
 - [ ] Add a basic xp level + rank system (or gamification).
 - [ ] Add cool personalization for user profile.
 
