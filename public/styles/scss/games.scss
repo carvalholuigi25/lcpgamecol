@@ -1382,6 +1382,10 @@ dialog::backdrop {
   }
 }
 
+.discussion-editor {
+  margin-top: -10px !important;
+}
+
 // Quill editor for reviews and comments (reviews.js).
 .discussion-form {
   .ql-toolbar.ql-snow,
