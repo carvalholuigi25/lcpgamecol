@@ -130,6 +130,8 @@ def email_link(username: str, token: str) -> str:
         f"Hi {username},\n\nSomeone asked to reset the password of your lcpgamecol account.\n"
         f"Choose a new password here (the link works once, for {minutes} minutes):\n\n{reset_link(token)}\n\n"
         "If this wasn't you, ignore this email; your password stays the same.\n",
+        action_label="Choose a new password",
+        action_url=reset_link(token),
     )
 
 

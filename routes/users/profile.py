@@ -11,6 +11,7 @@ from pydantic import Field
 
 from backend.auth.auth import Principal, get_current_principal
 from backend.database.database import get_connection
+from backend.gamification import xp
 from routes.admin.users import (
     FAVORITE_GAMES_MAX,
     GAME_SUMMARY_COLUMNS,
@@ -21,6 +22,8 @@ from routes.admin.users import (
 )
 
 router = APIRouter(prefix="/users/me/profile", tags=["users"])
+# Filling all of these in pays the "profile" XP, once.
+PROFILE_XP_FIELDS = ("display_name", "bio", "avatar_url")
 
 
 class OwnProfileUpdate(ProfileUpdate):
@@ -56,4 +59,7 @@ def update_my_profile(
     body: OwnProfileUpdate, principal: Principal = Depends(get_current_principal)
 ) -> dict:
     save_profile(principal.username, body)
-    return _own_profile(principal.username)
+    profile = _own_profile(principal.username)
+    if all(profile.get(field) for field in PROFILE_XP_FIELDS):
+        xp.award(principal.username, "profile")
+    return profile

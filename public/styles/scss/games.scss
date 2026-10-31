@@ -1,4 +1,5 @@
 @use "sass:meta";
+@use "seasonal_themes" as seasonal;
 // The Press Start 2P font is loaded by preferences.js only when the Cyber Retro theme is active.
 
 // Animated from 0 up to each bar's --rating (set inline by shelf.js).
@@ -943,6 +944,70 @@ dialog::backdrop {
   font: 1rem / 2rem Arial, sans-serif;
 }
 
+// Countdown to an upcoming release (shelf.js renderReleaseCountdown).
+.release-countdown {
+  margin: 0 0 1.25rem;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  color: var(--ink);
+  font-family: Arial, sans-serif;
+
+  &[hidden] { display: none; }
+
+  .release-countdown-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 4px 12px;
+    margin-bottom: 12px;
+
+    h3 { margin: 0; color: var(--accent); font-size: 1.05rem; text-transform: uppercase; letter-spacing: 0.06em; }
+    p { margin: 0; color: var(--muted); font-size: 0.9rem; }
+  }
+
+  .release-countdown-units {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 12px;
+
+    div {
+      display: grid;
+      justify-items: center;
+      padding: 10px 4px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--panel);
+    }
+
+    strong { font: 700 clamp(1.3rem, 4vw, 2rem) / 1.1 "Consolas", monospace; font-variant-numeric: tabular-nums; }
+    span { color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; }
+  }
+
+  progress {
+    display: block;
+    width: 100%;
+    height: 10px;
+    overflow: hidden;
+    border: 0;
+    border-radius: 999px;
+    background: var(--line);
+    accent-color: var(--accent);
+    appearance: none;
+
+    &::-webkit-progress-bar { border-radius: 999px; background: var(--line); }
+    &::-webkit-progress-value { border-radius: 999px; background: linear-gradient(90deg, var(--accent-dark), var(--accent)); transition: width 0.6s ease; }
+    &::-moz-progress-bar { border-radius: 999px; background: linear-gradient(90deg, var(--accent-dark), var(--accent)); }
+  }
+
+  .release-countdown-caption { margin: 6px 0 0; color: var(--muted); font-size: 0.82rem; }
+
+  &[data-released="true"] .release-countdown-units { opacity: 0.5; }
+}
+
 .details-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1303,6 +1368,107 @@ dialog::backdrop {
   font: 0.88rem / 1.5 Arial, sans-serif;
   white-space: pre-line;
   overflow-wrap: anywhere;
+
+  // Rich text from the editor brings its own paragraphs.
+  &.rich-text {
+    white-space: normal;
+
+    p, ol, ul, blockquote { margin: 0 0 0.4em; }
+    > :last-child { margin-bottom: 0; }
+    ol, ul { padding-left: 1.4em; }
+    li[data-list="bullet"] { list-style-type: disc; }
+    blockquote { padding-left: 10px; border-left: 3px solid var(--line); color: var(--muted); }
+    a { color: var(--accent); }
+  }
+}
+
+// Quill editor for reviews and comments (reviews.js).
+.discussion-form {
+  .ql-toolbar.ql-snow,
+  .ql-container.ql-snow { border-color: var(--line); }
+  .ql-toolbar.ql-snow { border-radius: 12px 12px 0 0; background: color-mix(in srgb, var(--ink) 4%, transparent); }
+  .ql-container.ql-snow {
+    border-radius: 0 0 12px 12px;
+    color: var(--ink);
+    font: 0.9rem / 1.5 Arial, sans-serif;
+  }
+  .ql-editor { min-height: 70px; max-height: 260px; text-align: left; }
+  .ql-editor.ql-blank::before { color: var(--muted); font-style: normal; }
+  .ql-snow .ql-stroke { stroke: var(--ink); }
+  .ql-snow .ql-fill { fill: var(--ink); }
+  .ql-snow button:hover .ql-stroke,
+  .ql-snow button.ql-active .ql-stroke { stroke: var(--accent); }
+  .ql-snow button:hover .ql-fill,
+  .ql-snow button.ql-active .ql-fill { fill: var(--accent); }
+  .ql-snow .ql-tooltip { z-index: 2; color: var(--ink); background: var(--panel); border-color: var(--line); box-shadow: none; }
+  .ql-snow .ql-tooltip input[type="text"] { color: var(--ink); background: transparent; border-color: var(--line); }
+  .ql-container:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .ql-toolbar.ql-snow,
+  .discussion-editor { align-self: stretch; width: 100%; }
+
+  // Undo the page-wide pill button and input styles inside the editor.
+  .ql-toolbar.ql-snow button {
+    width: 28px;
+    min-height: 0;
+    height: 24px;
+    padding: 3px 5px;
+    border: 0;
+    border-radius: 4px;
+    background: none;
+    box-shadow: none;
+  }
+  .ql-snow .ql-tooltip input[type="text"] { min-height: 0; height: 28px; border-radius: 4px; }
+}
+
+// Moderation status, report counts and the report form (reviews.js).
+.discussion-badge {
+  padding: 1px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font: 600 0.7rem / 1.5 Arial, sans-serif;
+
+  &[data-status="pending"] { border-color: #e0a800; color: #e0a800; }
+  &[data-status="hidden"],
+  &[data-status="reported"] { border-color: var(--accent-dark); color: var(--accent-dark); }
+}
+
+.discussion-item[data-status="pending"],
+.discussion-item[data-status="hidden"] { border-style: dashed; opacity: 0.85; }
+
+.discussion-meta .discussion-tools {
+  display: inline-flex;
+  gap: 6px;
+  margin-left: auto;
+
+  .discussion-delete { margin-left: 0; }
+  .discussion-report { width: 30px; height: 30px; font-size: 0.85rem; }
+}
+
+.report-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  align-items: end;
+  gap: 8px 12px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--line);
+  font: 0.82rem Arial, sans-serif;
+  text-align: left;
+
+  label { display: grid; gap: 4px; margin: 0; color: var(--muted); }
+  select, input {
+    width: 100%;
+    min-height: 0;
+    height: 36px;
+    padding: 4px 10px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    color: var(--ink);
+    background: transparent;
+    font-size: 0.85rem;
+  }
+  .discussion-form-actions { grid-column: 1 / -1; }
+
+  @media (max-width: 560px) { grid-template-columns: minmax(0, 1fr); }
 }
 
 .details-grid .valuserrating,
@@ -2290,6 +2456,42 @@ body[data-theme="rgb"] {
 
 @keyframes theme-rgb-text {
   to { background-position: 200% 0; }
+}
+
+// --- Seasonal themes (palettes in _seasonal_themes.scss) ----------------------
+
+@each $name, $theme in seasonal.$themes {
+  body[data-theme="#{$name}"] {
+    color-scheme: seasonal.get($theme, scheme);
+    --ink: #{seasonal.get($theme, ink)};
+    --muted: #{seasonal.get($theme, muted)};
+    --line: #{seasonal.get($theme, line)};
+    --panel: #{seasonal.get($theme, glass)};
+    --accent: #{seasonal.get($theme, accent)};
+    --accent-dark: #{seasonal.get($theme, accent-dark)};
+    --background: #{seasonal.get($theme, background)};
+    --neon-cyan: #{seasonal.get($theme, accent)};
+    --neon-magenta: #{seasonal.get($theme, accent2)};
+
+    background-color: var(--background);
+    background-image: seasonal.background-image($theme);
+    @include seasonal.decoration($theme);
+
+    input, .platform-switch summary, .platform-switch-menu { color: var(--ink); background: seasonal.get($theme, field); }
+    .panel, .game, dialog, .platform-switch-menu { backdrop-filter: blur(8px); }
+
+    @if seasonal.get($theme, scheme) == light {
+      .game h2, .details h2 { color: var(--ink); text-shadow: none; }
+      .game, .game:hover, .game:focus-within { border-color: var(--line); box-shadow: 0 8px 22px rgba(40, 40, 60, 0.1); }
+      dialog { color: var(--ink); background: seasonal.get($theme, panel); border-color: var(--line); box-shadow: 0 18px 50px rgba(40, 40, 60, 0.2); animation: none; }
+      .achievement-item, .discussion-item { background: var(--background); }
+      .details-grid .progress-bar { background: radial-gradient(closest-side, #fff 78%, transparent 79% 100%), conic-gradient(var(--rating-color) calc(var(--progress-value) * 1%), rgba(40, 40, 60, 0.1) 0); }
+      .details-action[aria-pressed="true"] { color: #fff; }
+      .game-badges { background: rgba(255, 255, 255, 0.85); }
+    } @else {
+      @include theme-card-glow(seasonal.get($theme, accent), seasonal.get($theme, accent2), seasonal.get($theme, panel));
+    }
+  }
 }
 
 // --- Screenshot lightbox: its own modal dialog, separate from #game-details ---

@@ -1,0 +1,116 @@
+// Seasonal and holiday themes, shared by games.scss and admin.scss. Each page maps
+// these colours onto its own tokens; preferences.js adds the options to the theme
+// selector and picks one by date for the "seasonal" option.
+@use "sass:list";
+@use "sass:map";
+
+// scheme: light or dark. panel is the solid card colour; glass is its translucent
+// version. accent2 is the second highlight (the library's --neon-magenta, the
+// admin's --orange). on-accent is the text colour on filled accent buttons.
+$themes: (
+  spring: (
+    scheme: light, background: #f5fbf3, ink: #22352a, muted: #5d7766, line: #cfe3cf,
+    panel: #ffffff, glass: rgba(255, 255, 255, 0.86), field: #ffffff,
+    accent: #c23f78, accent-dark: #962c5b, accent2: #4f9a5e, on-accent: #ffffff,
+    glow1: rgba(242, 160, 196, 0.35), glow2: rgba(150, 214, 150, 0.3),
+    emoji: ("🌸", "🌷", "🦋"),
+  ),
+  summer: (
+    scheme: light, background: #fff8e7, ink: #2a2618, muted: #786944, line: #f0dcae,
+    panel: #fffdf6, glass: rgba(255, 253, 246, 0.88), field: #ffffff,
+    accent: #0b7f91, accent-dark: #075e6b, accent2: #e2730f, on-accent: #ffffff,
+    glow1: rgba(255, 200, 70, 0.4), glow2: rgba(80, 200, 220, 0.25),
+    emoji: ("☀️", "🌊", "🍉"),
+  ),
+  fall: (
+    scheme: dark, background: #1e130c, ink: #f8ead9, muted: #cdb093, line: rgba(240, 138, 60, 0.28),
+    panel: #32201a, glass: rgba(50, 32, 22, 0.86), field: #160d08,
+    accent: #f08a3c, accent-dark: #b3501b, accent2: #d9a521, on-accent: #1e130c,
+    glow1: rgba(240, 138, 60, 0.22), glow2: rgba(180, 60, 30, 0.22),
+    emoji: ("🍂", "🍁", "🌰"),
+  ),
+  winter: (
+    scheme: dark, background: #0d1a2c, ink: #eef6ff, muted: #a8bdd8, line: rgba(143, 211, 255, 0.25),
+    panel: #162640, glass: rgba(22, 38, 64, 0.84), field: #09131f,
+    accent: #8fd3ff, accent-dark: #4b8fc9, accent2: #d6ecff, on-accent: #0d1a2c,
+    glow1: rgba(143, 211, 255, 0.2), glow2: rgba(200, 220, 255, 0.14),
+    emoji: ("❄️", "❄️", "⛄"),
+  ),
+  halloween: (
+    scheme: dark, background: #110a18, ink: #fbeee0, muted: #c3aec6, line: rgba(255, 123, 28, 0.3),
+    panel: #201128, glass: rgba(32, 17, 40, 0.88), field: #0b0610,
+    accent: #ff7b1c, accent-dark: #c2410c, accent2: #a66ef0, on-accent: #110a18,
+    glow1: rgba(255, 123, 28, 0.22), glow2: rgba(140, 70, 230, 0.24),
+    emoji: ("🎃", "🦇", "👻"),
+  ),
+  easter: (
+    scheme: light, background: #fbf7ff, ink: #3a2f4b, muted: #776b89, line: #e6dcf5,
+    panel: #ffffff, glass: rgba(255, 255, 255, 0.88), field: #ffffff,
+    accent: #7556c9, accent-dark: #5a3fa8, accent2: #d9658f, on-accent: #ffffff,
+    glow1: rgba(246, 165, 192, 0.32), glow2: rgba(180, 230, 200, 0.3),
+    emoji: ("🐣", "🥚", "🌷"),
+  ),
+  christmas: (
+    scheme: dark, background: #0e1f16, ink: #fdf6ec, muted: #c3d3c6, line: rgba(244, 211, 94, 0.25),
+    panel: #142e21, glass: rgba(20, 46, 33, 0.88), field: #08140e,
+    accent: #f25c66, accent-dark: #c1272d, accent2: #f4d35e, on-accent: #0e1f16,
+    glow1: rgba(230, 57, 70, 0.2), glow2: rgba(244, 211, 94, 0.16),
+    emoji: ("🎄", "🎁", "❄️"),
+  ),
+  new-years-eve: (
+    scheme: dark, background: #0b0b1a, ink: #fff8e8, muted: #c9c3d9, line: rgba(242, 201, 76, 0.28),
+    panel: #17172e, glass: rgba(23, 23, 46, 0.86), field: #07070f,
+    accent: #f2c94c, accent-dark: #b8901e, accent2: #c084fc, on-accent: #0b0b1a,
+    glow1: rgba(242, 201, 76, 0.2), glow2: rgba(192, 132, 252, 0.2),
+    emoji: ("🎆", "🥂", "✨"),
+  ),
+);
+
+@function get($theme, $key) {
+  @return map.get($theme, $key);
+}
+
+@function background-image($theme) {
+  @return radial-gradient(ellipse at 12% 8%, get($theme, glow1), transparent 40%),
+    radial-gradient(ellipse at 88% 78%, get($theme, glow2), transparent 44%);
+}
+
+// Three emoji scattered over a 240px tile, as an SVG data URI.
+@function pattern($theme) {
+  $emoji: get($theme, emoji);
+  $spots: ((28, 44, 22, -12), (150, 92, 18, 18), (78, 196, 26, 8));
+  $text: "";
+  @for $index from 1 through 3 {
+    $spot: list.nth($spots, $index);
+    $text: $text + "%3Ctext x='#{list.nth($spot, 1)}' y='#{list.nth($spot, 2)}' font-size='#{list.nth($spot, 3)}' "
+      + "transform='rotate(#{list.nth($spot, 4)} #{list.nth($spot, 1)} #{list.nth($spot, 2)})'%3E#{list.nth($emoji, $index)}%3C/text%3E";
+  }
+  @return url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E#{$text}%3C/svg%3E");
+}
+
+// Slowly falling emoji behind the page. Uses ::before, so pair it only with
+// themes that leave ::before alone.
+@mixin decoration($theme) {
+  &::before {
+    position: fixed;
+    z-index: -1;
+    inset: 0;
+    pointer-events: none;
+    background: pattern($theme) 0 0 / 240px 240px repeat;
+    opacity: 0.22;
+    animation: seasonal-fall 90s linear infinite;
+    content: "";
+  }
+
+  @if get($theme, scheme) == light {
+    &::before { opacity: 0.32; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &::before { animation: none; }
+  }
+}
+
+@keyframes seasonal-fall {
+  to { background-position: 120px 720px; }
+}

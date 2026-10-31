@@ -82,9 +82,11 @@ def get_dashboard_summary() -> dict:
     }
 
 from routes.admin.access_control import router as access_control_router  # noqa: E402
+from routes.admin.development import router as development_router  # noqa: E402
 from routes.admin.uploads import router as uploads_router  # noqa: E402
 from routes.admin.users import router as users_router  # noqa: E402
 
 router.include_router(access_control_router)
+router.include_router(development_router)
 router.include_router(uploads_router)
 router.include_router(users_router)

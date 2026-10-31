@@ -74,8 +74,12 @@ def next_totp(secret):
     return two_factor.totp_code(secret, two_factor.current_step() + 1)
 
 
+def text_of(email):
+    return email.get_body(preferencelist=("plain",)).get_content()
+
+
 def last_code(outbox):
-    return re.search(r"\b(\d{6})\b", outbox()[-1].get_content()).group(1)
+    return re.search(r"\b(\d{6})\b", text_of(outbox()[-1])).group(1)
 
 
 # --- TOTP algorithm ------------------------------------------------------------------
@@ -245,6 +249,39 @@ def test_admin_can_turn_off_two_factor_for_a_locked_out_user(client, player):
     assert client.get("/notifications", headers=player).json()["items"][0]["kind"] == "security"
 
 
+def test_development_bypass_skips_two_factor_only_in_development(client, player, monkeypatch):
+    enable_totp(client, player)
+    boss = bearer(token_for(client, "boss", "boss-pass").json()["access_token"])
+    assert client.put("/admin/development/two-factor", json={"enabled": True}, headers=player).status_code == 403
+
+    monkeypatch.setattr(two_factor, "DEV_MODE", False)
+    refused = client.put("/admin/development/two-factor", json={"enabled": True}, headers=boss)
+    assert refused.status_code == 409
+    assert "APP_ENV=development" in refused.json()["detail"]
+
+    monkeypatch.setattr(two_factor, "DEV_MODE", True)
+    state = client.put("/admin/development/two-factor", json={"enabled": True}, headers=boss).json()
+    assert state == {**state, "dev_mode": True, "enabled": True, "active": True, "updated_by": "boss"}
+    assert "access_token" in token_for(client, "player", STRONG_PASSWORD).json()
+
+    # A saved "on" is ignored once the server leaves development mode.
+    monkeypatch.setattr(two_factor, "DEV_MODE", False)
+    assert client.get("/admin/development/two-factor", headers=boss).json()["active"] is False
+    assert token_for(client, "player", STRONG_PASSWORD).json()["two_factor_required"] is True
+    assert client.put("/admin/development/two-factor", json={"enabled": False}, headers=boss).status_code == 200
+
+
+def test_emails_have_an_html_version_with_escaped_content(client, player, outbox):
+    set_email(client, player)
+    client.post("/auth/password-reset/request", json={"identifier": "player"})
+    email = outbox()[-1]
+    html_part = email.get_body(preferencelist=("html",)).get_content()
+    link = re.search(r"token=([\w-]+)", text_of(email)).group(0)
+    assert "Choose a new password" in html_part
+    assert link in html_part
+    assert mailer.render_html("<b>Hi</b>", "a <script>x</script>").count("<script>") == 0
+
+
 # --- password reset ---------------------------------------------------------------------
 
 
@@ -263,7 +300,7 @@ def test_reset_by_email_address_and_sign_in_with_the_new_password(client, player
     assert client.post("/auth/password-reset/request", json={"identifier": "player@example.com"}).status_code == 202
     emails = outbox()
     assert emails[0]["Subject"] == "Reset your lcpgamecol password"
-    token = re.search(r"token=([\w-]+)", emails[0].get_content()).group(1)
+    token = re.search(r"token=([\w-]+)", text_of(emails[0])).group(1)
 
     assert client.get(f"/auth/password-reset/check?token={token}").json() == {"valid": True, "username": "player"}
     weak = client.post("/auth/password-reset/confirm", json={"token": token, "password": "short"})

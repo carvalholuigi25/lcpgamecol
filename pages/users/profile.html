@@ -136,6 +136,41 @@
           </form>
         </article>
 
+        <section id="xp" class="records-panel profile-xp" aria-labelledby="xp-title">
+          <div class="panel-heading">
+            <div><p class="kicker">EXPERIENCE</p><h2 id="xp-title">Level and rank</h2></div>
+            <span id="xp-rank-badge" class="role-badge xp-rank-badge"></span>
+          </div>
+          <p id="xp-status" class="records-status" role="status" aria-live="polite"></p>
+          <div class="xp-layout">
+            <div class="xp-summary">
+              <div class="xp-level" aria-hidden="true"><span>LVL</span><strong id="xp-level">1</strong></div>
+              <div class="xp-progress-wrap">
+                <p class="xp-total"><strong id="xp-total">0</strong> XP</p>
+                <div class="xp-bar" role="progressbar" id="xp-bar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Progress to the next level">
+                  <span id="xp-bar-fill"></span>
+                </div>
+                <p id="xp-next" class="profile-form-hint"></p>
+              </div>
+            </div>
+            <div class="xp-columns">
+              <section aria-labelledby="xp-earn-title">
+                <h3 id="xp-earn-title">How to earn XP</h3>
+                <ul id="xp-actions" class="xp-list"></ul>
+              </section>
+              <section aria-labelledby="xp-recent-title">
+                <h3 id="xp-recent-title">Recent XP</h3>
+                <ul id="xp-recent" class="xp-list"></ul>
+                <p id="xp-recent-empty" class="empty-note" hidden>No XP yet. Review a game to get started.</p>
+              </section>
+              <section aria-labelledby="xp-board-title">
+                <h3 id="xp-board-title">Leaderboard</h3>
+                <ol id="xp-leaderboard" class="xp-list xp-leaderboard"></ol>
+              </section>
+            </div>
+          </div>
+        </section>
+
         <section class="records-panel profile-wishlist" aria-labelledby="wishlist-title">
           <div class="panel-heading">
             <div><p class="kicker">WISHLIST</p><h2 id="wishlist-title">Games you want next</h2></div>
@@ -168,6 +203,7 @@
     <script src="/public/scripts/realtime.js"></script>
     <script src="/public/scripts/inbox.js"></script>
     <script src="/public/scripts/profile.js"></script>
+    <script src="/public/scripts/xp.js"></script>
     <script src="/public/scripts/security.js"></script>
   </body>
 </html>

@@ -154,7 +154,7 @@ def test_admin_reply_notifies_and_emails_the_user(client, viewer_headers, admin_
     assert len(emails) == 1
     assert emails[0]["To"] == "player@example.com"
     assert emails[0]["Subject"] == "Re: Crash"
-    assert "Fixed, thanks!" in emails[0].get_content()
+    assert "Fixed, thanks!" in emails[0].get_body(preferencelist=("plain",)).get_content()
 
     notifications = client.get("/notifications", headers=viewer_headers).json()
     assert notifications["items"][0]["kind"] == "feedback_reply"

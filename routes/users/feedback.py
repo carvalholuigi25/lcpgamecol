@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field, field_validator
 from backend.auth import auth
 from backend.auth.auth import Principal, get_current_principal, require_admin
 from backend.database.database import get_connection
+from backend.gamification import xp
 from backend.mail import mailer
 from backend.realtime.hub import hub
 from routes.admin.users import _accounts
@@ -116,6 +117,8 @@ def _email_reply(feedback_id: int, username: str, subject: str, reply: str, repl
         f"Re: {subject}",
         f"Hi {username},\n\n{replied_by} replied to your feedback \"{subject}\":\n\n{reply}\n\n"
         f"See all your feedback: {mailer.app_link(FEEDBACK_LINK)}\n",
+        action_label="See your feedback",
+        action_url=mailer.app_link(FEEDBACK_LINK),
     )
     with closing(get_connection()) as connection:
         connection.execute("UPDATE feedback SET email_status = ? WHERE id = ?", (result, feedback_id))
@@ -141,6 +144,7 @@ def send_feedback(body: FeedbackCreate, principal: Principal = Depends(get_curre
         if admin.lower() != principal.username.lower():
             notify(admin, "feedback_new", f"New feedback from {principal.username}", body.subject, ADMIN_FEEDBACK_LINK)
     hub.publish("feedbackChanged", {"id": row["id"]})
+    xp.award(principal.username, "feedback", row["id"])
     return _feedback(row)
 
 

@@ -74,6 +74,10 @@ let detailsTrailerPlayer = null;
 let screenshotGallery = null;
 let screenshotGalleryItems = [];
 let screenshotGalleryOpen = false;
+// The release countdown bar fills over the last COUNTDOWN_WINDOW_DAYS before launch.
+const COUNTDOWN_WINDOW_DAYS = 365;
+const DAY_MS = 24 * 60 * 60 * 1000;
+let countdownTimer = null;
 // Asset URL -> promise that settles once the stylesheet or script has loaded.
 const loadedAssets = new Map();
 // An empty set means all platforms.
@@ -310,9 +314,10 @@ function ratingDetail(label, value) {
     </dd>`;
 }
 
-const richTextTags = new Set(["P", "BR", "H3", "H4", "STRONG", "B", "EM", "I", "U", "S", "OL", "UL", "LI", "A"]);
+const richTextTags = new Set(["P", "BR", "H3", "H4", "STRONG", "B", "EM", "I", "U", "S", "OL", "UL", "LI", "A", "BLOCKQUOTE"]);
 
-// Rebuild admin-authored rich text keeping only the formatting the Quill editor produces.
+// Rebuild rich text (admin game fields, reviews and comments) keeping only the
+// formatting the Quill editors produce.
 function sanitizeRichText(html) {
   const source = new DOMParser().parseFromString(html, "text/html").body;
   const output = document.createElement("div");
@@ -515,6 +520,63 @@ function renderScreenshotGallery(game) {
   screenshotGallery?.refresh(screenshotGalleryItems);
 }
 
+// IGDB release dates are midnight UTC; a bare release year has no countdown.
+function releaseTimeOf(game) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(game.release_date || "")) return null;
+  const time = Date.parse(`${game.release_date}T00:00:00Z`);
+  return Number.isNaN(time) ? null : time;
+}
+
+function stopReleaseCountdown() {
+  if (countdownTimer !== null) window.clearInterval(countdownTimer);
+  countdownTimer = null;
+}
+
+function renderReleaseCountdown(game) {
+  stopReleaseCountdown();
+  const section = document.getElementById("details-countdown");
+  if (!section) return;
+  const releaseTime = releaseTimeOf(game);
+  section.hidden = releaseTime === null || releaseTime <= Date.now();
+  if (section.hidden) return;
+
+  const heading = document.getElementById("details-countdown-title");
+  const releaseDate = document.getElementById("details-countdown-date");
+  const progress = document.getElementById("details-countdown-progress");
+  const caption = document.getElementById("details-countdown-caption");
+  const units = Object.fromEntries(
+    [...section.querySelectorAll("[data-countdown-unit]")].map((element) => [element.dataset.countdownUnit, element]),
+  );
+  const windowMs = COUNTDOWN_WINDOW_DAYS * DAY_MS;
+  delete section.dataset.released;
+  heading.textContent = window.i18n.t("Coming soon");
+
+  const tick = () => {
+    const remaining = Math.max(0, releaseTime - Date.now());
+    const seconds = Math.floor(remaining / 1000);
+    units.days.textContent = Math.floor(seconds / 86400).toLocaleString(localeByLanguage[window.i18n.language]);
+    units.hours.textContent = String(Math.floor(seconds / 3600) % 24).padStart(2, "0");
+    units.minutes.textContent = String(Math.floor(seconds / 60) % 60).padStart(2, "0");
+    units.seconds.textContent = String(seconds % 60).padStart(2, "0");
+    releaseDate.textContent = new Date(releaseTime).toLocaleDateString(localeByLanguage[window.i18n.language], {
+      dateStyle: "full",
+      timeZone: "UTC",
+    });
+    const percent = Math.round(Math.min(1, Math.max(0, 1 - remaining / windowMs)) * 100);
+    progress.value = percent;
+    caption.textContent = remaining > windowMs
+      ? window.i18n.t("More than a year to go.")
+      : window.i18n.t("{percent}% of the final year before launch", { percent });
+    if (remaining === 0) {
+      stopReleaseCountdown();
+      section.dataset.released = "true";
+      heading.textContent = window.i18n.t("Out now!");
+    }
+  };
+  tick();
+  countdownTimer = window.setInterval(tick, 1000);
+}
+
 function showGameDetails(game) {
   if (!game) return;
   // Keep the last action message while live updates re-render the same game.
@@ -549,6 +611,7 @@ function showGameDetails(game) {
   );
   document.getElementById("details-description").textContent =
     game.description || "No description yet.";
+  renderReleaseCountdown(game);
   document.getElementById("details-grid").innerHTML = [
     ["Genre", game.genre],
     ["Developer", game.developer_name],
@@ -1069,6 +1132,7 @@ function initShelf({ load, reset = () => {}, refresh = null, gameActions = null 
     detailsDialog.close();
   });
   detailsDialog.addEventListener("close", () => {
+    stopReleaseCountdown();
     if (screenshotGalleryOpen) screenshotGallery?.closeGallery();
     screenshotGalleryOpen = false;
     if (lightboxDialog.open) lightboxDialog.close();

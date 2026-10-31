@@ -17,6 +17,8 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import FileResponse, HTMLResponse, PlainTextResponse
 
+from backend.access.middleware import AccessControlMiddleware
+from backend.auth import two_factor
 from backend.auth.auth import (
     AUTH_COOKIE_NAME,
     AUTH_COOKIE_SECURE,
@@ -30,10 +32,8 @@ from backend.auth.auth import (
     issue_session,
     register_user,
 )
-from backend.access.middleware import AccessControlMiddleware
-from backend.auth import two_factor
-from backend.auth.routes import router as account_router
 from backend.auth.rate_limit import RateLimitMiddleware
+from backend.auth.routes import router as account_router
 from backend.database.database import initialize_database
 from backend.realtime.hub import router as realtime_router
 from error_pages.error_pages import ERROR_PAGE_FILES, accepts_html, error_page_response
@@ -239,6 +239,8 @@ def login(
     client_id = request.client.host if request.client else "unknown"
     principal = authenticate(form_data, client_id)
     method = two_factor.enabled_method(principal.username)
+    if method and two_factor.skip_for_development(principal.username):
+        method = None
     if method:
         challenge, code = two_factor.create_challenge(principal, method)
         if code:
@@ -338,6 +340,11 @@ def read_special_features_page() -> FileResponse:
     return FileResponse(
         PAGES_DIRECTORY / "admin" / "special_features.html", media_type="text/html"
     )
+
+
+@app.get("/admin/moderation", include_in_schema=False)
+def read_moderation_page() -> FileResponse:
+    return FileResponse(PAGES_DIRECTORY / "admin" / "moderation.html", media_type="text/html")
 
 
 @app.get("/admin/user-directory", include_in_schema=False)

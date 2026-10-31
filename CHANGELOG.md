@@ -8,6 +8,28 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Seasonal themes: **Spring**, **Summer**, **Fall**, **Winter**, **Halloween**, **Easter**, **Christmas**, and **New Year's Eve**, in the **Theme** menu of every page, each with slowly falling decorations (still when the system asks for reduced motion). **Seasonal (auto)** picks one by date: Halloween from 17 October to 1 November, Easter from Palm Sunday to Easter Monday, Christmas from 1 to 26 December, New Year's Eve from 27 December to 1 January, and otherwise the season.
+- Reviews and comments are written in a rich text editor (Quill): bold, italic, underline, strike-through, lists, quotes, and links.
+  - The server keeps only that formatting and drops everything else, including scripts and unsafe links. Links open in a new tab.
+  - The length limits (2,000 characters for reviews, 1,000 for comments) count the text, not the formatting.
+  - Older plain-text reviews and comments, and plain text sent through the API, are shown as before.
+- Moderation for reviews and comments, on a new **Moderation** page for administrators (`/admin/moderation`, in the **Tools** sidebar group).
+  - **Blocked words**: a post that uses one is held for review (only its author and administrators see it until it is approved) or refused, as the administrators choose. Words match whole words, ignoring case.
+  - **Reports**: every signed-in user can report someone else's post as spam, offensive, spoilers, off topic, or other, with optional details. A post with 3 open reports (adjustable) is hidden until an administrator looks at it.
+  - The page lists held, hidden, and reported posts with their reports. Administrators can approve, hide, or delete each one, with an optional note to the author.
+  - Authors are notified when an administrator hides, approves, or deletes their post, including deletes from the game details. Administrators are notified when a post is held or hidden by reports.
+  - Held and hidden posts don't count in the review count or average, and earn their XP only once approved.
+  - New endpoints: `POST /games/{game_id}/reviews/{review_id}/report`, `POST /games/{game_id}/comments/{comment_id}/report`, `GET`/`PUT /admin/moderation/settings`, `GET /admin/moderation/queue`, and `POST /admin/moderation/{kind}/{id}/approve`, `/hide`, and `/remove`. Reviews and comments now include `status` and `reported` (and `open_reports` for administrators).
+  - New event: `moderationChanged`.
+- A countdown in the game details for games that are not out yet, on the library and releases pages: days, hours, minutes and seconds to the release date, and a bar that fills over the final year before launch.
+- XP, levels and ranks. Users earn XP for a daily visit, reviews, comments, wishlist and favorite picks, feedback, completing their profile, and turning on two-step sign-in.
+  - Each action pays once per game, comment or feedback, so undoing and redoing it never pays twice. Comments pay up to 5 times a day and feedback up to 3. XP is never taken away.
+  - Level L needs 50 × L × (L − 1) XP in total. Ranks go from **Rookie** (level 1) through Explorer, Adventurer, Veteran, Elite and Champion to **Legend** (level 20).
+  - **My profile** shows the level, rank, progress to the next level, recent XP, how to earn more, and a leaderboard. It updates live (new event `xpChanged`), and reaching a new level sends a notification.
+  - New endpoints: `GET /users/me/xp` and `GET /users/xp/leaderboard`.
+- A **Development switches** panel on the dashboard, to skip two-step sign-in for every account while developing. It only works when the server runs with the new setting `APP_ENV=development` (the default is `production`); otherwise turning it on is refused and a saved "on" is ignored. New endpoints: `GET`/`PUT /admin/development/two-factor`.
+- Emails now have an HTML version, with the lcpgamecol header, sign-in codes in large type, and a button for the main link (password reset, feedback replies, and messages). The plain-text version is still included.
+
 - **Reviews** and **Comments** sections in the game details, on the library and upcoming releases pages.
   - Every signed-in user can leave one review per game, with 1 to 5 stars and optional text (up to 2,000 characters). Posting again updates it. The section shows the average rating and the number of reviews.
   - Comments are free-form (up to 1,000 characters each), newest first.
