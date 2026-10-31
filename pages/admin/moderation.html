@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f4f5ef" />
+    <title>Moderation / Games Library</title>
+    <link rel="icon" href="/public/images/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/public/styles/css/admin.css" />
+  </head>
+  <body>
+    <div id="page-loader" class="page-loader" role="status" aria-live="polite">
+      <span class="loading-spinner" aria-hidden="true"></span>
+      <span>Loading page...</span>
+    </div>
+    <aside id="admin-sidebar" class="admin-sidebar" aria-label="Page links" hidden></aside>
+    <div id="sidebar-backdrop" class="sidebar-backdrop" hidden></div>
+    <main class="admin-shell">
+      <header class="topbar">
+        <div class="topbar-start">
+          <button id="sidebar-toggle" class="icon-button sidebar-toggle" type="button" aria-controls="admin-sidebar" aria-expanded="true" aria-label="Hide page links" title="Hide page links" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+          </button>
+          <a class="wordmark" href="/admin" aria-label="Games Library admin home">
+            <span class="wordmark-mark" aria-hidden="true">G</span>
+            <span>LCPGAMECOL <small>LIBRARY ADMIN</small></span>
+          </a>
+        </div>
+        <nav class="main-nav" aria-label="Main navigation">
+          <a href="/admin">Overview</a>
+          <a href="/library">Games</a>
+          <a href="/library/releases">Releases</a>
+          <a href="/admin#settings-panel">Settings</a>
+          <a href="/docs">API</a>
+        </nav>
+        <div class="account-area">
+          <label class="language-control" for="language-selector">Language
+            <select id="language-selector" aria-label="Language">
+              <option value="en">English</option><option value="pt">Português</option>
+              <option value="de">Deutsch</option><option value="fr">Français</option>
+              <option value="it">Italiano</option><option value="es">Español</option><option value="ja">日本語</option>
+            </select>
+          </label>
+          <span id="account-name" class="account-name"></span>
+          <button id="logout-button" class="icon-button" type="button" aria-label="Log out" title="Log out" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3m9-8h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6" /></svg>
+          </button>
+        </div>
+      </header>
+
+      <section id="access-view" class="login-view" aria-labelledby="access-title" hidden>
+        <p class="kicker">MODERATION / ADMIN ACCESS</p>
+        <h1 id="access-title">Admin tools,<br />behind the door.</h1>
+        <p id="access-message" class="login-copy">Sign in with an administrator account to moderate reviews and comments.</p>
+        <a class="primary-button" href="/admin">Go to sign in <span aria-hidden="true">↗</span></a>
+      </section>
+
+      <section id="moderation-view" hidden>
+        <div class="page-heading">
+          <div>
+            <p class="kicker">ADMIN TOOLS / MODERATION</p>
+            <h1>Moderation<span class="heading-period">.</span></h1>
+            <p class="heading-copy">Reported, held and hidden reviews and comments, and the rules that catch them.</p>
+          </div>
+          <div class="heading-tools">
+            <time id="live-clock" class="live-clock"></time>
+            <label class="theme-control" for="theme-selector">Theme
+              <select id="theme-selector">
+                <option value="auto">Auto</option><option value="dark">Dark</option>
+                <option value="white">White</option><option value="glassmorphism">Glassmorphism</option>
+                <option value="liquid-glass">Liquid glass</option>
+                <option value="sunsetvibes">Sunset Vibes</option><option value="cyber-retro">Cyber Retro Gaming</option>
+                <option value="rgb">RGB</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <section class="metrics" aria-label="Moderation totals">
+          <article class="metric"><div class="metric-top"><span>WAITING</span><span class="metric-mark">01</span></div><strong id="metric-pending">0</strong><p>Used a blocked word</p></article>
+          <article class="metric metric-hours"><div class="metric-top"><span>REPORTED</span><span class="metric-mark">02</span></div><strong id="metric-reported">0</strong><p>With open reports</p></article>
+          <article class="metric metric-rating"><div class="metric-top"><span>HIDDEN</span><span class="metric-mark">03</span></div><strong id="metric-hidden">0</strong><p>By reports or by you</p></article>
+          <article class="metric metric-wishlist"><div class="metric-top"><span>BLOCKED WORDS</span><span class="metric-mark">04</span></div><strong id="metric-words">0</strong><p>In the list below</p></article>
+        </section>
+
+        <section class="records-panel" aria-labelledby="queue-title">
+          <div class="panel-heading">
+            <div><p class="kicker">QUEUE</p><h2 id="queue-title">Needs a look</h2></div>
+            <span id="queue-count" class="chart-note"></span>
+          </div>
+          <p id="queue-status" class="records-status" role="status" aria-live="polite"></p>
+          <ol id="queue-list" class="feedback-list"></ol>
+          <p id="queue-empty" class="empty-note" hidden>Nothing to moderate. Nice and quiet.</p>
+        </section>
+
+        <section class="settings-panel" aria-labelledby="rules-title">
+          <div class="panel-heading">
+            <div><p class="kicker">RULES</p><h2 id="rules-title">Blocked words and reports</h2></div>
+          </div>
+          <form id="rules-form" class="settings-form">
+            <div class="record-fields">
+              <label class="field-wide">Blocked words (one per line)
+                <textarea name="blocked_words" rows="5" spellcheck="false" translate="no" placeholder="One word or phrase per line"></textarea>
+              </label>
+              <label>When a post uses one
+                <select name="blocked_words_action">
+                  <option value="hold">Hold it for review</option>
+                  <option value="reject">Refuse it</option>
+                </select>
+              </label>
+              <label>Hide a post after this many reports
+                <input name="report_threshold" type="number" min="1" max="50" required />
+              </label>
+            </div>
+            <p class="profile-form-hint">Words match whole words, ignoring case. Held and hidden posts are only shown to their author and administrators.</p>
+            <p id="rules-status" class="records-status" role="status" aria-live="polite"></p>
+            <div class="upload-actions">
+              <button class="primary-button" type="submit">Save rules</button>
+            </div>
+          </form>
+        </section>
+
+        <footer class="page-footer"><span>LCPGAMECOL / MODERATION</span><span>ADMIN TOOLS</span></footer>
+      </section>
+      <div id="toast-region" class="toast-region" role="status" aria-live="polite" aria-atomic="true"></div>
+    </main>
+    <script src="/public/scripts/loading.js"></script>
+    <script src="/public/scripts/i18n.js"></script>
+    <script src="/public/scripts/preferences.js"></script>
+    <script src="/public/scripts/sidebar.js"></script>
+    <script src="/nmodules/@microsoft/signalr/dist/browser/signalr.min.js"></script>
+    <script src="/public/scripts/realtime.js"></script>
+    <script src="/public/scripts/inbox.js"></script>
+    <script src="/public/scripts/moderation.js"></script>
+  </body>
+</html>

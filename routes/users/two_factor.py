@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 
 from backend.auth import auth, two_factor
 from backend.auth.auth import Principal, get_current_principal
+from backend.gamification import xp
 from routes.users.notifications import notify
 
 router = APIRouter(prefix="/users/me/two-factor", tags=["users"])
@@ -64,6 +65,7 @@ def enable_two_factor(body: CodeBody, principal: Principal = Depends(get_current
     except two_factor.TwoFactorError as error:
         raise _refused(error) from None
     notify(principal.username, "security", "Two-factor sign-in is on", "Keep your recovery codes somewhere safe.")
+    xp.award(principal.username, "two_factor")
     return {**two_factor.status(principal.username), "recovery_codes": codes}
 
 

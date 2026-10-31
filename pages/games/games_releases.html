@@ -10,6 +10,7 @@
     <link rel="preconnect" href="https://images.igdb.com" />
     <link href="/nmodules/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link href="/nmodules/bootstrap-icons/font/bootstrap-icons.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" />
     <link href="/public/styles/css/games.css" rel="stylesheet" />
   </head>
   <body data-shelf-state="pending">
@@ -284,6 +285,20 @@
             </div>
           </div>
           <p class="details-description" id="details-description"></p>
+          <section class="release-countdown" id="details-countdown" aria-labelledby="details-countdown-title" hidden>
+            <div class="release-countdown-heading">
+              <h3 id="details-countdown-title">Coming soon</h3>
+              <p id="details-countdown-date"></p>
+            </div>
+            <div class="release-countdown-units" role="timer" aria-live="off">
+              <div><strong data-countdown-unit="days">0</strong><span>days</span></div>
+              <div><strong data-countdown-unit="hours">00</strong><span>hours</span></div>
+              <div><strong data-countdown-unit="minutes">00</strong><span>minutes</span></div>
+              <div><strong data-countdown-unit="seconds">00</strong><span>seconds</span></div>
+            </div>
+            <progress id="details-countdown-progress" max="100" value="0" aria-labelledby="details-countdown-caption"></progress>
+            <p class="release-countdown-caption" id="details-countdown-caption"></p>
+          </section>
           <div class="details-actions" id="details-actions" role="group" aria-label="Game actions" hidden>
             <button class="details-action" type="button" data-list-action="wishlist" aria-pressed="false" aria-label="Add to wishlist" title="Add to wishlist">
               <i class="bi bi-bookmark-plus" aria-hidden="true"></i>
@@ -341,8 +356,8 @@
                 <input type="radio" name="rating" value="5" id="review-rating-5" />
                 <label for="review-rating-5" title="5 out of 5"><i class="bi bi-star-fill" aria-hidden="true"></i><span class="visually-hidden">5 out of 5</span></label>
               </fieldset>
-              <label class="visually-hidden" for="review-body">Your review</label>
-              <textarea id="review-body" name="body" rows="3" maxlength="2000" placeholder="What did you think? (optional)"></textarea>
+              <span class="visually-hidden" id="review-body-label">Your review</span>
+              <textarea id="review-body" name="body" data-rich-text aria-labelledby="review-body-label" placeholder="What did you think? (optional)" hidden></textarea>
               <div class="discussion-form-actions">
                 <button type="submit">Post review</button>
                 <button class="link-button" type="button" id="review-delete" hidden>Delete my review</button>
@@ -357,8 +372,8 @@
               <p id="details-comments-status" role="status" aria-live="polite"></p>
             </div>
             <form class="discussion-form" id="comment-form" hidden>
-              <label class="visually-hidden" for="comment-body">Your comment</label>
-              <textarea id="comment-body" name="body" rows="2" maxlength="1000" required placeholder="Add a comment"></textarea>
+              <span class="visually-hidden" id="comment-body-label">Your comment</span>
+              <textarea id="comment-body" name="body" data-rich-text aria-labelledby="comment-body-label" placeholder="Add a comment" hidden></textarea>
               <div class="discussion-form-actions">
                 <button type="submit">Post comment</button>
               </div>
@@ -408,6 +423,7 @@
     <script defer src="/public/scripts/inbox.js"></script>
     <script defer src="/public/scripts/register.js"></script>
     <script defer src="/public/scripts/two_factor_login.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
     <script defer src="/public/scripts/shelf.js"></script>
     <script defer src="/public/scripts/reviews.js"></script>
     <script defer src="/public/scripts/games_releases.js"></script>

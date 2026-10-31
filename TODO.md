@@ -11,9 +11,11 @@ Planned work and known gaps. Move items to `CHANGELOG.md` when they ship.
 
 ## Features
 
-- [ ] Add moderation filters for reviews and comments (for example, a blocked-words list, reporting, and a moderation queue). Today administrators can only delete them from the game details.
-- [ ] Let users edit their comments, and notify authors when an administrator deletes their review or comment.
-- [ ] Add a basic xp level + rank system (or gamification).
+- [ ] Let users edit their comments.
+- [ ] Let users appeal a hidden or removed post, and keep a moderation history (who approved, hid, or deleted what, and when).
+- [ ] Load Quill from `/nmodules` (add it to `package.json`) instead of the jsDelivr CDN, so the editors work offline.
+- [ ] Add XP badges (for example, "First review") and show each user's rank in the user directory and next to their reviews.
+- [ ] Add the seasonal themes to the API docs theme menu (`/docs`).
 - [ ] Add cool personalization for user profile.
 
 ## Access control

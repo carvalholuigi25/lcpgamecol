@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="supported-color-schemes" content="light dark" />
+    <title>$title</title>
+    <style>
+      @media (prefers-color-scheme: dark) {
+        .email-page { background: #151d1c !important; }
+        .email-card { background: #202a28 !important; border-color: #3a4944 !important; }
+        .email-text, .email-title { color: #edf4f0 !important; }
+        .email-muted { color: #a6b4ad !important; }
+        .email-code { background: #293c34 !important; color: #edf4f0 !important; }
+        .email-link { color: #78b89a !important; }
+      }
+      @media (max-width: 620px) {
+        .email-card { padding: 24px 20px !important; }
+      }
+    </style>
+  </head>
+  <body style="margin: 0; padding: 0; background: #f4f5ef;">
+    <div style="display: none; max-height: 0; overflow: hidden; opacity: 0;">$preheader</div>
+    <table role="presentation" class="email-page" width="100%" cellspacing="0" cellpadding="0" border="0" style="background: #f4f5ef;">
+      <tr>
+        <td align="center" style="padding: 32px 12px;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 560px;">
+            <tr>
+              <td style="padding: 0 4px 16px; font: 700 13px/1 'Trebuchet MS', Arial, sans-serif; letter-spacing: 0.08em; color: #245f48;">
+                <a href="$app_url" style="color: #245f48; text-decoration: none;">
+                  <span style="display: inline-block; width: 28px; height: 28px; margin-right: 8px; border-radius: 8px; background: #245f48; color: #fffefa; font: 700 16px/28px Georgia, serif; text-align: center; vertical-align: middle;">G</span>
+                  <span style="vertical-align: middle;">LCPGAMECOL</span>
+                </a>
+              </td>
+            </tr>
+            <tr>
+              <td class="email-card" style="padding: 32px; border: 1px solid #dfe4da; border-radius: 16px; background: #fffefa;">
+                <h1 class="email-title" style="margin: 0 0 20px; color: #202823; font: 600 24px/1.25 Georgia, 'Times New Roman', serif;">$title</h1>
+                <div class="email-text" style="color: #202823; font: 15px/1.6 'Trebuchet MS', Arial, sans-serif;">
+                  $body
+                </div>
+                $action
+              </td>
+            </tr>
+            <tr>
+              <td class="email-muted" style="padding: 18px 4px 0; color: #747e75; font: 12px/1.5 'Trebuchet MS', Arial, sans-serif;">
+                $fallback
+                You are getting this email because of your account at <a class="email-link" href="$app_url" style="color: #245f48;">lcpgamecol</a>.
+                To stop emails, remove the address from your profile.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

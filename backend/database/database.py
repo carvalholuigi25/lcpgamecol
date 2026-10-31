@@ -268,7 +268,39 @@ def initialize_database() -> None:
             );
             CREATE INDEX IF NOT EXISTS game_comments_by_game ON game_comments (game_id);
 
-            -- Geoblock, VPN and lockdown rules, stored as one JSON document.
+            -- Reports on reviews and comments (kind is 'review' or 'comment'); see
+            -- backend/moderation/moderation.py. One report per user and post.
+            CREATE TABLE IF NOT EXISTS content_reports (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                kind TEXT NOT NULL,
+                item_id INTEGER NOT NULL,
+                game_id INTEGER NOT NULL,
+                reporter TEXT NOT NULL COLLATE NOCASE,
+                reason TEXT NOT NULL,
+                details TEXT NULL,
+                status TEXT NOT NULL DEFAULT 'open',
+                created_at TEXT NOT NULL,
+                resolved_by TEXT NULL,
+                resolved_at TEXT NULL,
+                UNIQUE (kind, item_id, reporter),
+                FOREIGN KEY (game_id) REFERENCES games (id) ON DELETE CASCADE
+            );
+            CREATE INDEX IF NOT EXISTS content_reports_by_item ON content_reports (kind, item_id, status);
+
+            -- XP is paid once per (action, ref), e.g. one review per game (backend/gamification/xp.py).
+            CREATE TABLE IF NOT EXISTS user_xp_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL COLLATE NOCASE,
+                action TEXT NOT NULL,
+                ref TEXT NOT NULL,
+                xp INTEGER NOT NULL,
+                created_at TEXT NOT NULL,
+                UNIQUE (username, action, ref)
+            );
+            CREATE INDEX IF NOT EXISTS user_xp_events_by_user ON user_xp_events (username, action, created_at);
+
+            -- Site-wide settings, one JSON document per name: the geoblock, VPN and
+            -- lockdown rules, and the development two-factor bypass.
             CREATE TABLE IF NOT EXISTS access_settings (
                 name TEXT PRIMARY KEY,
                 value TEXT NOT NULL,
@@ -296,6 +328,11 @@ def initialize_database() -> None:
         }
         if "email" not in profile_columns:
             connection.execute("ALTER TABLE user_profiles ADD COLUMN email TEXT NULL")
+        # 'visible', 'pending' (waits for an administrator) or 'hidden'.
+        for table in ("game_reviews", "game_comments"):
+            columns = {row["name"] for row in connection.execute(f"PRAGMA table_info({table})")}  # nosec B608
+            if "status" not in columns:
+                connection.execute(f"ALTER TABLE {table} ADD COLUMN status TEXT NOT NULL DEFAULT 'visible'")
         connection.execute(
             """
             UPDATE games SET esrb = CASE esrb

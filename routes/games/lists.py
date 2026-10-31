@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from backend.auth.auth import Principal, get_current_principal
 from backend.database.database import get_connection
+from backend.gamification import xp
 from backend.realtime.hub import hub
 from routes.admin.users import FAVORITE_GAMES_MAX
 
@@ -69,7 +70,9 @@ def add_to_wishlist(game_id: int, principal: Principal = CURRENT_PRINCIPAL) -> d
             "INSERT OR IGNORE INTO user_wishlist_games (username, game_id, added_at) VALUES (?, ?, ?)",
             (principal.username, game_id, datetime.now(UTC).isoformat(timespec="seconds")),
         )
-        return _changed(connection, principal, game_id)
+        state = _changed(connection, principal, game_id)
+    xp.award(principal.username, "wishlist", game_id)
+    return state
 
 
 @router.delete("/games/{game_id}/wishlist")
@@ -103,7 +106,9 @@ def add_to_favorites(
                 "INSERT INTO user_favorite_games (username, game_id, position) VALUES (?, ?, ?)",
                 (principal.username, game_id, last_position + 1),
             )
-        return _changed(connection, principal, game_id)
+        state = _changed(connection, principal, game_id)
+    xp.award(principal.username, "favorite", game_id)
+    return state
 
 
 @router.delete("/games/{game_id}/favorite")

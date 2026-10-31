@@ -102,6 +102,7 @@ async function loadDashboard() {
     }
     if (!response.ok) throw new Error("Dashboard data could not be loaded.");
     renderDashboard(await response.json());
+    loadDevelopmentSettings();
     if (dirtyRecordForms.size === 0) await loadRecordGames(gameRecordSelect.value || undefined);
     dashboardStatus.textContent = "";
     const locale = { en: "en-GB", pt: "pt-PT", de: "de-DE", fr: "fr-FR", it: "it-IT", es: "es-ES", ja: "ja-JP" }[window.i18n.language];
@@ -746,6 +747,51 @@ async function fetchProfile() {
   const response = await fetch("/users");
   return response.ok ? response.json() : null;
 }
+
+const developmentPanel = document.getElementById("development-panel");
+const skipTwoFactorInput = document.getElementById("setting-skip-two-factor");
+const developmentStatus = document.getElementById("development-status");
+
+function renderDevelopmentSettings(state) {
+  developmentPanel.dataset.active = String(state.active);
+  document.getElementById("development-mode-badge").textContent = state.dev_mode ? "DEVELOPMENT" : "PRODUCTION";
+  skipTwoFactorInput.checked = state.enabled;
+  // Leave a saved "on" switchable to off, even when the server is no longer in development mode.
+  skipTwoFactorInput.disabled = !state.dev_mode && !state.enabled;
+  if (state.active) {
+    developmentStatus.textContent = "Two-step sign-in is skipped for every account. Turn this off when you are done.";
+  } else if (state.enabled) {
+    developmentStatus.textContent = "Saved as on, but ignored: this server is not in development mode.";
+  } else {
+    developmentStatus.textContent = "";
+  }
+}
+
+async function loadDevelopmentSettings() {
+  try {
+    renderDevelopmentSettings(await readApiResponse(await fetch("/admin/development/two-factor")));
+  } catch (error) {
+    developmentStatus.textContent = error.message;
+  }
+}
+
+skipTwoFactorInput.addEventListener("change", async () => {
+  const enabled = skipTwoFactorInput.checked;
+  skipTwoFactorInput.disabled = true;
+  try {
+    const state = await readApiResponse(await fetch("/admin/development/two-factor", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled }),
+    }));
+    renderDevelopmentSettings(state);
+    showToast(enabled ? "Two-step sign-in is now skipped." : "Two-step sign-in is required again.");
+  } catch (error) {
+    skipTwoFactorInput.checked = !enabled;
+    skipTwoFactorInput.disabled = false;
+    developmentStatus.textContent = error.message;
+  }
+});
 
 if (settingsForm) {
   settingsForm.addEventListener("change", () => {

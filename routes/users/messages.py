@@ -100,6 +100,8 @@ def _email_recipient(recipient: str, sender: str, subject: str, body: str) -> No
         f"{sender} sent you a message on lcpgamecol.\n\n"
         f"Subject: {subject}\n\n{body}\n\n"
         f"Read and reply: {mailer.app_link(INBOX_LINK)}\n",
+        action_label="Read and reply",
+        action_url=mailer.app_link(INBOX_LINK),
     )
 
 

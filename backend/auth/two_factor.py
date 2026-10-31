@@ -7,11 +7,18 @@ are issued for when the phone or mailbox is unavailable.
 Signing in with a password returns a short-lived challenge token instead of a
 session when 2FA is on (see create_challenge). The session is only issued once
 verify_challenge accepts a code. Each challenge allows MAX_ATTEMPTS codes.
+
+While developing, an administrator can switch the second step off for every
+account from the dashboard (see skip_for_development). The switch only works when
+APP_ENV is "development"; on any other server it is refused and ignored.
 """
 
 import base64
 import hashlib
 import hmac
+import json
+import logging
+import os
 import secrets
 import struct
 import time
@@ -42,6 +49,10 @@ MAX_EMAIL_SENDS = 5
 RESEND_INTERVAL_SECONDS = 30
 RECOVERY_CODE_COUNT = 10
 CHALLENGE_TOKEN_TYPE = "2fa"  # a claim value, not a secret  # nosec B105
+DEV_MODE = os.getenv("APP_ENV", "production").strip().lower() in ("development", "dev")
+DEV_BYPASS_SETTING = "dev_two_factor_bypass"
+
+logger = logging.getLogger(__name__)
 
 
 class TwoFactorError(Exception):
@@ -152,7 +163,7 @@ def _send_code_email(username: str, code: str, purpose: str) -> str:
     return mailer.send_to_user(
         username,
         f"Your lcpgamecol code: {code}",
-        f"Hi {username},\n\nYour code to {purpose} is:\n\n    {code}\n\n"
+        f"Hi {username},\n\nYour code to {purpose} is:\n\n{code}\n\n"
         f"It expires in {EMAIL_CODE_TTL_SECONDS // 60} minutes. If this wasn't you, change your password.\n",
     )
 
@@ -270,6 +281,55 @@ def regenerate_recovery_codes(username: str) -> list[str]:
         codes = _new_recovery_codes(connection, username)
         connection.commit()
     return codes
+
+
+def _stored_dev_bypass(connection):
+    return connection.execute(
+        "SELECT value, updated_by, updated_at FROM access_settings WHERE name = ?", (DEV_BYPASS_SETTING,)
+    ).fetchone()
+
+
+def dev_bypass_status() -> dict:
+    with closing(get_connection()) as connection:
+        row = _stored_dev_bypass(connection)
+    try:
+        enabled = bool(row and json.loads(row["value"]).get("enabled"))
+    except (ValueError, AttributeError):
+        enabled = False
+    return {
+        "dev_mode": DEV_MODE,
+        "enabled": enabled,
+        # Saved but ignored when the server is not in development mode.
+        "active": DEV_MODE and enabled,
+        "updated_by": row["updated_by"] if row else None,
+        "updated_at": row["updated_at"] if row else None,
+    }
+
+
+def skip_for_development(username: str) -> bool:
+    """True when the development bypass lets this sign-in go without a code."""
+    if not DEV_MODE or not dev_bypass_status()["active"]:
+        return False
+    logger.warning("Skipped two-factor sign-in for %s: the development bypass is on.", username)
+    return True
+
+
+def set_dev_bypass(enabled: bool, updated_by: str) -> dict:
+    if enabled and not DEV_MODE:
+        raise TwoFactorError("Two-factor sign-in can only be skipped when the server runs with APP_ENV=development.")
+    with closing(get_connection()) as connection:
+        connection.execute(
+            """
+            INSERT INTO access_settings (name, value, updated_by, updated_at) VALUES (?, ?, ?, ?)
+            ON CONFLICT (name) DO UPDATE SET value = excluded.value, updated_by = excluded.updated_by,
+                updated_at = excluded.updated_at
+            """,
+            (DEV_BYPASS_SETTING, json.dumps({"enabled": enabled}), updated_by,
+             datetime.now(UTC).isoformat(timespec="seconds")),
+        )
+        connection.commit()
+    logger.warning("%s turned the development two-factor bypass %s.", updated_by, "on" if enabled else "off")
+    return dev_bypass_status()
 
 
 def disable(username: str) -> None:

@@ -22,6 +22,7 @@
     releases: "M5 5h14v15H5zM5 9h14M9 3v4m6-4v4",
     profile: "M19 20v-1a5 5 0 0 0-5-5h-4a5 5 0 0 0-5 5v1M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z",
     docs: "M9 8l-4 4 4 4m6-8l4 4-4 4",
+    shield: "M12 3l8 3v6c0 5-3.4 8.3-8 9-4.6-.7-8-4-8-9V6zm-3 9l2 2 4-4",
   };
   const GROUPS = [
     { label: "ACTIVITY", inbox: true, links: [["/feedback", "feedback", "Feedback"]] },
@@ -42,6 +43,7 @@
       links: [
         ["/admin/special-features", "star", "Special features"],
         ["/admin/user-directory", "users", "Users"],
+        ["/admin/moderation", "shield", "Moderation"],
         ["/feedback#manage", "feedback", "Manage feedback"],
       ],
     },

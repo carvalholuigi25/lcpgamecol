@@ -255,6 +255,21 @@
           </form>
         </section>
 
+        <section id="development-panel" class="settings-panel development-panel" aria-labelledby="development-title">
+          <div class="panel-heading">
+            <div><p class="kicker">DEVELOPMENT</p><h2 id="development-title">Development switches</h2></div>
+            <span id="development-mode-badge" class="chart-note">PRODUCTION</span>
+          </div>
+          <form id="development-form" class="settings-form">
+            <label class="setting-option development-option" for="setting-skip-two-factor">
+              <input id="setting-skip-two-factor" name="skipTwoFactor" type="checkbox" disabled />
+              <span>Skip two-step sign-in for every account</span>
+            </label>
+            <p id="development-hint" class="profile-form-hint">Only works while the server runs with APP_ENV=development, so it never weakens a live site.</p>
+            <p id="development-status" class="records-status" role="status" aria-live="polite"></p>
+          </form>
+        </section>
+
         <section id="charts-section" class="chart-layout" aria-label="Library charts">
           <article class="chart-panel release-panel">
             <div class="panel-heading">
