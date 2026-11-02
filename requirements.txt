@@ -12,3 +12,4 @@ signalrcore
 lighthouse-python-plus
 bandit
 pip-audit
+tzdata
