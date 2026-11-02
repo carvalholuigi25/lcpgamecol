@@ -25,11 +25,20 @@ fi
 # shellcheck disable=SC1090
 source "$ACTIVATE"
 
+# The activate script hardcodes the venv path it was created with, which is
+# wrong under WSL (/mnt/c/...) - so set it from the real location
+export VIRTUAL_ENV="$VENV_DIR"
+export PATH="$(dirname "$ACTIVATE"):$PATH"
+
 # When executed (not sourced), run the given command inside the venv
 if [ "${BASH_SOURCE[0]}" = "$0" ]; then
     if [ $# -eq 0 ]; then
         echo "Activated $VENV_DIR, but nothing to run (use 'source' to stay activated)." >&2
         exit 0
+    fi
+    # A Windows venv run from WSL only has python.exe, pip.exe, ...
+    if ! command -v "$1" >/dev/null 2>&1 && command -v "$1.exe" >/dev/null 2>&1; then
+        set -- "$1.exe" "${@:2}"
     fi
     exec "$@"
 fi
