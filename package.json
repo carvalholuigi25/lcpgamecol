@@ -6,8 +6,8 @@
   "scripts": {
     "build-css": "sass public/styles/scss:public/styles/css --no-source-map --style=compressed",
     "build-css-w": "sass --watch public/styles/scss:public/styles/css --style=compressed",
-    "start": "npm run build-css && python -m uvicorn main:app --reload --env-file config.env",
-    "startapp": "python -m uvicorn main:app --reload --env-file config.env",
+    "start": "npm run build-css && .\\.venv\\Scripts\\Activate.bat && python -m uvicorn main:app --reload --env-file config.env",
+    "startapp": ".\\.venv\\Scripts\\Activate.bat && python -m uvicorn main:app --reload --env-file config.env",
     "startw": "conc \"npm:build-css-w\" \"npm:startapp\"",
     "test": "python -m pytest",
     "db:make": "python -m backend.database.migrate make",
