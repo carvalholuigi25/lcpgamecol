@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field, field_validator
 from backend.auth import auth, password_reset, two_factor
 from backend.mail import mailer
 from backend.database.database import get_connection
+from backend.gamification import xp
 from backend.mail.mailer import email_problem
 from backend.realtime.hub import hub
 
@@ -138,6 +139,13 @@ def _profiles(usernames: list[str]) -> list[dict]:
                 keys,
             )
         }
+        xp_totals = {
+            row[0].lower(): row[1]
+            for row in connection.execute(
+                f"SELECT username, SUM(xp) FROM user_xp_events WHERE lower(username) IN ({placeholders}) GROUP BY lower(username)",  # only ? placeholders are interpolated  # nosec B608
+                keys,
+            )
+        }
         favorites: dict[str, list[dict]] = {}
         for row in connection.execute(
             f"""
@@ -166,6 +174,8 @@ def _profiles(usernames: list[str]) -> list[dict]:
                 "cover_url": profile["cover_url"] if profile else None,
                 "email": profile["email"] if profile else None,
                 "two_factor_enabled": key in two_factor_users,
+                "xp": xp_totals.get(key, 0),
+                "rank": xp.badge(xp_totals.get(key, 0)),
                 "updated_at": profile["updated_at"] if profile else None,
                 "favorite_games": favorite_games,
                 "hours_in_favorites": round(sum(float(game["hours_played"]) for game in favorite_games), 1),

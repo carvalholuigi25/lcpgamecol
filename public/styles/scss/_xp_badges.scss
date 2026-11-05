@@ -1,0 +1,126 @@
+// XP rank badges (public/scripts/xp_badges.js), shared by the profile, the user
+// directory and the reviews and comments on the library pages. The colours are fixed
+// per rank, so a badge reads the same in every theme.
+
+@use "sass:list";
+
+// rank key: (from, to, text)
+$xp-badge-colors: (
+  rookie: (#6d4c41, #a1887f, #fff),
+  explorer: (#2e7d32, #66bb6a, #fff),
+  adventurer: (#00838f, #26c6da, #fff),
+  veteran: (#1565c0, #42a5f5, #fff),
+  elite: (#6a1b9a, #ba68c8, #fff),
+  champion: (#c62828, #ff8a50, #fff),
+  legend: (#b8860b, #ffe082, #2b1d00),
+);
+
+.xp-badge {
+  --xp-badge-from: #546e7a;
+  --xp-badge-to: #90a4ae;
+  --xp-badge-ink: #fff;
+
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 4px 2px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  color: var(--xp-badge-ink);
+  background: linear-gradient(135deg, var(--xp-badge-from), var(--xp-badge-to));
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  font: 700 0.68rem/1.4 Arial, sans-serif;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  vertical-align: middle;
+
+  .bi { font-size: 0.85em; }
+}
+
+.xp-badge-level {
+  min-width: 1.6em;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.28);
+  text-align: center;
+}
+
+@each $key, $colors in $xp-badge-colors {
+  .xp-badge[data-rank="#{$key}"],
+  .xp-medal[data-rank="#{$key}"] {
+    --xp-badge-from: #{list.nth($colors, 1)};
+    --xp-badge-to: #{list.nth($colors, 2)};
+    --xp-badge-ink: #{list.nth($colors, 3)};
+  }
+}
+
+// The top rank gets a slow shine.
+.xp-badge[data-rank="legend"],
+.xp-medal[data-rank="legend"] .xp-medal-shape {
+  background-size: 200% 200%;
+  animation: xp-badge-shine 4s ease-in-out infinite;
+}
+
+@keyframes xp-badge-shine {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+// Large badge with its name underneath, for the rank collection on the profile.
+.xp-medals {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.xp-medal {
+  --xp-badge-from: #546e7a;
+  --xp-badge-to: #90a4ae;
+  --xp-badge-ink: #fff;
+
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  text-align: center;
+
+  strong { font-size: 0.8rem; }
+  small { opacity: 0.75; font-size: 0.7rem; }
+
+  &[data-locked] .xp-medal-shape {
+    filter: grayscale(1);
+    opacity: 0.35;
+  }
+
+  &[data-current] .xp-medal-shape {
+    outline: 3px solid var(--xp-badge-to);
+    outline-offset: 3px;
+  }
+}
+
+.xp-medal-shape {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  color: var(--xp-badge-ink);
+  background: linear-gradient(135deg, var(--xp-badge-from), var(--xp-badge-to));
+  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.2), 0 4px 12px rgba(0, 0, 0, 0.25);
+  font-size: 1.7rem;
+  transform: rotate(45deg);
+
+  .bi { transform: rotate(-45deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .xp-badge[data-rank="legend"],
+  .xp-medal[data-rank="legend"] .xp-medal-shape {
+    animation: none;
+  }
+}

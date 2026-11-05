@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 
 import backend.auth.auth as auth
 import backend.database.database as database
+from helpers import rate_limiter
 from main import app
 from routes.admin.users import FAVORITE_GAMES_MAX, validate_image_url
 
@@ -18,7 +19,7 @@ def client(tmp_path, monkeypatch):
     auth._registrations.clear()
     database.initialize_database()
     with TestClient(app) as test_client:
-        app.middleware_stack.app.requests.clear()
+        rate_limiter(app).requests.clear()
         yield test_client
 
 

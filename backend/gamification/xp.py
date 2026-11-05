@@ -7,7 +7,8 @@ they can't be farmed (comments, feedback).
 
 Levels grow a little further apart each time: reaching level L takes
 LEVEL_STEP_XP * L * (L - 1) / 2 XP in total (100 for level 2, 300 for level 3...).
-Ranks are names for level ranges.
+Ranks are names for level ranges. Each rank has a badge; the pages draw it from the
+rank's key (public/scripts/xp_badges.js).
 """
 
 import logging
@@ -72,11 +73,23 @@ def rank_for(level: int) -> str:
     return next(name for first, name in reversed(RANKS) if level >= first)
 
 
+def rank_key(name: str) -> str:
+    """The badge key for a rank, e.g. "Rookie" -> "rookie"."""
+    return name.lower()
+
+
 def next_rank(level: int) -> dict | None:
     for first, name in RANKS:
         if first > level:
-            return {"name": name, "level": first}
+            return {"name": name, "level": first, "key": rank_key(name)}
     return None
+
+
+def badge(xp: int) -> dict:
+    """The short rank shown next to a user's name: level, rank and badge key."""
+    level = level_for(xp)
+    rank = rank_for(level)
+    return {"level": level, "rank": rank, "rank_key": rank_key(rank)}
 
 
 def summary(xp: int) -> dict:
@@ -86,6 +99,7 @@ def summary(xp: int) -> dict:
         "xp": xp,
         "level": level,
         "rank": rank_for(level),
+        "rank_key": rank_key(rank_for(level)),
         "next_rank": next_rank(level),
         "level_xp": floor,
         "next_level_xp": ceiling,
@@ -155,7 +169,7 @@ def describe(username: str) -> dict:
             {"action": name, "label": rule.label, "xp": rule.xp, "daily_limit": rule.daily_limit}
             for name, rule in ACTIONS.items()
         ],
-        "ranks": [{"name": name, "level": first} for first, name in RANKS],
+        "ranks": [{"name": name, "level": first, "key": rank_key(name)} for first, name in RANKS],
     }
 
 

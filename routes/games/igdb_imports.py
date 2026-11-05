@@ -19,13 +19,16 @@ from backend.database.database import get_connection
 from backend.realtime.hub import hub
 from routes.games.lists import _list_state
 from routes.games.routes import (
+    IGDB_AGE_RATING_FIELDS,
     _fetch_igdb_token,
+    _igdb_category,
     _igdb_company_names,
     _igdb_cover_url,
     _igdb_esrb_rating,
     _igdb_screenshot_url,
     _igdb_screenshots,
     _igdb_trailer_url,
+    _igdb_trailers,
     _igdb_website_url,
     insert_game,
 )
@@ -35,9 +38,9 @@ router = APIRouter(tags=["games"])
 
 IGDB_GAME_FIELDS = (
     "name,first_release_date,summary,game_modes.name,cover.url,screenshots.url,"
-    "websites.category,websites.url,videos.video_id,involved_companies.developer,"
-    "involved_companies.publisher,involved_companies.company.name,age_ratings.category,"
-    "age_ratings.rating,genres.name,platforms.name,rating,aggregated_rating"
+    "websites.category,websites.url,videos.video_id,game_type.type,involved_companies.developer,"
+    f"involved_companies.publisher,involved_companies.company.name,{IGDB_AGE_RATING_FIELDS},"
+    "genres.name,platforms.name,rating,aggregated_rating"
 )
 IgdbId = Path(ge=1, le=2**53)
 
@@ -87,6 +90,8 @@ def game_create_from_igdb(game: dict) -> GameCreate:
         publisher_name=_igdb_company_names(game, "publisher"),
         website_url=_igdb_website_url(game),
         trailer_url=_igdb_trailer_url(game),
+        trailers=_igdb_trailers(game),
+        category=_igdb_category(game),
         screenshots=_igdb_screenshots(game),
         platforms=", ".join(platform["name"] for platform in game.get("platforms") or []) or "PC",
         user_rating=game.get("rating") or 0,

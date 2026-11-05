@@ -96,6 +96,7 @@ def _review(row, principal: Principal, reports: dict[int, int] | None = None, mi
         "game_id": row["game_id"],
         "username": row["username"],
         "display_name": row["display_name"],
+        "author_rank": xp.badge(row["author_xp"]),
         "rating": row["rating"],
         "body": row["body"],
         "created_at": row["created_at"],
@@ -110,18 +111,24 @@ def _comment(row, principal: Principal, reports: dict[int, int] | None = None, m
         "game_id": row["game_id"],
         "username": row["username"],
         "display_name": row["display_name"],
+        "author_rank": xp.badge(row["author_xp"]),
         "body": row["body"],
         "created_at": row["created_at"],
         **_moderation_fields(row, principal, reports or {}, mine or set()),
     }
 
 
+# author_xp is the author's total XP, for the rank badge next to their name.
 REVIEW_SELECT = """
-    SELECT r.*, p.display_name FROM game_reviews r
+    SELECT r.*, p.display_name,
+        (SELECT COALESCE(SUM(x.xp), 0) FROM user_xp_events x WHERE x.username = r.username) AS author_xp
+    FROM game_reviews r
     LEFT JOIN user_profiles p ON p.username = r.username
 """
 COMMENT_SELECT = """
-    SELECT c.*, p.display_name FROM game_comments c
+    SELECT c.*, p.display_name,
+        (SELECT COALESCE(SUM(x.xp), 0) FROM user_xp_events x WHERE x.username = c.username) AS author_xp
+    FROM game_comments c
     LEFT JOIN user_profiles p ON p.username = c.username
 """
 

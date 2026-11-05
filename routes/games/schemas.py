@@ -170,6 +170,10 @@ class GameCreate(BaseModel):
     )
     minimum_system_requirements: str | None = None
     recommended_system_requirements: str | None = None
+    # IGDB game type, e.g. "Main Game", "DLC", "Expansion", "Remake".
+    category: str | None = ""
+    # Every trailer link; trailer_url stays the first (main) one.
+    trailers: list[str] = Field(default_factory=list)
 
     @field_validator("esrb", mode="before")
     @classmethod

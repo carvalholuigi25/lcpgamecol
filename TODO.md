@@ -14,7 +14,7 @@ Planned work and known gaps. Move items to `CHANGELOG.md` when they ship.
 - [ ] Let users edit their comments.
 - [ ] Let users appeal a hidden or removed post, and keep a moderation history (who approved, hid, or deleted what, and when).
 - [ ] Load Quill from `/nmodules` (add it to `package.json`) instead of the jsDelivr CDN, so the editors work offline.
-- [ ] Add XP badges (for example, "First review") and show each user's rank in the user directory and next to their reviews.
+- [ ] Add achievement badges for one-off milestones (for example, "First review"). Rank badges are done.
 - [ ] Add the seasonal themes to the API docs theme menu (`/docs`).
 - [ ] Add cool personalization for user profile.
 
@@ -40,6 +40,7 @@ Planned work and known gaps. Move items to `CHANGELOG.md` when they ship.
 
 ## Library
 
+- [ ] Filter the library on the server (genre, age rating, category, platform). Today the dropdowns only filter and list the 12 games on the current page.
 - [ ] Let administrators edit a game inside the details dialog, without opening the dashboard.
 - [ ] Offer an "Undo" right after a game is deleted.
 

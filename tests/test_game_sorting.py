@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 import backend.auth.auth as auth
 import backend.database.database as database
 import routes.games.routes as games_routes
+from helpers import rate_limiter
 from main import app
 from routes.games.schemas import ReleaseSort, SortOrder
 
@@ -23,7 +24,7 @@ def client(tmp_path, monkeypatch):
     auth._login_attempts.clear()
     database.initialize_database()
     with TestClient(app) as test_client:
-        app.middleware_stack.app.requests.clear()
+        rate_limiter(app).requests.clear()
         token = test_client.post("/auth/token", data={"username": "admin", "password": "1234"}).json()["access_token"]
         test_client.cookies.clear()
         test_client.headers["Authorization"] = f"Bearer {token}"

@@ -11,6 +11,7 @@ from starlette.websockets import WebSocketDisconnect
 import backend.auth.auth as auth
 import backend.database.database as database
 from backend.realtime.hub import RECORD_SEPARATOR, hub
+from helpers import rate_limiter
 from main import app
 
 GAME = {"title": "Hades", "genre": "Roguelike", "platforms": "PC", "release_year": 2020}
@@ -23,7 +24,7 @@ def client(tmp_path, monkeypatch):
     auth._login_attempts.clear()
     database.initialize_database()
     with TestClient(app) as test_client:
-        app.middleware_stack.app.requests.clear()
+        rate_limiter(app).requests.clear()
         yield test_client
 
 
@@ -198,7 +199,7 @@ def live_server(tmp_path, monkeypatch):
     while not server.started:
         assert time.monotonic() < deadline, "uvicorn did not start"
         time.sleep(0.05)
-    app.middleware_stack.app.requests.clear()
+    rate_limiter(app).requests.clear()
     yield f"http://127.0.0.1:{port}"
     server.should_exit = True
     thread.join(timeout=10)

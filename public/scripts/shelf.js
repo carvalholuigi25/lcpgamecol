@@ -19,9 +19,7 @@ const userMenu = document.getElementById("user-menu");
 const userAvatar = document.getElementById("user-avatar");
 const usernameDisplay = document.getElementById("username-display");
 const logoutButton = document.getElementById("logout-button");
-const platformSwitch = document.getElementById("platform-switch");
-const platformMenu = platformSwitch?.querySelector(".platform-switch-menu");
-const platformLabel = platformSwitch?.querySelector(".platform-switch-label");
+const clearFiltersButton = document.getElementById("clear-filters");
 const detailsActions = document.getElementById("details-actions");
 const detailsActionsStatus = document.getElementById("details-actions-status");
 const DEFAULT_GAME_COVER = "/public/images/default-game-cover.svg";
@@ -80,9 +78,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 let countdownTimer = null;
 // Asset URL -> promise that settles once the stylesheet or script has loaded.
 const loadedAssets = new Map();
-// An empty set means all platforms.
-let selectedPlatforms = new Set();
-let renderedPlatforms = null;
+let detailsTrailerIndex = 0;
 
 // Sort selects hold "field:order" values; the choice is remembered per browser.
 function initSortSelect(select, settingName, onChange) {
@@ -218,63 +214,120 @@ function gameCard(game, index) {
     </article>`;
 }
 
-// Platforms are stored as a comma-separated string, e.g. "PC, PlayStation 5".
+// Lists such as platforms and genres are stored as comma-separated strings, e.g. "PC, PlayStation 5".
+function splitList(value) {
+  const items = Array.isArray(value) ? value : String(value ?? "").split(",");
+  return items.map((item) => String(item).trim()).filter(Boolean);
+}
+
 function platformsOf(game) {
-  const platforms = Array.isArray(game.platforms)
-    ? game.platforms
-    : String(game.platforms ?? "").split(",");
-  return platforms.map((platform) => platform.trim()).filter(Boolean);
+  return splitList(game.platforms);
 }
 
-function platformOption(value, text, checked) {
-  return `<label><input type="checkbox" value="${escapeHtml(value)}"${checked ? " checked" : ""}>${escapeHtml(text)}</label>`;
+// Dropdown filters with checkboxes. Each one lists the values found in the loaded games,
+// and an empty selection means "all". A game must match every filter that has a selection.
+// Pages only include the dropdowns they want; missing ones are skipped.
+const gameFilters = [
+  { id: "platform-switch", valuesOf: platformsOf, all: "All platforms", many: "{count} platforms" },
+  { id: "genre-switch", valuesOf: (game) => splitList(game.genre), all: "All genres", many: "{count} genres" },
+  {
+    id: "age-rating-switch",
+    valuesOf: (game) => (game.esrb ? [game.esrb] : []),
+    labelOf: (value) => window.i18n.t(getGameESRBLabel(value)),
+    options: AGE_RATING_OPTIONS,
+    all: "All age ratings",
+    many: "{count} age ratings",
+  },
+  {
+    id: "category-switch",
+    valuesOf: (game) => splitList(game.category),
+    labelOf: (value) => window.i18n.t(value),
+    options: GAME_CATEGORIES,
+    all: "All categories",
+    many: "{count} categories",
+  },
+]
+  .map((filter) => {
+    const element = document.getElementById(filter.id);
+    return element && {
+      labelOf: (value) => value,
+      ...filter,
+      element,
+      menu: element.querySelector(".platform-switch-menu"),
+      label: element.querySelector(".platform-switch-label"),
+      selected: new Set(),
+      rendered: null,
+    };
+  })
+  .filter(Boolean);
+
+// count is the number of loaded games with this value; null for the "All ..." option.
+function filterOption(value, text, checked, count = null) {
+  const empty = count === 0 ? ` class="is-empty"` : "";
+  const badge = count === null ? "" : `<span class="filter-count">${count}</span>`;
+  return `<label${empty}><input type="checkbox" value="${escapeHtml(value)}"${checked ? " checked" : ""}><span class="filter-option-text">${escapeHtml(text)}</span>${badge}</label>`;
 }
 
-function updatePlatformLabel() {
-  const selected = [...selectedPlatforms];
-  platformLabel.textContent =
-    selected.length === 0 ? window.i18n.t("All platforms")
-    : selected.length === 1 ? selected[0]
-    : window.i18n.t("{count} platforms", { count: selected.length });
+function updateFilterLabel(filter) {
+  const selected = [...filter.selected];
+  filter.label.textContent =
+    selected.length === 0 ? window.i18n.t(filter.all)
+    : selected.length === 1 ? filter.labelOf(selected[0])
+    : window.i18n.t(filter.many, { count: selected.length });
+  filter.element.toggleAttribute("data-active", selected.length > 0);
+  if (clearFiltersButton) clearFiltersButton.hidden = !gameFilters.some((item) => item.selected.size > 0);
 }
 
-// Rebuilds the platform checkboxes from the loaded games ("" is "All platforms").
-function renderPlatformSwitch() {
-  if (!platformSwitch) return;
-  const platforms = [...new Set(games.flatMap(platformsOf))].sort();
-  // Only rebuild when the list changes, so toggling a checkbox keeps its focus.
-  if (platforms.join("|") === renderedPlatforms) return;
-  renderedPlatforms = platforms.join("|");
-  selectedPlatforms = new Set(platforms.filter((platform) => selectedPlatforms.has(platform)));
-  platformMenu.innerHTML = [
-    platformOption("", "All platforms", selectedPlatforms.size === 0),
-    ...platforms.map((platform) => platformOption(platform, platform, selectedPlatforms.has(platform))),
+// Rebuilds a filter's checkboxes from the loaded games ("" is the "All ..." option).
+// Filters with a fixed list of options (age ratings, categories) always show all of them,
+// in that order, plus any unknown value found in the games. The others list what the
+// loaded games have, alphabetically. Each option shows how many loaded games match it.
+function renderFilterSwitch(filter) {
+  const counts = new Map();
+  for (const game of games) {
+    for (const value of new Set(filter.valuesOf(game))) counts.set(value, (counts.get(value) || 0) + 1);
+  }
+  const byLabel = (a, b) => filter.labelOf(a).localeCompare(filter.labelOf(b), undefined, { sensitivity: "base" });
+  const values = filter.options
+    ? [...filter.options, ...[...counts.keys()].filter((value) => !filter.options.includes(value)).sort(byLabel)]
+    : [...counts.keys()].sort(byLabel);
+  // Only rebuild when the options or counts change, so toggling a checkbox keeps its focus.
+  const key = `${window.i18n.language}|${values.map((value) => `${value}:${counts.get(value) || 0}`).join("|")}`;
+  if (key === filter.rendered) return;
+  filter.rendered = key;
+  filter.selected = new Set(values.filter((value) => filter.selected.has(value)));
+  filter.menu.innerHTML = [
+    filterOption("", window.i18n.t(filter.all), filter.selected.size === 0),
+    ...values.map((value) => filterOption(value, filter.labelOf(value), filter.selected.has(value), counts.get(value) || 0)),
   ].join("");
-  updatePlatformLabel();
+  filter.element.querySelector("summary").title = counts.size ? "" : window.i18n.t("Nothing to filter on this page");
+  updateFilterLabel(filter);
 }
 
-function resetPlatformSwitch() {
-  selectedPlatforms = new Set();
-  renderedPlatforms = null;
-  if (!platformSwitch) return;
-  platformSwitch.open = false;
-  platformMenu.innerHTML = platformOption("", "All platforms", true);
-  updatePlatformLabel();
+function resetFilterSwitches() {
+  for (const filter of gameFilters) {
+    filter.selected = new Set();
+    filter.rendered = null;
+    filter.element.open = false;
+    filter.menu.innerHTML = filterOption("", window.i18n.t(filter.all), true);
+    updateFilterLabel(filter);
+  }
 }
 
 function filterGames(items) {
   const query = searchInput.value.trim().toLowerCase();
   return items.filter(
     (game) =>
-      (selectedPlatforms.size === 0 ||
-        platformsOf(game).some((platform) => selectedPlatforms.has(platform))) &&
-      `${game.title ?? ""} ${game.genre ?? ""}`.toLowerCase().includes(query),
+      gameFilters.every(
+        (filter) => filter.selected.size === 0 || filter.valuesOf(game).some((value) => filter.selected.has(value)),
+      ) &&
+      `${game.title ?? ""} ${game.genre ?? ""} ${game.category ?? ""}`.toLowerCase().includes(query),
   );
 }
 
-// Renders the loaded games, respecting the search box and selected platform.
+// Renders the loaded games, respecting the search box and the dropdown filters.
 function renderGames() {
-  renderPlatformSwitch();
+  gameFilters.forEach(renderFilterSwitch);
   const items = filterGames(games);
   count.textContent = window.i18n.t(items.length === 1 ? "{count} game" : "{count} games", {
     count: items.length,
@@ -374,27 +427,97 @@ function getGamesDetailsRes(label, value) {
   </div>`;
 }
 
-function renderTrailer(trailerUrl) {
+const YOUTUBE_HOSTS = ["youtube.com", "www.youtube.com", "m.youtube.com", "youtube-nocookie.com", "www.youtube-nocookie.com", "youtu.be"];
+
+function youtubeIdOf(url) {
+  if (!YOUTUBE_HOSTS.includes(url.hostname)) return null;
+  const videoId = url.hostname === "youtu.be"
+    ? url.pathname.slice(1)
+    : url.searchParams.get("v") || url.pathname.match(/^\/(?:embed|shorts)\/([^/]+)/)?.[1];
+  return videoId && /^[\w-]+$/.test(videoId) ? videoId : null;
+}
+
+// The main trailer (trailer_url) comes first, followed by the rest of the gallery.
+function trailerUrlsOf(game) {
+  const seen = new Set();
+  const urls = [];
+  for (const value of [game.trailer_url, ...(Array.isArray(game.trailers) ? game.trailers : [])]) {
+    const url = typeof value === "string" ? safeWebUrl(value.trim()) : null;
+    // Different links to the same YouTube video count once.
+    const key = url && (youtubeIdOf(url) || url.href);
+    if (!url || seen.has(key)) continue;
+    seen.add(key);
+    urls.push(url);
+  }
+  return urls;
+}
+
+function renderTrailers(game) {
   const section = document.getElementById("details-trailer-section");
+  const heading = document.getElementById("details-trailer-title");
+  const gallery = document.getElementById("details-trailer-gallery");
+  const urls = trailerUrlsOf(game);
+  detailsTrailerIndex = 0;
+  section.hidden = urls.length === 0;
+  if (heading) {
+    heading.textContent = urls.length > 1
+      ? window.i18n.t("Trailers ({count})", { count: urls.length })
+      : window.i18n.t("Trailer");
+  }
+  gallery?.replaceChildren();
+  if (gallery) gallery.hidden = urls.length < 2;
+  playTrailer(urls[0]);
+  if (!gallery || urls.length < 2) return;
+
+  for (const [index, url] of urls.entries()) {
+    const button = document.createElement("button");
+    button.className = "details-trailer-thumb";
+    button.type = "button";
+    button.setAttribute("aria-label", window.i18n.t("Play trailer {number}", { number: index + 1 }));
+    button.setAttribute("aria-pressed", String(index === 0));
+    const videoId = youtubeIdOf(url);
+    if (videoId) {
+      const image = document.createElement("img");
+      image.src = `https://i.ytimg.com/vi/${encodeURIComponent(videoId)}/mqdefault.jpg`;
+      image.alt = "";
+      image.loading = "lazy";
+      image.decoding = "async";
+      image.addEventListener("error", () => image.remove());
+      button.append(image);
+    }
+    const label = document.createElement("span");
+    label.className = "details-trailer-thumb-label";
+    label.innerHTML = `<i class="bi bi-play-circle-fill" aria-hidden="true"></i>`;
+    label.append(document.createTextNode(` ${index + 1}`));
+    button.append(label);
+    button.addEventListener("click", () => {
+      if (index === detailsTrailerIndex) return;
+      detailsTrailerIndex = index;
+      for (const thumbnail of gallery.children) {
+        thumbnail.setAttribute("aria-pressed", String(thumbnail === button));
+      }
+      playTrailer(url);
+    });
+    gallery.append(button);
+  }
+}
+
+// Shows one trailer in the player area (video.js for YouTube and video files, an iframe for
+// Vimeo, otherwise a link).
+function playTrailer(url) {
   const container = document.getElementById("details-trailer");
   detailsTrailerPlayer?.dispose();
   detailsTrailerPlayer = null;
   container.replaceChildren();
-  const url = safeWebUrl(trailerUrl);
-  section.hidden = !url;
   if (!url) return;
 
   let videoSource = null;
-  if (["youtube.com", "www.youtube.com", "m.youtube.com", "youtube-nocookie.com", "www.youtube-nocookie.com", "youtu.be"].includes(url.hostname)) {
-    const videoId = url.hostname === "youtu.be"
-      ? url.pathname.slice(1)
-      : url.searchParams.get("v") || url.pathname.match(/^\/(?:embed|shorts)\/([^/]+)/)?.[1];
-    if (videoId && /^[\w-]+$/.test(videoId)) {
-      videoSource = {
-        src: `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`,
-        type: "video/youtube",
-      };
-    }
+  const youtubeId = youtubeIdOf(url);
+  if (youtubeId) {
+    videoSource = {
+      src: `https://www.youtube.com/watch?v=${encodeURIComponent(youtubeId)}`,
+      type: "video/youtube",
+    };
   } else if (/\.(mp4|webm|ogg)$/i.test(url.pathname)) {
     const extension = url.pathname.match(/\.(mp4|webm|ogg)$/i)[1].toLowerCase();
     videoSource = {
@@ -614,6 +737,7 @@ function showGameDetails(game) {
   renderReleaseCountdown(game);
   document.getElementById("details-grid").innerHTML = [
     ["Genre", game.genre],
+    ["Category", game.category],
     ["Developer", game.developer_name],
     ["Publisher", game.publisher_name],
     ["Website", game.website_url],
@@ -650,7 +774,7 @@ function showGameDetails(game) {
   achievementStatus.textContent = "Loading achievements...";
   window.setStatusLoading(achievementStatus, true);
   if (!detailsDialog.open) detailsDialog.showModal();
-  renderTrailer(game.trailer_url);
+  renderTrailers(game);
   loadLibraryDetails(game.id);
 }
 
@@ -916,7 +1040,7 @@ function showLogin() {
   appStatus.textContent = "";
   searchInput.value = "";
   games = [];
-  resetPlatformSwitch();
+  resetFilterSwitches();
   gamesContainer.replaceChildren();
   gamesEmpty.hidden = true;
   count.textContent = "";
@@ -1077,31 +1201,58 @@ function initShelf({ load, reset = () => {}, refresh = null, gameActions = null 
 
   searchInput.addEventListener("input", renderGames);
 
-  platformMenu?.addEventListener("change", (event) => {
-    const { value, checked } = event.target;
-    if (value === "" || (!checked && selectedPlatforms.size === 1)) {
-      selectedPlatforms.clear();
-    } else if (checked) {
-      selectedPlatforms.add(value);
-    } else {
-      selectedPlatforms.delete(value);
-    }
-    platformMenu.querySelectorAll("input").forEach((input) => {
-      input.checked = input.value === "" ? selectedPlatforms.size === 0 : selectedPlatforms.has(input.value);
+  function syncFilterCheckboxes(filter) {
+    filter.menu.querySelectorAll("input").forEach((input) => {
+      input.checked = input.value === "" ? filter.selected.size === 0 : filter.selected.has(input.value);
     });
-    updatePlatformLabel();
+    updateFilterLabel(filter);
+  }
+
+  for (const filter of gameFilters) {
+    filter.menu.addEventListener("change", (event) => {
+      const { value, checked } = event.target;
+      if (value === "" || (!checked && filter.selected.size === 1)) {
+        filter.selected.clear();
+      } else if (checked) {
+        filter.selected.add(value);
+      } else {
+        filter.selected.delete(value);
+      }
+      syncFilterCheckboxes(filter);
+      renderGames();
+    });
+    // Only one dropdown open at a time.
+    filter.element.addEventListener("toggle", () => {
+      if (!filter.element.open) return;
+      for (const other of gameFilters) if (other !== filter) other.element.open = false;
+    });
+    filter.element.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && filter.element.open) {
+        filter.element.open = false;
+        filter.element.querySelector("summary").focus();
+      }
+    });
+  }
+
+  clearFiltersButton?.addEventListener("click", () => {
+    for (const filter of gameFilters) {
+      filter.selected.clear();
+      filter.element.open = false;
+      syncFilterCheckboxes(filter);
+    }
     renderGames();
   });
 
-  // Close the dropdown when clicking outside it or pressing Escape.
+  // Close the dropdowns when clicking outside them.
   document.addEventListener("click", (event) => {
-    if (platformSwitch?.open && !platformSwitch.contains(event.target)) platformSwitch.open = false;
-  });
-  platformSwitch?.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && platformSwitch.open) {
-      platformSwitch.open = false;
-      platformSwitch.querySelector("summary").focus();
+    for (const filter of gameFilters) {
+      if (filter.element.open && !filter.element.contains(event.target)) filter.element.open = false;
     }
+  });
+  // Option labels (e.g. age ratings) and the "All ..." texts are translated.
+  document.addEventListener("languagechange", () => {
+    if (games.length) gameFilters.forEach(renderFilterSwitch);
+    else resetFilterSwitches();
   });
 
   gamesContainer.addEventListener("click", (event) => {

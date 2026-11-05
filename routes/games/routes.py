@@ -97,10 +97,21 @@ def _igdb_website_url(game: dict) -> str:
     return url.replace("//", "https://", 1) if url.startswith("//") else url
 
 
+def _igdb_trailers(game: dict) -> list[str]:
+    return [
+        f"https://www.youtube.com/watch?v={video['video_id']}"
+        for video in game.get("videos") or []
+        if video.get("video_id")
+    ]
+
+
 def _igdb_trailer_url(game: dict) -> str:
-    videos = game.get("videos") or []
-    video_id = videos[0].get("video_id") if videos else None
-    return f"https://www.youtube.com/watch?v={video_id}" if video_id else ""
+    return next(iter(_igdb_trailers(game)), "")
+
+
+def _igdb_category(game: dict) -> str:
+    game_type = game.get("game_type")
+    return (game_type.get("type") or "") if isinstance(game_type, dict) else ""
 
 
 def _igdb_screenshots(game: dict) -> list[str]:
@@ -111,16 +122,53 @@ def _igdb_screenshots(game: dict) -> list[str]:
     ]
 
 
+# IGDB age_rating_categories id -> our rating. IGDB lists them at /v4/age_rating_categories.
+IGDB_RATING_CATEGORY = {
+    1: GamesESRB.RP, 2: GamesESRB.EC, 3: GamesESRB.E, 4: GamesESRB.E10, 5: GamesESRB.T,
+    6: GamesESRB.M, 7: GamesESRB.AO,
+    8: GamesESRB.Three, 9: GamesESRB.Seven, 10: GamesESRB.Twelve, 11: GamesESRB.Sixteen,
+    12: GamesESRB.Eighteen,
+    13: GamesESRB.CERO_A, 14: GamesESRB.CERO_B, 15: GamesESRB.CERO_C, 16: GamesESRB.CERO_D,
+    17: GamesESRB.CERO_Z,
+    18: GamesESRB.USK_0, 19: GamesESRB.USK_6, 20: GamesESRB.USK_12, 21: GamesESRB.USK_16,
+    22: GamesESRB.USK_18,
+    23: GamesESRB.GRAC_ALL, 24: GamesESRB.GRAC_TWELVE, 25: GamesESRB.GRAC_FIFTEEN,
+    26: GamesESRB.GRAC_EIGHTEEN, 27: GamesESRB.GRAC_TESTING, 40: GamesESRB.GRAC_EIGHTEEN,
+    28: GamesESRB.CLASS_IND_L, 29: GamesESRB.CLASS_IND_TEN, 30: GamesESRB.CLASS_IND_TWELVE,
+    31: GamesESRB.CLASS_IND_FOURTEEN, 32: GamesESRB.CLASS_IND_SIXTEEN,
+    33: GamesESRB.CLASS_IND_EIGHTEEN,
+    34: GamesESRB.ACB_G, 35: GamesESRB.ACB_PG, 36: GamesESRB.ACB_M, 37: GamesESRB.ACB_MA15,
+    38: GamesESRB.ACB_R18, 39: GamesESRB.ACB_RC,
+}
+# Age rating fields to request. organization and rating_category are IGDB's current
+# fields; category and rating are the deprecated ones, still read when present.
+IGDB_AGE_RATING_FIELDS = (
+    "age_ratings.organization,age_ratings.rating_category,age_ratings.category,age_ratings.rating"
+)
+
+
+def _igdb_id(value) -> int | None:
+    """IGDB sends a reference as an id, or as an object when the query expands it."""
+    if isinstance(value, dict):
+        value = value.get("id")
+    return value if isinstance(value, int) else None
+
+
 def _igdb_esrb_rating(age_ratings: list[dict] | None) -> GamesESRB | None:
-    if not age_ratings:
-        return None
-    for age_rating in age_ratings:
-        if age_rating.get("category") != 1:
-            continue
-        rating = IGDB_AGE_RATING_BY_ID.get(age_rating.get("rating"))
-        if rating is not None:
-            return rating
-    return None
+    """Pick one age rating: ESRB first, then PEGI, then the other boards in IGDB's order."""
+    found: list[tuple[int, GamesESRB]] = []
+    for age_rating in age_ratings or []:
+        organization = _igdb_id(age_rating.get("organization"))
+        rating = IGDB_RATING_CATEGORY.get(_igdb_id(age_rating.get("rating_category")))
+        if organization is None or rating is None:
+            # Deprecated format: category 1 is ESRB, rating is an index into GamesESRB.
+            if age_rating.get("category") != 1:
+                continue
+            organization, rating = 1, IGDB_AGE_RATING_BY_ID.get(age_rating.get("rating"))
+            if rating is None:
+                continue
+        found.append((organization, rating))
+    return min(found, key=lambda item: item[0])[1] if found else None
 
 
 def _fetch_igdb_token(client: httpx.Client, client_id: str, client_secret: str) -> str:
@@ -247,8 +295,9 @@ def _fetch_all_games_by_title(title: str, limit: int) -> list[Game]:
 
     igdb_title = json.dumps(title)
     query = (
-        "fields name,first_release_date,summary,game_modes.id,game_modes.name,cover.url,screenshots.url,websites.category,websites.url,videos.video_id,"
-        "involved_companies.developer,involved_companies.publisher,involved_companies.company.name,age_ratings.category,age_ratings.rating,genres.name,"
+        "fields name,first_release_date,summary,game_modes.id,game_modes.name,cover.url,screenshots.url,websites.category,websites.url,videos.video_id,game_type.type,"
+        "involved_companies.developer,involved_companies.publisher,involved_companies.company.name,"
+        f"{IGDB_AGE_RATING_FIELDS},genres.name,"
         "platforms.name,rating,aggregated_rating; "
         f"where name ~ {igdb_title}; "
         "sort first_release_date asc; "
@@ -293,6 +342,8 @@ def _fetch_all_games_by_title(title: str, limit: int) -> list[Game]:
             publisher_name=_igdb_company_names(game, "publisher"),
             website_url=_igdb_website_url(game),
             trailer_url=_igdb_trailer_url(game),
+            trailers=_igdb_trailers(game),
+            category=_igdb_category(game),
             screenshots=_igdb_screenshots(game),
             platforms=", ".join(
                 platform["name"] for platform in game.get("platforms", [])
@@ -504,8 +555,9 @@ def _fetch_all_games_by_date(
     parsed_date = int(ndt(year, month, day, 0, 0, 0, tzinfo=tzinfo).timestamp())
     where_clause = f"where first_release_date >= {parsed_date}; "
     query = (
-        "fields name,first_release_date,summary,game_modes.id,game_modes.name,cover.url,screenshots.url,websites.category,websites.url,videos.video_id,"
-        "involved_companies.developer,involved_companies.publisher,involved_companies.company.name,age_ratings.category,age_ratings.rating,genres.name,"
+        "fields name,first_release_date,summary,game_modes.id,game_modes.name,cover.url,screenshots.url,websites.category,websites.url,videos.video_id,game_type.type,"
+        "involved_companies.developer,involved_companies.publisher,involved_companies.company.name,"
+        f"{IGDB_AGE_RATING_FIELDS},genres.name,"
         f"platforms.name,rating,aggregated_rating; {where_clause}"
         f"{release_sort_clause(sort, order)}"
         f"offset {skip}; "
@@ -558,6 +610,8 @@ def _fetch_all_games_by_date(
             publisher_name=_igdb_company_names(game, "publisher"),
             website_url=_igdb_website_url(game),
             trailer_url=_igdb_trailer_url(game),
+            trailers=_igdb_trailers(game),
+            category=_igdb_category(game),
             screenshots=_igdb_screenshots(game),
             platforms=", ".join(
                 platform["name"] for platform in game.get("platforms", [])
@@ -583,8 +637,9 @@ def _fetch_next_releases(limit: int) -> list[Game]:
 
     release_timestamp = int(time.time())
     query = (
-        "fields name,first_release_date,summary,cover.url,screenshots.url,websites.category,websites.url,videos.video_id,"
-        "involved_companies.developer,involved_companies.publisher,involved_companies.company.name,age_ratings.category,age_ratings.rating,genres.name,"
+        "fields name,first_release_date,summary,cover.url,screenshots.url,websites.category,websites.url,videos.video_id,game_type.type,"
+        "involved_companies.developer,involved_companies.publisher,involved_companies.company.name,"
+        f"{IGDB_AGE_RATING_FIELDS},genres.name,"
         "platforms.name,rating,aggregated_rating; "
         f"where first_release_date > {release_timestamp}; "
         "sort first_release_date asc; "
@@ -628,6 +683,8 @@ def _fetch_next_releases(limit: int) -> list[Game]:
             publisher_name=_igdb_company_names(game, "publisher"),
             website_url=_igdb_website_url(game),
             trailer_url=_igdb_trailer_url(game),
+            trailers=_igdb_trailers(game),
+            category=_igdb_category(game),
             screenshots=_igdb_screenshots(game),
             platforms=", ".join(
                 platform["name"] for platform in game.get("platforms", [])
@@ -642,20 +699,22 @@ def _fetch_next_releases(limit: int) -> list[Game]:
 def game_from_row(row) -> Game:
     game = dict(row)
     game["screenshots"] = json.loads(game.get("screenshots") or "[]")
+    game["trailers"] = json.loads(game.get("trailers") or "[]")
     return Game(**game)
 
 
 def game_database_values(game: GameCreate) -> tuple:
     values = game.model_dump()
     values["screenshots"] = json.dumps(values["screenshots"])
+    values["trailers"] = json.dumps(values["trailers"])
     return tuple(values.values())
 
 def insert_game(connection, game: GameCreate) -> int:
     """Insert a game without committing and return its new id."""
     cursor = connection.execute(
         """
-        INSERT INTO games (title, genre, release_year, release_date, description, cover_image_url, image_url, screenshot_url, developer_name, publisher_name, website_url, trailer_url, screenshots, platforms, gamemodes, editions, user_rating, critic_rating, wishlisted, hoursplayed, esrb, minimum_system_requirements, recommended_system_requirements)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO games (title, genre, release_year, release_date, description, cover_image_url, image_url, screenshot_url, developer_name, publisher_name, website_url, trailer_url, screenshots, platforms, gamemodes, editions, user_rating, critic_rating, wishlisted, hoursplayed, esrb, minimum_system_requirements, recommended_system_requirements, category, trailers)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         game_database_values(game),
     )
@@ -857,7 +916,8 @@ def update_game(game_id: int, game: GameCreate) -> Game:
                 developer_name = ?, publisher_name = ?, website_url = ?, trailer_url = ?, screenshots = ?,
                 platforms = ?, gamemodes = ?, editions = ?, user_rating = ?, critic_rating = ?,
                 wishlisted = ?, hoursplayed = ?, esrb = ?,
-                minimum_system_requirements = ?, recommended_system_requirements = ?
+                minimum_system_requirements = ?, recommended_system_requirements = ?,
+                category = ?, trailers = ?
             WHERE id = ?
             """,
             (*game_database_values(game), game_id),
