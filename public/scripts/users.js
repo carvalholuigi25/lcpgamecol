@@ -138,6 +138,11 @@ function renderCard(user) {
   const role = document.createElement("span");
   role.className = `role-badge role-${user.role}`;
   role.textContent = roleLabel(user.role);
+  if (user.rank && window.xpBadges) {
+    const rank = window.xpBadges.badge(user.rank);
+    rank.classList.add("user-card-rank");
+    identity.append(rank);
+  }
 
   const bio = document.createElement("span");
   bio.className = "user-card-bio";
@@ -234,6 +239,11 @@ function renderUserPage(user) {
   const role = document.getElementById("user-page-role");
   role.className = `role-badge role-${user.role}`;
   role.textContent = roleLabel(user.role);
+  const rank = document.getElementById("user-page-rank");
+  rank.replaceChildren(...(user.rank && window.xpBadges ? [window.xpBadges.badge(user.rank)] : []));
+  document.getElementById("user-page-xp").textContent = user.rank
+    ? `${(user.xp ?? 0).toLocaleString(locale())} XP · ${window.i18n.t("Level {level}", { level: user.rank.level })}`
+    : "—";
 
   const bio = document.getElementById("user-page-bio");
   bio.textContent = user.bio || "";

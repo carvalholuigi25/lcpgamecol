@@ -435,6 +435,52 @@ a.link-button {
   cursor: pointer;
 }
 
+// Genre, age rating, category (and platform, on the library) dropdowns under the toolbar.
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+
+  .platform-switch {
+    flex: 1 1 200px;
+    max-width: 260px;
+  }
+}
+
+// A dropdown with a selection gets the accent border, so active filters are easy to spot.
+.platform-switch[data-active] summary {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.clear-filters {
+  white-space: nowrap;
+}
+
+// Option text, then the number of games on the page with that value.
+.platform-switch-menu .filter-option-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.platform-switch-menu .filter-count {
+  flex: none;
+  min-width: 1.8em;
+  padding: 0 6px;
+  border-radius: 999px;
+  color: var(--muted);
+  background: rgba(127, 127, 127, 0.18);
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+// Options that no game on the page has stay selectable, but recede.
+.platform-switch-menu label.is-empty {
+  opacity: 0.55;
+}
+
 .status {
   margin: 0px auto;
   padding: 15px;
@@ -1155,6 +1201,66 @@ dialog::backdrop {
   width: 100%;
   aspect-ratio: 16 / 9;
   object-fit: cover;
+}
+
+.details-trailer-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.details-trailer-gallery[hidden] {
+  display: none;
+}
+
+.details-trailer-thumb {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  color: #fff;
+  background: #11131a;
+  cursor: pointer;
+
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.75;
+    transition: opacity 0.2s ease;
+  }
+
+  &:hover img,
+  &[aria-pressed="true"] img {
+    opacity: 1;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--neon-cyan);
+    outline-offset: 2px;
+  }
+
+  &[aria-pressed="true"] {
+    border-color: var(--neon-cyan);
+    box-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+  }
+}
+
+.details-trailer-thumb-label {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.65);
+  font: 600 0.8rem Arial, sans-serif;
 }
 
 .details-requirements-warning {
@@ -2194,13 +2300,13 @@ body[data-theme="liquid-glass"] {
   option { color: $liquid-ink; background: #eef6ff; }
 
   // Leave the screenshot thumbnails and lightGallery's own controls unstyled.
-  button:not(.link-button, .details-action, .details-screenshot-thumb, .lg-icon),
+  button:not(.link-button, .details-action, .details-screenshot-thumb, .details-trailer-thumb, .lg-icon),
   .nav-button,
   .details-button {
     @include liquid-glass-pill;
   }
 
-  button:not(.link-button, .details-action, .details-screenshot-thumb, .lg-icon):hover,
+  button:not(.link-button, .details-action, .details-screenshot-thumb, .details-trailer-thumb, .lg-icon):hover,
   .nav-button:hover,
   .details-button:hover {
     color: $liquid-ink;
@@ -2532,3 +2638,4 @@ html body dialog.lg-dialog {
 
 @include meta.load-css("sidebar");
 @include meta.load-css("inbox");
+@include meta.load-css("xp_badges");

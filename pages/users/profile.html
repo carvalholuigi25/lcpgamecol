@@ -139,7 +139,7 @@
         <section id="xp" class="records-panel profile-xp" aria-labelledby="xp-title">
           <div class="panel-heading">
             <div><p class="kicker">EXPERIENCE</p><h2 id="xp-title">Level and rank</h2></div>
-            <span id="xp-rank-badge" class="role-badge xp-rank-badge"></span>
+            <span id="xp-rank-badge" class="xp-rank-badge"></span>
           </div>
           <p id="xp-status" class="records-status" role="status" aria-live="polite"></p>
           <div class="xp-layout">
@@ -153,6 +153,10 @@
                 <p id="xp-next" class="profile-form-hint"></p>
               </div>
             </div>
+            <section class="xp-badges" aria-labelledby="xp-badges-title">
+              <h3 id="xp-badges-title">Rank badges</h3>
+              <ul id="xp-medals" class="xp-medals"></ul>
+            </section>
             <div class="xp-columns">
               <section aria-labelledby="xp-earn-title">
                 <h3 id="xp-earn-title">How to earn XP</h3>
@@ -203,6 +207,7 @@
     <script src="/public/scripts/realtime.js"></script>
     <script src="/public/scripts/inbox.js"></script>
     <script src="/public/scripts/profile.js"></script>
+    <script src="/public/scripts/xp_badges.js"></script>
     <script src="/public/scripts/xp.js"></script>
     <script src="/public/scripts/security.js"></script>
   </body>

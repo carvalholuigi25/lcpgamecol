@@ -168,12 +168,6 @@
             <p id="count" class="subtle"></p>
           </div>
           <div class="toolbar-filters">
-            <details id="platform-switch" class="platform-switch">
-              <summary aria-label="Filter by platform">
-                <span class="platform-switch-label">All platforms</span>
-              </summary>
-              <div class="platform-switch-menu" role="group" aria-label="Platforms"></div>
-            </details>
             <label class="sort-control">
               <span class="sort-control-label">Sort by</span>
               <select id="sort-select" aria-label="Sort games">
@@ -198,6 +192,33 @@
               aria-label="Search games"
             />
           </div>
+        </div>
+        <div class="filter-bar" role="group" aria-label="Filters">
+            <details id="platform-switch" class="platform-switch filter-switch">
+              <summary aria-label="Filter by platform">
+                <span class="platform-switch-label">All platforms</span>
+              </summary>
+              <div class="platform-switch-menu" role="group" aria-label="Filter by platform"></div>
+            </details>
+            <details id="genre-switch" class="platform-switch filter-switch">
+              <summary aria-label="Filter by genre">
+                <span class="platform-switch-label">All genres</span>
+              </summary>
+              <div class="platform-switch-menu" role="group" aria-label="Filter by genre"></div>
+            </details>
+            <details id="age-rating-switch" class="platform-switch filter-switch">
+              <summary aria-label="Filter by age rating">
+                <span class="platform-switch-label">All age ratings</span>
+              </summary>
+              <div class="platform-switch-menu" role="group" aria-label="Filter by age rating"></div>
+            </details>
+            <details id="category-switch" class="platform-switch filter-switch">
+              <summary aria-label="Filter by category">
+                <span class="platform-switch-label">All categories</span>
+              </summary>
+              <div class="platform-switch-menu" role="group" aria-label="Filter by category"></div>
+            </details>
+            <button id="clear-filters" class="link-button clear-filters" type="button" hidden>Clear filters</button>
         </div>
         <div id="mgames">
           <div id="games" class="grid"></div>
@@ -292,8 +313,9 @@
           <dl class="details-grid" id="details-grid"></dl>
           <dl class="details-grid-info" id="details-grid-info"></dl>
           <section class="details-media-section" id="details-trailer-section" hidden>
-            <h3>Trailer</h3>
+            <h3 id="details-trailer-title">Trailer</h3>
             <div id="details-trailer"></div>
+            <div class="details-trailer-gallery" id="details-trailer-gallery" role="group" aria-label="Trailers" hidden></div>
           </section>
           <section class="details-media-section" id="details-screenshots-section" hidden>
             <h3>Screenshots</h3>
@@ -400,6 +422,7 @@
     <script defer src="/public/scripts/two_factor_login.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
     <script defer src="/public/scripts/shelf.js"></script>
+    <script defer src="/public/scripts/xp_badges.js"></script>
     <script defer src="/public/scripts/reviews.js"></script>
     <script defer src="/public/scripts/games.js"></script>
   </body>

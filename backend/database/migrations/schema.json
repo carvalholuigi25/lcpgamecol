@@ -185,6 +185,18 @@
           "type": "TEXT",
           "nullable": true,
           "default": null
+        },
+        {
+          "name": "category",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "trailers",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null
         }
       ]
     },

@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 import backend.access.rules as rules
 import backend.auth.auth as auth
 import backend.database.database as database
+from helpers import rate_limiter
 from main import app
 
 PUBLIC_IP = "8.8.8.8"
@@ -19,7 +20,7 @@ def client(tmp_path, monkeypatch):
     rules.clear_caches()
     database.initialize_database()
     with TestClient(app) as test_client:
-        app.middleware_stack.app.requests.clear()
+        rate_limiter(app).requests.clear()
         yield test_client
     rules.clear_caches()
 

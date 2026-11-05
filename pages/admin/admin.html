@@ -164,6 +164,7 @@
               <div class="record-fields">
                 <label>Title<input name="title" required maxlength="200" /></label>
                 <label>Genre<input name="genre" required maxlength="200" /></label>
+                <label>Category<input name="category" list="category-options" maxlength="100" placeholder="Main Game" /></label>
                 <label>Release year<input name="release_year" type="number" min="1950" max="2200" required /></label>
                 <label>Release date<input name="release_date" type="date" /></label>
                 <label class="field-wide">Description<textarea name="description" rows="5"></textarea></label>
@@ -181,12 +182,14 @@
                 <label>Publisher name<input name="publisher_name" maxlength="200" /></label>
                 <label>Website URL<input name="website_url" type="url" /></label>
                 <label>Trailer URL<input name="trailer_url" type="url" /></label>
+                <label class="field-wide">Trailer gallery<textarea name="trailers" rows="3" placeholder="Add one trailer URL per line (YouTube, Vimeo, or a video file)"></textarea></label>
                 <label class="field-wide">Screenshot gallery<textarea name="screenshots" rows="5" placeholder="Add one screenshot URL per line"></textarea></label>
                 <div class="field-wide rich-text-field"><span id="minimum-requirements-label">Minimum PC system requirements</span><textarea name="minimum_system_requirements" data-rich-text aria-labelledby="minimum-requirements-label" hidden></textarea></div>
                 <div class="field-wide rich-text-field"><span id="recommended-requirements-label">Recommended PC system requirements</span><textarea name="recommended_system_requirements" data-rich-text aria-labelledby="recommended-requirements-label" hidden></textarea></div>
                 <label class="setting-option record-checkbox"><input name="wishlisted" type="checkbox" /><span>On wishlist</span></label>
               </div>
               <datalist id="esrb-options"><option value="e"></option><option value="e10"></option><option value="t"></option><option value="m"></option><option value="ao"></option><option value="rp"></option></datalist>
+              <datalist id="category-options"><option value="Main Game"></option><option value="DLC"></option><option value="Expansion"></option><option value="Standalone Expansion"></option><option value="Bundle"></option><option value="Remake"></option><option value="Remaster"></option><option value="Expanded Game"></option><option value="Port"></option><option value="Episode"></option><option value="Season"></option><option value="Mod"></option><option value="Fork"></option><option value="Pack / Addon"></option><option value="Update"></option></datalist>
               <button class="primary-button" type="submit">Save game</button>
             </form>
           </div>

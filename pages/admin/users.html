@@ -116,6 +116,7 @@
             <p class="user-handle" translate="no">@<span id="user-page-username"></span></p>
           </div>
           <div class="user-page-badges">
+            <span id="user-page-rank"></span>
             <span id="user-page-role" class="role-badge"></span>
             <button id="user-page-edit" class="secondary-button" type="button">Edit profile</button>
           </div>
@@ -127,6 +128,7 @@
             <p id="user-page-bio" class="user-bio" translate="no"></p>
             <dl class="user-details">
               <div><dt>ROLE</dt><dd id="user-page-role-text"></dd></div>
+              <div><dt>XP</dt><dd id="user-page-xp"></dd></div>
               <div><dt>ACCOUNT</dt><dd id="user-page-source"></dd></div>
               <div><dt>JOINED</dt><dd id="user-page-joined"></dd></div>
               <div><dt>LOCATION</dt><dd id="user-page-location" translate="no"></dd></div>
@@ -188,6 +190,7 @@
     <script src="/nmodules/@microsoft/signalr/dist/browser/signalr.min.js"></script>
     <script src="/public/scripts/realtime.js"></script>
     <script src="/public/scripts/inbox.js"></script>
+    <script src="/public/scripts/xp_badges.js"></script>
     <script src="/public/scripts/users.js"></script>
   </body>
 </html>

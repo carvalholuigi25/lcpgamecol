@@ -224,6 +224,27 @@
             </div>
           </div>
         </form>
+        <div class="filter-bar mt-3" role="group" aria-label="Filters">
+            <details id="genre-switch" class="platform-switch filter-switch">
+              <summary aria-label="Filter by genre">
+                <span class="platform-switch-label">All genres</span>
+              </summary>
+              <div class="platform-switch-menu" role="group" aria-label="Filter by genre"></div>
+            </details>
+            <details id="age-rating-switch" class="platform-switch filter-switch">
+              <summary aria-label="Filter by age rating">
+                <span class="platform-switch-label">All age ratings</span>
+              </summary>
+              <div class="platform-switch-menu" role="group" aria-label="Filter by age rating"></div>
+            </details>
+            <details id="category-switch" class="platform-switch filter-switch">
+              <summary aria-label="Filter by category">
+                <span class="platform-switch-label">All categories</span>
+              </summary>
+              <div class="platform-switch-menu" role="group" aria-label="Filter by category"></div>
+            </details>
+            <button id="clear-filters" class="link-button clear-filters" type="button" hidden>Clear filters</button>
+        </div>
         <div id="mgames" class="mt-3">
           <div id="games" class="grid"></div>
           <div id="games-empty" class="games-empty" hidden>
@@ -317,8 +338,9 @@
           <dl class="details-grid" id="details-grid"></dl>
           <dl class="details-grid-info" id="details-grid-info"></dl>
           <section class="details-media-section" id="details-trailer-section" hidden>
-            <h3>Trailer</h3>
+            <h3 id="details-trailer-title">Trailer</h3>
             <div id="details-trailer"></div>
+            <div class="details-trailer-gallery" id="details-trailer-gallery" role="group" aria-label="Trailers" hidden></div>
           </section>
           <section class="details-media-section" id="details-screenshots-section" hidden>
             <h3>Screenshots</h3>
@@ -425,6 +447,7 @@
     <script defer src="/public/scripts/two_factor_login.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
     <script defer src="/public/scripts/shelf.js"></script>
+    <script defer src="/public/scripts/xp_badges.js"></script>
     <script defer src="/public/scripts/reviews.js"></script>
     <script defer src="/public/scripts/games_releases.js"></script>
   </body>

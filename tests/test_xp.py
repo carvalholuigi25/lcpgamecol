@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 import backend.auth.auth as auth
 import backend.database.database as database
 from backend.gamification import xp
+from helpers import rate_limiter
 from main import app
 
 GAME = {"title": "Celeste", "genre": "Platformer", "platforms": "PC", "release_year": 2018}
@@ -15,7 +16,7 @@ def client(tmp_path, monkeypatch):
     auth._login_attempts.clear()
     database.initialize_database()
     with TestClient(app) as test_client:
-        app.middleware_stack.app.requests.clear()
+        rate_limiter(app).requests.clear()
         yield test_client
 
 
@@ -58,13 +59,14 @@ def test_ranks_follow_levels():
     assert xp.rank_for(1) == "Rookie"
     assert xp.rank_for(4) == "Explorer"
     assert xp.rank_for(25) == "Legend"
-    assert xp.next_rank(4) == {"name": "Adventurer", "level": 5}
+    assert xp.next_rank(4) == {"name": "Adventurer", "level": 5, "key": "adventurer"}
     assert xp.next_rank(20) is None
 
 
 def test_summary_reports_progress_through_the_level():
     assert xp.summary(150) == {
-        "xp": 150, "level": 2, "rank": "Rookie", "next_rank": {"name": "Explorer", "level": 3},
+        "xp": 150, "level": 2, "rank": "Rookie", "rank_key": "rookie",
+        "next_rank": {"name": "Explorer", "level": 3, "key": "explorer"},
         "level_xp": 100, "next_level_xp": 300, "progress": 25,
     }
 
@@ -134,3 +136,33 @@ def test_leaderboard_orders_by_xp(client, admin_headers, viewer_headers, game_id
     board = client.get("/users/xp/leaderboard", headers=viewer_headers).json()
     assert [(row["position"], row["username"]) for row in board] == [(1, "viewer"), (2, "admin")]
     assert board[0]["rank"] == "Rookie"
+
+
+def test_badge_names_the_rank_and_its_key():
+    assert xp.badge(0) == {"level": 1, "rank": "Rookie", "rank_key": "rookie"}
+    assert xp.badge(xp.xp_for_level(20)) == {"level": 20, "rank": "Legend", "rank_key": "legend"}
+
+
+def test_describe_lists_every_rank_with_its_badge_key(client, viewer_headers):
+    ranks = my_xp(client, viewer_headers)["ranks"]
+    assert [rank["key"] for rank in ranks] == [name.lower() for _, name in xp.RANKS]
+
+
+def test_reviews_and_comments_show_the_author_rank(client, viewer_headers, game_id, monkeypatch):
+    monkeypatch.setitem(xp.ACTIONS, "review", xp.Action(300, "Review a game"))
+    client.put(f"/games/{game_id}/reviews/mine", json={"rating": 5}, headers=viewer_headers)
+    client.post(f"/games/{game_id}/comments", json={"body": "Nice"}, headers=viewer_headers)
+
+    review = client.get(f"/games/{game_id}/reviews", headers=viewer_headers).json()["items"][0]
+    comment = client.get(f"/games/{game_id}/comments", headers=viewer_headers).json()["items"][0]
+
+    # 300 XP for the review, then 10 for the comment: level 3, the first Explorer level.
+    assert review["author_rank"] == {"level": 3, "rank": "Explorer", "rank_key": "explorer"}
+    assert comment["author_rank"] == review["author_rank"]
+
+
+def test_users_directory_shows_each_rank(client, admin_headers, viewer_headers, game_id):
+    client.put(f"/games/{game_id}/reviews/mine", json={"rating": 5}, headers=viewer_headers)
+    users = {user["username"]: user for user in client.get("/admin/users", headers=admin_headers).json()}
+    assert users["viewer"]["xp"] == xp.ACTIONS["review"].xp
+    assert users["viewer"]["rank"] == {"level": 1, "rank": "Rookie", "rank_key": "rookie"}

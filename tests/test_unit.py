@@ -814,7 +814,8 @@ def test_fetch_games_by_title_maps_igdb_fields(fake_igdb):
             {"developer": False, "publisher": True, "company": {"name": "Valve"}},
         ],
         "websites": [{"category": 1, "url": "https://www.thinkwithportals.com/"}],
-        "videos": [{"video_id": "abc123"}],
+        "videos": [{"video_id": "abc123"}, {"name": "No id"}, {"video_id": "def456"}],
+        "game_type": {"type": "Main Game"},
     }
     client = fake_igdb({"https://api.igdb.com/v4/games": [igdb_game]})
 
@@ -841,6 +842,11 @@ def test_fetch_games_by_title_maps_igdb_fields(fake_igdb):
     assert game.publisher_name == "Valve"
     assert game.website_url == "https://www.thinkwithportals.com/"
     assert game.trailer_url == "https://www.youtube.com/watch?v=abc123"
+    assert game.trailers == [
+        "https://www.youtube.com/watch?v=abc123",
+        "https://www.youtube.com/watch?v=def456",
+    ]
+    assert game.category == "Main Game"
     assert game.platforms == "PC, Xbox 360"
     assert (game.user_rating, game.critic_rating) == (88.5, 90.0)
     assert game.esrb == GamesESRB.T
@@ -849,11 +855,33 @@ def test_fetch_games_by_title_maps_igdb_fields(fake_igdb):
     assert "game_modes.id,game_modes.name" in query
     assert "age_ratings.category" in query
     assert "age_ratings.rating" in query
+    assert "age_ratings.organization" in query
+    assert "age_ratings.rating_category" in query
     assert "websites.url" in query
     assert "videos.video_id" in query
+    assert "game_type.type" in query
     assert "involved_companies.company.name" in query
     assert 'where name ~ "Portal \\"2\\""; ' in query  # stripped and JSON-escaped
     assert "limit 3;" in query
+
+
+@pytest.mark.parametrize(
+    ("age_ratings", "expected"),
+    [
+        # IGDB's current format: organization + rating_category ids, plain or expanded.
+        ([{"organization": 2, "rating_category": 12}, {"organization": 1, "rating_category": 6}], GamesESRB.M),
+        ([{"organization": {"id": 7}, "rating_category": {"id": 38}}], GamesESRB.ACB_R18),
+        ([{"organization": 2, "rating_category": 8}, {"organization": 3, "rating_category": 17}], GamesESRB.Three),
+        ([{"organization": 5, "rating_category": 40}], GamesESRB.GRAC_EIGHTEEN),
+        # The deprecated format still works: category 1 is ESRB.
+        ([{"category": 2, "rating": 2}, {"category": 1, "rating": 10}], GamesESRB.T),
+        ([{"organization": 1, "rating_category": 999}], None),
+        ([], None),
+        (None, None),
+    ],
+)
+def test_igdb_age_ratings_prefer_esrb_then_pegi(age_ratings, expected):
+    assert games_routes._igdb_esrb_rating(age_ratings) == expected
 
 
 def test_fetch_games_by_title_wraps_http_errors(fake_igdb):

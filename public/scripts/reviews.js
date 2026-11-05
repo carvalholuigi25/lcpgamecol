@@ -112,6 +112,7 @@ function postItem(kind, post) {
     <div class="discussion-meta">
       <strong translate="no">${escapeHtml(post.display_name || post.username)}</strong>
       ${post.display_name ? `<span translate="no">@${escapeHtml(post.username)}</span>` : ""}
+      ${window.xpBadges?.badgeHtml(post.author_rank) ?? ""}
       ${kind === "reviews" ? starsHtml(post.rating) : ""}
       <time datetime="${escapeHtml(post.updated_at || post.created_at)}" translate="no">${escapeHtml(discussionDate(post.updated_at || post.created_at))}</time>
       ${badges.map(([status, label]) => `<span class="discussion-badge" data-status="${status}">${escapeHtml(window.i18n.t(label))}</span>`).join("")}

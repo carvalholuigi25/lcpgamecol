@@ -82,7 +82,9 @@ def initialize_database() -> None:
                 hoursplayed REAL NULL,
                 esrb TEXT NULL,
                 minimum_system_requirements TEXT NULL,
-                recommended_system_requirements TEXT NULL
+                recommended_system_requirements TEXT NULL,
+                category TEXT NULL,
+                trailers TEXT NULL
             );
 
             CREATE TABLE IF NOT EXISTS achievements (

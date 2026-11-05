@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 
 import backend.auth.auth as auth
 import backend.database.database as database
+from helpers import rate_limiter
 from main import app
 
 GAME = {
@@ -21,7 +22,7 @@ def client(tmp_path, monkeypatch):
     database.initialize_database()
     database.seed_database()
     with TestClient(app) as test_client:
-        app.middleware_stack.app.requests.clear()
+        rate_limiter(app).requests.clear()
         yield test_client
 
 
@@ -391,6 +392,28 @@ def test_game_crud_and_search(client, auth_headers):
     assert client.get(f"/games/{game_id}", headers=auth_headers).status_code == 200
     assert client.delete(f"/games/{game_id}", headers=auth_headers).status_code == 204
     assert client.get(f"/games/{game_id}", headers=auth_headers).status_code == 404
+
+
+def test_game_category_and_trailers_round_trip(client, auth_headers):
+    trailers = ["https://www.youtube.com/watch?v=abc123", "https://vimeo.com/76979871"]
+    game = {**GAME, "category": "Remaster", "trailer_url": trailers[0], "trailers": trailers}
+    created = client.post("/games", json=game, headers=auth_headers)
+
+    assert created.status_code == 201
+    game_id = created.json()["id"]
+    stored = client.get(f"/games/{game_id}", headers=auth_headers).json()
+    assert (stored["category"], stored["trailers"]) == ("Remaster", trailers)
+
+    updated = client.put(f"/games/{game_id}", json={**game, "category": "Remake", "trailers": []}, headers=auth_headers)
+    assert updated.status_code == 200
+    stored = client.get(f"/games/{game_id}", headers=auth_headers).json()
+    assert (stored["category"], stored["trailers"]) == ("Remake", [])
+
+
+def test_games_without_category_or_trailers_default_to_empty(client, auth_headers):
+    game_id = client.post("/games", json=GAME, headers=auth_headers).json()["id"]
+    stored = client.get(f"/games/{game_id}", headers=auth_headers).json()
+    assert (stored["category"], stored["trailers"]) == ("", [])
 
 
 def test_game_system_requirements_round_trip(client, auth_headers):
@@ -891,7 +914,7 @@ def test_not_found_and_validation_responses(client, auth_headers):
 def test_rate_limit_returns_retry_after_header(client, auth_headers, monkeypatch):
     import backend.auth.rate_limit as rate_limit
 
-    middleware = app.middleware_stack.app
+    middleware = rate_limiter(app)
     assert isinstance(middleware, rate_limit.RateLimitMiddleware)
     middleware.requests.clear()
     monkeypatch.setattr(rate_limit, "RATE_LIMIT_REQUESTS", 1)

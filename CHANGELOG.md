@@ -8,6 +8,15 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- **Genre**, **Age rating** and **Category** filters on the library and upcoming releases pages, next to the **Platform** filter on the library. Each one is a dropdown with a checkbox for every value in the games on screen; pick several to see games matching any of them. Filters combine with each other and with the search box, and **Clear filters** resets them all.
+  - Games have a new **category** (the IGDB game type: Main Game, DLC, Expansion, Remake, Remaster...). It is filled in when a game is imported from IGDB and can be set on the dashboard.
+  - Age ratings now show their full name (for example "PEGI 16" or "CERO B (Ages 12+)") instead of "Not set" for ratings outside ESRB.
+- A trailer gallery in the game details. Games keep every trailer from IGDB (new `trailers` list, with `trailer_url` still the main one); when there is more than one, thumbnails under the player switch between them. Administrators can edit the list on the dashboard (**Trailer gallery**, one link per line).
+- Rank badges for the XP ranks, from Rookie to Legend, each with its own icon and colour.
+  - **My profile** shows the current rank badge and every rank's badge, earned or still locked, with the level it unlocks at. The leaderboard shows each player's badge.
+  - Reviews and comments show their author's badge (new `author_rank` field), and the user directory shows each user's badge and XP (new `xp` and `rank` fields).
+  - `GET /users/me/xp` and the leaderboard now include `rank_key`, and each rank in `ranks` has a `key`.
+- Migration `0001_add_game_category_trailers` adds the `category` and `trailers` columns to `games`; it runs when the app starts.
 - Seasonal themes: **Spring**, **Summer**, **Fall**, **Winter**, **Halloween**, **Easter**, **Christmas**, and **New Year's Eve**, in the **Theme** menu of every page, each with slowly falling decorations (still when the system asks for reduced motion). **Seasonal (auto)** picks one by date: Halloween from 17 October to 1 November, Easter from Palm Sunday to Easter Monday, Christmas from 1 to 26 December, New Year's Eve from 27 December to 1 January, and otherwise the season.
 - Reviews and comments are written in a rich text editor (Quill): bold, italic, underline, strike-through, lists, quotes, and links.
   - The server keeps only that formatting and drops everything else, including scripts and unsafe links. Links open in a new tab.

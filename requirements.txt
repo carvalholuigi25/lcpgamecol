@@ -8,6 +8,7 @@ tzdata
 httpx2
 pytest
 pytest-cov
+flake8
 signalrcore
 lighthouse-python-plus
 bandit

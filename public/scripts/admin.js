@@ -133,7 +133,7 @@ function setFormField(form, name, value) {
   const field = form.elements.namedItem(name);
   if (field.type === "checkbox") {
     field.checked = Boolean(value);
-  } else if (name === "screenshots" && Array.isArray(value)) {
+  } else if ((name === "screenshots" || name === "trailers") && Array.isArray(value)) {
     field.value = value.join("\n");
   } else {
     field.value = value ?? "";
@@ -306,6 +306,8 @@ function gameFormPayload() {
     website_url: values.get("website_url") || "",
     trailer_url: values.get("trailer_url") || "",
     screenshots: values.get("screenshots").split(/\r?\n/).map((url) => url.trim()).filter(Boolean),
+    trailers: values.get("trailers").split(/\r?\n/).map((url) => url.trim()).filter(Boolean),
+    category: values.get("category").trim(),
     platforms: values.get("platforms") || "PC",
     gamemodes: values.get("gamemodes") || "all",
     editions: values.get("editions") || "Standard",

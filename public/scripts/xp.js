@@ -22,7 +22,13 @@
     const t = window.i18n.t;
     document.getElementById("xp-level").textContent = state.level;
     document.getElementById("xp-total").textContent = state.xp.toLocaleString(locale());
-    document.getElementById("xp-rank-badge").textContent = t(state.rank);
+    document.getElementById("xp-rank-badge").replaceChildren(window.xpBadges.badge(state));
+    document.getElementById("xp-medals").replaceChildren(
+      ...state.ranks.map((rank) => window.xpBadges.medal(rank, {
+        earned: state.level >= rank.level,
+        current: rank.key === state.rank_key,
+      })),
+    );
     document.getElementById("xp-bar-fill").style.width = `${state.progress}%`;
     document.getElementById("xp-bar").setAttribute("aria-valuenow", String(state.progress));
     const toNext = state.next_level_xp - state.xp;
@@ -45,11 +51,12 @@
     document.getElementById("xp-leaderboard").replaceChildren(
       ...leaderboard.map((row) => {
         const item = listItem(
-          `${row.position}. ${row.display_name || row.username} · ${t("Level {level}", { level: row.level })} ${t(row.rank)}`,
+          `${row.position}. ${row.display_name || row.username}`,
           `${row.xp.toLocaleString(locale())} XP`,
           row.username.toLowerCase() === accountName.textContent.toLowerCase() ? "is-me" : "",
         );
         item.firstChild.setAttribute("translate", "no");
+        item.firstChild.after(window.xpBadges.badge(row));
         return item;
       }),
     );
