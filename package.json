@@ -31,6 +31,7 @@
     "lighthouse-ci": "python scripts/lighthouse_audit.py --start-server --repeats 3 --min-score 90",
     "security": "python scripts/security_audit.py",
     "security-ci": "python scripts/security_audit.py --min-severity medium --fail-on high",
+    "security-wsl": "wsl ./.venv/bin/python scripts/security_audit.py",
     "audit-report": "python scripts/audit_report.py",
     "all-reports": "conc \"npm run coverage\" \"npm run gen-coverage-pretty\" \"npm run lighthouse\" \"npm run security\"",
     "all-reports-cov": "conc \"npm run coverage\" \"npm run gen-coverage-pretty\"",

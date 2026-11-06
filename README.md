@@ -21,10 +21,16 @@ npm install
 
 The second `pip install` replaces the vulnerable `msgpack` version that `signalrcore` pins. pip then reports that `signalrcore` requires `msgpack==1.1.2`; the test that uses `signalrcore` still passes, so you can ignore the warning.
 
-The security audit (`npm run security`) also needs Semgrep. Semgrep pins vulnerable versions of `mcp` and `opentelemetry-api`, so install it in its own environment instead of the project's:
+The security audit (`npm run security`) also needs Semgrep. Semgrep pins vulnerable versions of `mcp` and `opentelemetry-api`, so install it in its own environment instead of the project's. On Linux or in WSL:
+
+```bash
+uv tool install semgrep==1.182.1
+```
+
+Semgrep does not support native Windows. To include it in the security audit, install the project dependencies and Semgrep in WSL and run the audit there. For a native Windows audit without Semgrep, run:
 
 ```powershell
-uv tool install semgrep==1.182.1
+python scripts/security_audit.py --tools bandit pip-audit
 ```
 
 Create your local configuration from the example:
