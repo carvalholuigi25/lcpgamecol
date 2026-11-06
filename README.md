@@ -21,10 +21,16 @@ npm install
 
 The second `pip install` replaces the vulnerable `msgpack` version that `signalrcore` pins. pip then reports that `signalrcore` requires `msgpack==1.1.2`; the test that uses `signalrcore` still passes, so you can ignore the warning.
 
-The security audit (`npm run security`) also needs Semgrep. Semgrep pins vulnerable versions of `mcp` and `opentelemetry-api`, so install it in its own environment instead of the project's:
+The security audit (`npm run security`) also needs Semgrep. Semgrep pins vulnerable versions of `mcp` and `opentelemetry-api`, so install it in its own environment instead of the project's. On Linux or in WSL:
+
+```bash
+uv tool install semgrep==1.182.1
+```
+
+Semgrep does not support native Windows. To include it in the security audit, install the project dependencies and Semgrep in WSL and run the audit there. For a native Windows audit without Semgrep, run:
 
 ```powershell
-uv tool install semgrep==1.182.1
+python scripts/security_audit.py --tools bandit pip-audit
 ```
 
 Create your local configuration from the example:
@@ -83,6 +89,7 @@ The seed data is defined in `backend/database/seed.sql`; running the seeder more
 - Create, browse, search, update, and delete games and achievements through the API.
 - Browse and search the game library, view release information, and manage collection data through the browser pages.
 - Review collection statistics in the administrator dashboard. Dashboard data and write operations require the `admin` role.
+- Import and export the complete game library from the admin records panel as JSON, XML, CSV, Markdown, or PDF.
 - Move between pages with the sidebar, on every page once you're signed in. Its **Activity** group at the top has notifications, messages, and feedback; administrators also see the dashboard and tools groups. The menu button shows or hides it; on wide screens it collapses to icons, and on small screens it opens as an overlay.
 - Upload images and PDFs safely from the Special features page (admin only).
 - Create a viewer account from the library or dashboard sign-in panel.
@@ -96,6 +103,10 @@ The seed data is defined in `backend/database/seed.sql`; running the seeder more
 - Control who can reach the library from the Special features page (admin only): block or allow countries, block VPNs and proxies, and close the library at scheduled times.
 - Receive custom HTML error pages for common HTTP errors; API clients retain API-style error responses.
 - Optionally search IGDB and view upcoming game releases by configuring IGDB credentials.
+
+### Game data transfer
+
+The admin records panel exports the complete library and imports JSON, XML, CSV, Markdown, and PDF. Imports are additive, validate every game before writing, ignore source IDs, assign new IDs, and are limited to 10 MiB and 5,000 games per file. CSV exports escape spreadsheet formula cells. Markdown imports use the JSON game blocks produced by this app. PDF exports include a `games.json` attachment; only PDFs with that attachment can be imported, since arbitrary PDFs are not treated as structured game data.
 
 ## Authentication and roles
 
@@ -123,6 +134,19 @@ People can create their own accounts from the sign-in panel, or with `POST /auth
 - Passwords must be at least `PASSWORD_MIN_LENGTH` characters long (12 by default) and no longer than 128 characters. They must mix letters with numbers, spaces, or symbols, must not contain the username, and are rejected if they are common or predictable.
 - Each client IP can make up to `REGISTRATION_MAX_PER_CLIENT` registration attempts per `REGISTRATION_WINDOW_SECONDS` window (5 per hour by default).
 - Set `AUTH_REGISTRATION_ENABLED=false` to turn registration off.
+
+### OAuth sign-in
+
+Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, and/or `MICROSOFT_CLIENT_ID` and `MICROSOFT_CLIENT_SECRET`. Set `APP_BASE_URL` to the public app origin and register these callback URLs with each provider:
+
+```text
+{APP_BASE_URL}/auth/oauth/google/callback
+{APP_BASE_URL}/auth/oauth/microsoft/callback
+```
+
+For Microsoft, `OAUTH_MICROSOFT_TENANT` defaults to `common`; set it to a tenant ID to restrict sign-in to that tenant. Set `OAUTH_SESSION_SECRET` to a long random value for signing the short-lived OAuth state cookie; when unset, the app uses `JWT_SECRET`. The sign-in buttons appear only for providers with both credentials configured.
+
+OAuth identities create separate `viewer` accounts and are not linked to existing accounts by matching email. An administrator can promote an OAuth account from the user directory. New OAuth accounts are unavailable when `AUTH_REGISTRATION_ENABLED=false`; existing OAuth identities can still sign in. Two-step sign-in remains enforced for OAuth accounts that have it enabled.
 
 ### Two-step sign-in
 

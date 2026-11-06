@@ -74,14 +74,15 @@ def test_custom_page_routes_preserve_games_api_route(client, auth_headers):
     # The trailer player is fetched on demand by shelf.js, not loaded by the pages.
     shelf_script = client.get("/public/scripts/shelf.js").text
     for page in (library, releases):
-        assert "/nmodules/video.js/dist/video.min.js" not in page.text
+        assert "/nmodules/@videojs/cdn/video.js" not in page.text
         assert 'id="details-trailer-section"' in page.text
         assert 'id="details-screenshots-section"' in page.text
         assert 'id="details-requirements-warning"' in page.text
     for asset in (
-        "/nmodules/video.js/dist/video-js.min.css",
-        "/nmodules/video.js/dist/video.min.js",
-        "/nmodules/videojs-youtube/dist/Youtube.min.js",
+        "/nmodules/@videojs/cdn/global.css",
+        "/nmodules/@videojs/cdn/video.css",
+        "/nmodules/@videojs/cdn/video.js",
+        "/nmodules/@videojs/cdn/media/youtube-video.js",
     ):
         assert asset in shelf_script
         response = client.get(asset)

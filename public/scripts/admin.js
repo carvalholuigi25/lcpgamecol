@@ -1,11 +1,17 @@
 const loginView = document.getElementById("login-view");
 const dashboardView = document.getElementById("dashboard-view");
 const loginForm = document.getElementById("login-form");
+const gameEsrbRating = document.getElementById("game-esrb-rating");
+const oauthLoginOptions = document.getElementById("oauth-login-options");
 const loginStatus = document.getElementById("login-status");
 const dashboardStatus = document.getElementById("dashboard-status");
 const logoutButton = document.getElementById("logout-button");
 const accountName = document.getElementById("account-name");
 const refreshButton = document.getElementById("refresh-button");
+const gameDataFormat = document.getElementById("game-data-format");
+const importGamesFile = document.getElementById("import-games-file");
+const importGamesButton = document.getElementById("import-games-button");
+const gameTransferStatus = document.getElementById("game-transfer-status");
 const settingsForm = document.getElementById("settings-form");
 const recordsStatus = document.getElementById("records-status");
 const gameRecordSelect = document.getElementById("game-record-select");
@@ -24,6 +30,17 @@ const richTextEditors = new Map();
 // Forms with unsaved changes; background refreshes leave their records alone.
 const dirtyRecordForms = new Set();
 let liveRefreshTimer = null;
+
+const unsetAgeRating = document.createElement("option");
+unsetAgeRating.value = "";
+unsetAgeRating.textContent = "Not set";
+gameEsrbRating.append(unsetAgeRating);
+for (const value of AGE_RATING_OPTIONS) {
+  const option = document.createElement("option");
+  option.value = value;
+  option.textContent = `${value.toUpperCase()} - ${AGE_RATING_LABELS[value]}`;
+  gameEsrbRating.append(option);
+}
 
 function initRichTextEditors() {
   for (const textarea of document.querySelectorAll("textarea[data-rich-text]")) {
@@ -410,6 +427,73 @@ document.getElementById("delete-game-button").addEventListener("click", async ()
   }
 });
 
+const gameDataExtensions = {
+  json: "json",
+  xml: "xml",
+  csv: "csv",
+  markdown: "md",
+  pdf: "pdf",
+};
+
+gameDataFormat.addEventListener("change", () => {
+  importGamesFile.accept = `.${gameDataExtensions[gameDataFormat.value]}`;
+});
+
+document.getElementById("export-games-button").addEventListener("click", async () => {
+  const format = gameDataFormat.value;
+  gameTransferStatus.textContent = `Preparing ${format.toUpperCase()} export...`;
+  try {
+    const response = await fetch(`/admin/games/export?format=${encodeURIComponent(format)}`);
+    if (!response.ok) throw new Error(await readApiResponse(response));
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = objectUrl;
+    link.download = `games.${gameDataExtensions[format]}`;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    gameTransferStatus.textContent = `${format.toUpperCase()} export ready.`;
+  } catch (error) {
+    gameTransferStatus.textContent = error.message;
+  }
+});
+
+importGamesButton.addEventListener("click", () => importGamesFile.click());
+importGamesFile.addEventListener("change", async () => {
+  const file = importGamesFile.files[0];
+  if (!file) return;
+  const format = gameDataFormat.value;
+  if (!window.confirm(window.i18n.t(
+    "Import {file}? This adds games without replacing existing records.",
+    { file: file.name },
+  ))) {
+    importGamesFile.value = "";
+    return;
+  }
+
+  importGamesButton.disabled = true;
+  gameTransferStatus.textContent = `Importing ${format.toUpperCase()} file...`;
+  try {
+    const body = new FormData();
+    body.append("file", file);
+    const response = await fetch(`/admin/games/import?format=${encodeURIComponent(format)}`, {
+      method: "POST",
+      body,
+    });
+    const result = await readApiResponse(response);
+    gameTransferStatus.textContent = `${result.imported} games imported.`;
+    showToast(window.i18n.t("{count} games imported.", { count: result.imported }));
+    await loadDashboard();
+  } catch (error) {
+    gameTransferStatus.textContent = error.message;
+  } finally {
+    importGamesButton.disabled = false;
+    importGamesFile.value = "";
+  }
+});
+
 achievementGameSelect.addEventListener("change", async () => {
   recordsStatus.textContent = "Loading achievements...";
   window.setStatusLoading(recordsStatus, true);
@@ -750,6 +834,38 @@ async function fetchProfile() {
   return response.ok ? response.json() : null;
 }
 
+async function loadOAuthProviders() {
+  try {
+    const response = await fetch("/auth/oauth/providers");
+    if (!response.ok) return;
+    const { providers } = await response.json();
+    for (const provider of providers) {
+      const link = document.getElementById(`oauth-${provider.id}`);
+      if (link) link.hidden = false;
+    }
+    oauthLoginOptions.hidden = providers.length === 0;
+  } catch {
+    oauthLoginOptions.hidden = true;
+  }
+}
+
+async function finishOAuthChallenge() {
+  const prefix = "#oauth-challenge=";
+  if (!window.location.hash.startsWith(prefix)) return true;
+  const encoded = window.location.hash.slice(prefix.length);
+  window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+  try {
+    const challenge = JSON.parse(decodeURIComponent(encoded));
+    loginView.hidden = false;
+    loginStatus.textContent = "Waiting for your sign-in code...";
+    if (await window.twoFactorLogin.complete(challenge)) return true;
+    showLogin("Sign-in cancelled.");
+  } catch {
+    showLogin("Social sign-in could not be completed.");
+  }
+  return false;
+}
+
 const developmentPanel = document.getElementById("development-panel");
 const skipTwoFactorInput = document.getElementById("setting-skip-two-factor");
 const developmentStatus = document.getElementById("development-status");
@@ -884,8 +1000,17 @@ window.initRegistration({
 initRichTextEditors();
 applyDashboardSettings();
 
-fetchProfile()
+const oauthError = new URLSearchParams(window.location.search).get("oauth_error");
+if (oauthError) {
+  loginStatus.textContent = "Social sign-in could not be completed.";
+  window.history.replaceState(null, "", window.location.pathname);
+}
+
+loadOAuthProviders();
+finishOAuthChallenge()
+  .then((canContinue) => canContinue ? fetchProfile() : null)
   .then((profile) => {
+    if (!profile && loginStatus.textContent) return;
     if (!profile) {
       showLogin();
       return;

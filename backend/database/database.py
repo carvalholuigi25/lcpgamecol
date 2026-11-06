@@ -109,6 +109,14 @@ def initialize_database() -> None:
                 created_at TEXT NOT NULL
             );
 
+            CREATE TABLE IF NOT EXISTS oauth_identities (
+                provider TEXT NOT NULL,
+                subject TEXT NOT NULL,
+                username TEXT NOT NULL,
+                PRIMARY KEY (provider, subject),
+                FOREIGN KEY (username) REFERENCES users (username) ON DELETE CASCADE
+            );
+
             CREATE TABLE IF NOT EXISTS uploads (
                 id TEXT PRIMARY KEY,
                 original_name TEXT NOT NULL,

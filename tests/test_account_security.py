@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 import backend.auth.auth as auth
 import backend.database.database as database
-from backend.auth import password_reset, two_factor
+from backend.auth import oauth, password_reset, two_factor
 from backend.mail import mailer
 from helpers import rate_limiter
 from main import app
@@ -188,6 +188,37 @@ def test_configured_accounts_can_use_two_factor(client):
     boss = bearer(token_for(client, "boss", "boss-pass").json()["access_token"])
     enable_totp(client, boss)
     assert token_for(client, "boss", "boss-pass").json()["two_factor_required"] is True
+
+
+def test_oauth_identity_creates_and_reuses_a_viewer_account(client):
+    claims = {"sub": "google-subject-123", "email": "player@example.com", "name": "Player"}
+    first = oauth.get_or_create_principal("google", claims)
+    second = oauth.get_or_create_principal("google", claims)
+
+    assert first == second
+    assert first.role == auth.ROLE_VIEWER
+    assert first.username.startswith("oauth_")
+    assert auth._find_credentials(first.username) is not None
+
+
+def test_oauth_identity_requires_provider_subject(client):
+    with pytest.raises(oauth.OAuthLoginError):
+        oauth.get_or_create_principal("google", {"email": "player@example.com"})
+
+
+def test_oauth_registration_obeys_registration_setting(client, monkeypatch):
+    monkeypatch.setattr(auth, "REGISTRATION_ENABLED", False)
+
+    with pytest.raises(oauth.OAuthLoginError, match="registration is disabled"):
+        oauth.get_or_create_principal("google", {"sub": "new-google-subject"})
+
+
+def test_oauth_routes_require_a_configured_provider(client, monkeypatch):
+    monkeypatch.setattr(oauth, "available_providers", lambda: [])
+    monkeypatch.setattr(oauth, "get_client", lambda _provider: None)
+
+    assert client.get("/auth/oauth/providers").json() == {"providers": []}
+    assert client.get("/auth/oauth/google").status_code == 404
 
 
 # --- email codes ---------------------------------------------------------------------

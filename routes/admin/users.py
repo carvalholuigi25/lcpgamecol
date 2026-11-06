@@ -8,6 +8,7 @@ both kinds of account can have one.
 import re
 from contextlib import closing
 from datetime import UTC, datetime
+from typing import Literal
 from urllib.parse import urlsplit
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
@@ -81,6 +82,10 @@ class ProfileUpdate(BaseModel):
     @classmethod
     def unique_ids(cls, value: list[int] | None) -> list[int] | None:
         return None if value is None else list(dict.fromkeys(value))
+
+
+class RoleUpdate(BaseModel):
+    role: Literal["admin", "viewer"]
 
 
 def _accounts() -> dict[str, dict]:
@@ -272,6 +277,76 @@ def update_user_profile(
     body: ProfileUpdate, username: str = PathParam(pattern=USERNAME_PATH_PATTERN)
 ) -> dict:
     return save_profile(username, body)
+
+
+@router.put("/{username}/role")
+def update_user_role(
+    body: RoleUpdate,
+    username: str = PathParam(pattern=USERNAME_PATH_PATTERN),
+    principal: auth.Principal = Depends(auth.require_admin),
+) -> dict:
+    account = _get_account(username)
+    target_username = account["username"]
+    if account["source"] == "configured":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This role is managed in the server configuration.",
+        )
+    if (
+        target_username.lower() == principal.username.lower()
+        and body.role != auth.ROLE_ADMIN
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You cannot remove your own administrator access.",
+        )
+
+    role_changed = False
+    with closing(get_connection()) as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        current = connection.execute(
+            "SELECT role FROM users WHERE username = ? COLLATE NOCASE",
+            (target_username,),
+        ).fetchone()
+        if current is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found",
+            )
+
+        if current["role"] != body.role:
+            if current["role"] == auth.ROLE_ADMIN and body.role == auth.ROLE_VIEWER:
+                configured_names = {name.lower() for name in auth.AUTH_USERS}
+                configured_admins = sum(
+                    role == auth.ROLE_ADMIN
+                    for _name, (_password, role) in auth.AUTH_USERS.items()
+                )
+                registered_admins = connection.execute(
+                    "SELECT username FROM users WHERE role = ?",
+                    (auth.ROLE_ADMIN,),
+                ).fetchall()
+                admin_count = configured_admins + sum(
+                    row["username"].lower() not in configured_names
+                    for row in registered_admins
+                )
+                if admin_count <= 1:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="The last administrator cannot be demoted.",
+                    )
+
+            connection.execute(
+                "UPDATE users SET role = ? WHERE username = ? COLLATE NOCASE",
+                (body.role, target_username),
+            )
+            connection.commit()
+            role_changed = True
+        else:
+            connection.commit()
+
+    if role_changed:
+        auth.revoke_sessions(target_username)
+    return get_profile(target_username)
 
 
 @router.post("/{username}/password-reset")

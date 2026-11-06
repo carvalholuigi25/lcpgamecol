@@ -7,6 +7,7 @@ from fastapi import BackgroundTasks, Depends, FastAPI, Request, Response
 from fastapi.exception_handlers import http_exception_handler
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
@@ -18,7 +19,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import FileResponse, HTMLResponse, PlainTextResponse
 
 from backend.access.middleware import AccessControlMiddleware
-from backend.auth import two_factor
+from backend.auth import oauth, two_factor
 from backend.auth.auth import (
     AUTH_COOKIE_NAME,
     AUTH_COOKIE_SECURE,
@@ -112,6 +113,13 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+)
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=oauth.SESSION_SECRET,
+    max_age=600,
+    same_site="lax",
+    https_only=AUTH_COOKIE_SECURE,
 )
 app.add_middleware(SecurityPolicyMiddleware)
 app.add_middleware(UploadBodyLimitMiddleware)

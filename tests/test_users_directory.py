@@ -92,6 +92,56 @@ def test_configured_users_can_have_a_profile(client, admin_headers):
     assert response.json()["bio"] == "Runs the shelf"
 
 
+def test_admin_can_change_registered_user_role_and_revoke_sessions(client, admin_headers):
+    client.post("/auth/register", json={"username": "newplayer", "password": STRONG_PASSWORD})
+    old_token = client.post(
+        "/auth/token", data={"username": "newplayer", "password": STRONG_PASSWORD}
+    ).json()["access_token"]
+    client.cookies.clear()
+
+    response = client.put(
+        "/admin/users/newplayer/role",
+        headers=admin_headers,
+        json={"role": "admin"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["role"] == "admin"
+    assert client.get("/admin/users", headers={"Authorization": f"Bearer {old_token}"}).status_code == 401
+    fresh_token = client.post(
+        "/auth/token", data={"username": "newplayer", "password": STRONG_PASSWORD}
+    ).json()["access_token"]
+    assert client.get("/admin/users", headers={"Authorization": f"Bearer {fresh_token}"}).status_code == 200
+
+
+def test_configured_user_role_cannot_be_changed_in_dashboard(client, admin_headers):
+    response = client.put(
+        "/admin/users/admin/role",
+        headers=admin_headers,
+        json={"role": "viewer"},
+    )
+
+    assert response.status_code == 400
+    assert "server configuration" in response.json()["detail"]
+
+
+def test_last_registered_admin_cannot_be_demoted(client, admin_headers, monkeypatch):
+    client.post("/auth/register", json={"username": "otheradmin", "password": STRONG_PASSWORD})
+    with closing(database.get_connection()) as connection:
+        connection.execute("UPDATE users SET role = 'admin' WHERE username = 'otheradmin'")
+        connection.commit()
+    monkeypatch.setattr(auth, "AUTH_USERS", {})
+
+    response = client.put(
+        "/admin/users/otheradmin/role",
+        headers=admin_headers,
+        json={"role": "viewer"},
+    )
+
+    assert response.status_code == 400
+    assert "last administrator" in response.json()["detail"]
+
+
 def test_deleted_games_drop_out_of_favorites(client, admin_headers):
     game_id = add_game("Gone")
     client.put("/admin/users/admin", headers=admin_headers, json={"favorite_game_ids": [game_id]})
@@ -156,6 +206,11 @@ def test_users_directory_requires_admin(client):
     assert client.get("/admin/users").status_code == 401
     assert client.get("/admin/users", headers=viewer_headers).status_code == 403
     assert client.put("/admin/users/newplayer", headers=viewer_headers, json={}).status_code == 403
+    assert client.put(
+        "/admin/users/newplayer/role",
+        headers=viewer_headers,
+        json={"role": "admin"},
+    ).status_code == 403
 
 
 def test_users_page_is_served(client):
@@ -163,3 +218,4 @@ def test_users_page_is_served(client):
 
     assert response.status_code == 200
     assert "Favorite games" in response.text
+    assert 'id="user-role-select"' in response.text

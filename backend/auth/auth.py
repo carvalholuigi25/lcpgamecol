@@ -108,7 +108,7 @@ def _create_token(
     username: str, token_type: str, expires_in: int, role: str | None = None
 ) -> str:
     claims = {
-        "iat": datetime.now(UTC),
+        "iat": time.time(),
         "jti": secrets.token_urlsafe(12),
         "sub": username,
         "type": token_type,
@@ -145,18 +145,18 @@ def issue_session(response, principal: Principal) -> dict[str, str]:
     }
 
 
-def sessions_valid_after(username: str) -> int:
-    """Epoch second before which this user's tokens are no longer accepted."""
+def sessions_valid_after(username: str) -> float:
+    """Timestamp before which this user's tokens are no longer accepted."""
     if not os.path.exists(database.DATABASE_PATH):
-        return 0
+        return 0.0
     try:
         with closing(database.get_connection()) as connection:
             row = connection.execute(
                 "SELECT sessions_valid_after FROM user_security WHERE username = ?", (username,)
             ).fetchone()
     except sqlite3.OperationalError:
-        return 0
-    return row[0] if row else 0
+        return 0.0
+    return float(row[0]) if row else 0.0
 
 
 def revoke_sessions(username: str) -> None:
@@ -167,7 +167,7 @@ def revoke_sessions(username: str) -> None:
             INSERT INTO user_security (username, sessions_valid_after) VALUES (?, ?)
             ON CONFLICT (username) DO UPDATE SET sessions_valid_after = excluded.sessions_valid_after
             """,
-            (username, int(time.time())),
+            (username, time.time()),
         )
         connection.commit()
 

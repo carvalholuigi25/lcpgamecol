@@ -18,5 +18,8 @@ config.env
 *.env
 *.css
 *.css.map
+styles/css/*.css
+styles/css/*.css.map
 uploads/
 tests/reports/
+.venv-wsl/

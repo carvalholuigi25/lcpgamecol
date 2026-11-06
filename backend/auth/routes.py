@@ -1,16 +1,31 @@
-"""Public account routes: finishing a two-factor sign-in and resetting a forgotten password.
+"""Public account routes for sign-in challenges, OAuth and password recovery.
 
 These run before the user has a session, so they are not behind the signed-in
 router in routes/__init__.py.
 """
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Request, Response, status
+import json
+import logging
+import os
+from urllib.parse import quote
+
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    HTTPException,
+    Query,
+    Request,
+    Response,
+    status,
+)
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 
-from backend.auth import auth, password_reset, two_factor
+from backend.auth import auth, oauth, password_reset, two_factor
 from backend.mail import mailer
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
+logger = logging.getLogger(__name__)
 
 RESET_REQUEST_REPLY = (
     "If that account exists and has an email address, a reset link is on its way. "
@@ -41,6 +56,73 @@ def _client_id(request: Request) -> str:
 
 def _refused(error: Exception) -> HTTPException:
     return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error))
+
+
+@router.get("/oauth/providers")
+def oauth_providers() -> dict[str, list[dict[str, str]]]:
+    return {"providers": oauth.available_providers()}
+
+
+@router.get("/oauth/{provider}", name="oauth_login")
+async def oauth_login(provider: str, request: Request):
+    client = oauth.get_client(provider)
+    if client is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Provider is not configured.",
+        )
+    base_url = os.getenv("APP_BASE_URL", "").rstrip("/")
+    redirect_uri = (
+        f"{base_url}/auth/oauth/{provider}/callback"
+        if base_url
+        else str(request.url_for("oauth_callback", provider=provider))
+    )
+    return await client.authorize_redirect(request, redirect_uri)
+
+
+@router.get("/oauth/{provider}/callback", name="oauth_callback")
+async def oauth_callback(
+    provider: str, request: Request, background_tasks: BackgroundTasks
+):
+    client = oauth.get_client(provider)
+    if client is None:
+        return RedirectResponse(
+            "/admin?oauth_error=provider",
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+    try:
+        token = await client.authorize_access_token(request)
+        userinfo = token.get("userinfo") or await client.userinfo(token=token)
+        principal = oauth.get_or_create_principal(provider, userinfo)
+    except Exception as error:
+        logger.warning(
+            "OAuth sign-in failed for provider %s (%s)",
+            provider,
+            type(error).__name__,
+        )
+        return RedirectResponse(
+            "/admin?oauth_error=sign-in",
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
+    method = two_factor.enabled_method(principal.username)
+    if method and two_factor.skip_for_development(principal.username):
+        method = None
+    if method:
+        challenge, code = two_factor.create_challenge(principal, method)
+        if code:
+            background_tasks.add_task(two_factor.send_challenge_code, principal.username, code)
+        payload = quote(json.dumps(challenge, separators=(",", ":")), safe="")
+        return RedirectResponse(
+            f"/admin#oauth-challenge={payload}",
+            status_code=status.HTTP_303_SEE_OTHER,
+            background=background_tasks,
+        )
+
+    target = "/admin" if principal.role == auth.ROLE_ADMIN else "/library"
+    response = RedirectResponse(target, status_code=status.HTTP_303_SEE_OTHER)
+    auth.issue_session(response, principal)
+    return response
 
 
 @router.post("/two-factor/verify")

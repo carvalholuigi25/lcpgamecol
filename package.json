@@ -31,10 +31,11 @@
     "lighthouse-ci": "python scripts/lighthouse_audit.py --start-server --repeats 3 --min-score 90",
     "security": "python scripts/security_audit.py",
     "security-ci": "python scripts/security_audit.py --min-severity medium --fail-on high",
+    "security-wsl": "wsl ./.venv-wsl/bin/python scripts/security_audit.py",
     "audit-report": "python scripts/audit_report.py",
     "all-reports": "conc \"npm run coverage\" \"npm run gen-coverage-pretty\" \"npm run lighthouse\" \"npm run security\"",
     "all-reports-cov": "conc \"npm run coverage\" \"npm run gen-coverage-pretty\"",
-    "lint": "flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=.venv,.venv-1,node_modules,build,dist",
+    "lint": "flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=.venv,.venv-1,.venv-wsl,node_modules,build,dist",
     "lint-fix": "black .",
     "format": "black .",
     "format-check": "black --check .",
@@ -48,12 +49,13 @@
   },
   "dependencies": {
     "@microsoft/signalr": "^8.0.7",
+    "@videojs/cdn": "10.3.0",
+    "@videojs/youtube-video": "10.3.0",
     "bootstrap": "6.0.0-alpha.1",
     "bootstrap-icons": "^1.13.1",
     "concurrently": "^10.0.5",
     "js-cookie": "^3.0.8",
     "lightgallery": "^2.8.3",
-    "video.js": "^8.24.2",
-    "videojs-youtube": "^3.0.1"
+    "video.js": "10.3.0"
   }
 }
