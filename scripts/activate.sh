@@ -9,7 +9,15 @@
 #   bash scripts/activate.sh python -m uvicorn main:app --reload --env-file config.env
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-VENV_DIR="${VENV_DIR:-$PROJECT_ROOT/.venv}"
+# Linux/WSL uses its own venv: a venv's pyvenv.cfg can only point at one base
+# interpreter, so sharing .venv with Windows breaks one side or the other.
+if [ -z "$VENV_DIR" ]; then
+    if [ "$(uname -s)" = "Linux" ]; then
+        VENV_DIR="$PROJECT_ROOT/.venv-wsl"
+    else
+        VENV_DIR="$PROJECT_ROOT/.venv"
+    fi
+fi
 
 # Windows venvs use Scripts/, Linux/macOS venvs use bin/
 if [ -f "$VENV_DIR/bin/activate" ]; then
@@ -18,7 +26,7 @@ elif [ -f "$VENV_DIR/Scripts/activate" ]; then
     ACTIVATE="$VENV_DIR/Scripts/activate"
 else
     echo "Virtual environment not found at $VENV_DIR" >&2
-    echo "Create it with: python -m venv .venv" >&2
+    echo "Create it with: python3 -m venv $VENV_DIR" >&2
     return 1 2>/dev/null || exit 1
 fi
 

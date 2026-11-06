@@ -22,3 +22,4 @@ styles/css/*.css
 styles/css/*.css.map
 uploads/
 tests/reports/
+.venv-wsl/
