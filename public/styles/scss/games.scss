@@ -440,8 +440,12 @@ a.link-button {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: center;
+  text-align: center;
   gap: 12px;
+  margin-top: 18px;
   margin-bottom: 18px;
+  padding: 6px;
 
   .platform-switch {
     flex: 1 1 200px;

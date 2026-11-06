@@ -2698,6 +2698,57 @@ body[data-theme="liquid-glass"] {
 
   h3 { margin: 0 0 10px; }
 }
+.user-role-editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px;
+  margin-bottom: 8px;
+
+  label {
+    display: grid;
+    gap: 5px;
+    color: var(--muted);
+    font: 0.75rem var(--sans);
+  }
+
+  .users-filter { width: 100%; }
+
+  @media (max-width: 420px) {
+    grid-template-columns: 1fr;
+  }
+}
+.game-data-transfer {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) auto auto;
+  align-items: end;
+  gap: 8px;
+  margin-bottom: 6px;
+
+  label {
+    display: grid;
+    gap: 5px;
+    color: var(--muted);
+    font: 0.75rem var(--sans);
+  }
+
+  select {
+    min-height: 42px;
+    padding: 0 11px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--ink);
+    font: 0.8rem var(--sans);
+  }
+
+  @media (max-width: 560px) {
+    grid-template-columns: 1fr 1fr;
+
+    label { grid-column: 1 / -1; }
+  }
+}
+.game-data-help { margin: 0 0 8px; }
 .user-reset-result {
   display: flex;
   gap: 8px;

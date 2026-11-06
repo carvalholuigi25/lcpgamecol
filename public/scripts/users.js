@@ -11,6 +11,9 @@ const pageView = document.getElementById("user-page-view");
 const profileForm = document.getElementById("user-profile-form");
 const profileStatus = document.getElementById("user-profile-status");
 const editButton = document.getElementById("user-page-edit");
+const userRoleEditor = document.getElementById("user-role-editor");
+const userRoleSelect = document.getElementById("user-role-select");
+const userRoleSave = document.getElementById("user-role-save");
 const pickerList = document.getElementById("favorite-picker-list");
 const pickerSearch = document.getElementById("favorite-picker-search");
 const toastRegion = document.getElementById("toast-region");
@@ -257,6 +260,11 @@ function renderUserPage(user) {
   document.getElementById("user-page-hours").textContent = window.i18n.t("{hours} h", { hours: user.hours_in_favorites });
   document.getElementById("user-page-updated").textContent = formatDate(user.updated_at);
   document.getElementById("user-page-two-factor").textContent = user.two_factor_enabled ? "On" : "Off";
+  const configured = user.source === "configured";
+  userRoleEditor.hidden = configured;
+  document.getElementById("user-role-managed").hidden = !configured;
+  userRoleSelect.value = user.role;
+  userRoleSave.disabled = true;
   // Configured accounts keep the password from the server settings.
   const resetButton = document.getElementById("user-reset-link");
   resetButton.disabled = user.source === "configured";
@@ -391,6 +399,51 @@ document.getElementById("user-profile-cancel").addEventListener("click", () => s
 document.getElementById("user-page-close").addEventListener("click", () => userDialog.close());
 userDialog.addEventListener("click", (event) => {
   if (event.target === userDialog) userDialog.close();
+});
+
+userRoleSelect.addEventListener("change", () => {
+  userRoleSave.disabled = !activeUser || userRoleSelect.value === activeUser.role;
+});
+
+userRoleSave.addEventListener("click", async () => {
+  if (!activeUser || userRoleSave.disabled) return;
+  const requestedRole = userRoleSelect.value;
+  const confirmed = window.confirm(window.i18n.t(
+    "Change {name}'s role to {role}? Their active sessions will be signed out.",
+    { name: activeUser.username, role: roleLabel(requestedRole) },
+  ));
+  if (!confirmed) {
+    userRoleSelect.value = activeUser.role;
+    userRoleSave.disabled = true;
+    return;
+  }
+
+  const status = document.getElementById("user-access-status");
+  userRoleSave.disabled = true;
+  status.textContent = "Updating permissions...";
+  try {
+    const response = await fetch(
+      `/admin/users/${encodeURIComponent(activeUser.username)}/role`,
+      {
+        method: "PUT",
+        headers: { Accept: "application/json", "Content-Type": "application/json" },
+        body: JSON.stringify({ role: requestedRole }),
+      },
+    );
+    if (!response.ok) throw new Error(await readError(response, "Permissions could not be updated."));
+    const saved = await response.json();
+    users = users.map((user) => user.username === saved.username ? saved : user);
+    activeUser = saved;
+    renderTotals();
+    renderUsers();
+    renderUserPage(saved);
+    showToast(window.i18n.t("Permissions updated for {name}.", { name: displayName(saved) }));
+  } catch (error) {
+    status.textContent = window.i18n.t(error.message);
+    userRoleSelect.value = activeUser.role;
+  } finally {
+    userRoleSave.disabled = !activeUser || userRoleSelect.value === activeUser.role;
+  }
 });
 
 profileForm.addEventListener("submit", async (event) => {

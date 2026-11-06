@@ -1,5 +1,10 @@
 fastapi
 uvicorn[standard]
+Authlib>=1.3.2
+itsdangerous>=2.2.0
+defusedxml>=0.7.1
+reportlab>=4.2
+pypdf>=5.0
 anyio>=4.14.2
 python-multipart
 PyJWT

@@ -60,6 +60,10 @@
           <input id="password" name="password" type="password" autocomplete="current-password" maxlength="256" required />
           <button class="primary-button" type="submit">Open dashboard <span aria-hidden="true">↗</span></button>
         </form>
+        <div id="oauth-login-options" hidden aria-label="Sign in with a provider">
+          <a id="oauth-google" class="primary-button" href="/auth/oauth/google" hidden>Google</a>
+          <a id="oauth-microsoft" class="primary-button" href="/auth/oauth/microsoft" hidden>Microsoft</a>
+        </div>
         <form id="register-form" class="register-form" hidden>
           <label for="register-username">Username</label>
           <input id="register-username" name="username" autocomplete="username" minlength="3" maxlength="32" spellcheck="false" required />
@@ -145,6 +149,23 @@
             </div>
           </div>
 
+          <div class="game-data-transfer" aria-label="Game data import and export">
+            <label for="game-data-format">File format
+              <select id="game-data-format">
+                <option value="json">JSON</option>
+                <option value="xml">XML</option>
+                <option value="csv">CSV</option>
+                <option value="markdown">Markdown</option>
+                <option value="pdf">PDF</option>
+              </select>
+            </label>
+            <button id="export-games-button" class="secondary-button" type="button">Export games</button>
+            <button id="import-games-button" class="secondary-button" type="button">Import games</button>
+            <input id="import-games-file" type="file" accept=".json" hidden />
+          </div>
+          <p class="game-data-help chart-note">Imports add new records and assign new IDs. PDF import requires a PDF exported by this app.</p>
+          <p id="game-transfer-status" class="records-status" role="status" aria-live="polite"></p>
+
           <div id="records-content">
           <p id="records-status" class="records-status" role="status" aria-live="polite"></p>
           <div id="games-records" class="record-workspace" role="tabpanel" aria-labelledby="games-tab">
@@ -171,7 +192,7 @@
                 <label>Platforms<input name="platforms" placeholder="PC, PlayStation 5" /></label>
                 <label>Game modes<input name="gamemodes" placeholder="Single Player, Online" /></label>
                 <label>Editions<input name="editions" placeholder="Standard, Deluxe" /></label>
-                <label>ESRB rating<input name="esrb" list="esrb-options" placeholder="e, e10, t, m" /></label>
+                <label>Age rating<select name="esrb" id="game-esrb-rating"></select></label>
                 <label>Player rating<input name="user_rating" type="number" min="0" max="100" step="0.1" /></label>
                 <label>Critic rating<input name="critic_rating" type="number" min="0" max="100" step="0.1" /></label>
                 <label>Hours played<input name="hoursplayed" type="number" min="0" step="0.1" /></label>
@@ -188,7 +209,6 @@
                 <div class="field-wide rich-text-field"><span id="recommended-requirements-label">Recommended PC system requirements</span><textarea name="recommended_system_requirements" data-rich-text aria-labelledby="recommended-requirements-label" hidden></textarea></div>
                 <label class="setting-option record-checkbox"><input name="wishlisted" type="checkbox" /><span>On wishlist</span></label>
               </div>
-              <datalist id="esrb-options"><option value="e"></option><option value="e10"></option><option value="t"></option><option value="m"></option><option value="ao"></option><option value="rp"></option></datalist>
               <datalist id="category-options"><option value="Main Game"></option><option value="DLC"></option><option value="Expansion"></option><option value="Standalone Expansion"></option><option value="Bundle"></option><option value="Remake"></option><option value="Remaster"></option><option value="Expanded Game"></option><option value="Port"></option><option value="Episode"></option><option value="Season"></option><option value="Mod"></option><option value="Fork"></option><option value="Pack / Addon"></option><option value="Update"></option></datalist>
               <button class="primary-button" type="submit">Save game</button>
             </form>
@@ -357,6 +377,7 @@
     <script src="/public/scripts/realtime.js"></script>
     <script src="/public/scripts/inbox.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
+    <script src="/public/scripts/functions.js"></script>
     <script src="/public/scripts/admin.js"></script>
   </body>
 </html>

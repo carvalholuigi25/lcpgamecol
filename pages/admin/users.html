@@ -138,7 +138,17 @@
               <div><dt>TWO-STEP SIGN-IN</dt><dd id="user-page-two-factor"></dd></div>
             </dl>
             <div class="user-access-tools" aria-labelledby="user-access-title">
-              <h3 id="user-access-title">Account access</h3>
+              <h3 id="user-access-title">Account access &amp; permissions</h3>
+              <div id="user-role-editor" class="user-role-editor">
+                <label for="user-role-select">Dashboard role
+                  <select id="user-role-select" class="users-filter">
+                    <option value="viewer">Viewer / browse library</option>
+                    <option value="admin">Administrator / manage library</option>
+                  </select>
+                </label>
+                <button id="user-role-save" class="secondary-button" type="button">Save role</button>
+              </div>
+              <p id="user-role-managed" class="chart-note" hidden>Managed in server configuration.</p>
               <div class="upload-actions">
                 <button id="user-reset-link" class="secondary-button" type="button">Create reset link</button>
                 <button id="user-two-factor-off" class="danger-button" type="button">Turn off two-step sign-in</button>
