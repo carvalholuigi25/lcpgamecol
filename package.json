@@ -48,12 +48,13 @@
   },
   "dependencies": {
     "@microsoft/signalr": "^8.0.7",
+    "@videojs/cdn": "10.3.0",
+    "@videojs/youtube-video": "10.3.0",
     "bootstrap": "6.0.0-alpha.1",
     "bootstrap-icons": "^1.13.1",
     "concurrently": "^10.0.5",
     "js-cookie": "^3.0.8",
     "lightgallery": "^2.8.3",
-    "video.js": "^8.24.2",
-    "videojs-youtube": "^3.0.1"
+    "video.js": "10.3.0"
   }
 }

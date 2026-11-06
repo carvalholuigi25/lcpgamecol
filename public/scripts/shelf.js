@@ -28,9 +28,10 @@ const EAGER_COVER_COUNT = 4;
 // The trailer player and screenshot lightbox are only needed inside the details dialog,
 // so their libraries are fetched on demand instead of blocking the first page load.
 const VIDEO_PLAYER_ASSETS = [
-  "/nmodules/video.js/dist/video-js.min.css",
-  "/nmodules/video.js/dist/video.min.js",
-  "/nmodules/videojs-youtube/dist/Youtube.min.js",
+  "/nmodules/@videojs/cdn/global.css",
+  "/nmodules/@videojs/cdn/video.css",
+  "/nmodules/@videojs/cdn/video.js",
+  "/nmodules/@videojs/cdn/media/youtube-video.js",
 ];
 const SCREENSHOT_GALLERY_ASSETS = [
   "/nmodules/lightgallery/css/lightgallery-bundle.min.css",
@@ -68,7 +69,6 @@ let myLists = { wishlist: new Set(), favorites: new Set() };
 // IGDB id -> library game id, or null once we know the release is not in the library.
 const releaseLinks = new Map();
 let activeDetailsGameId = null;
-let detailsTrailerPlayer = null;
 let screenshotGallery = null;
 let screenshotGalleryItems = [];
 let screenshotGalleryOpen = false;
@@ -172,7 +172,7 @@ function loadAsset(url) {
         element.rel = "stylesheet";
         element.href = url;
       } else {
-        // Dynamic scripts default to async; keep them in order so plugins run after their library.
+        if (url.startsWith("/nmodules/@videojs/cdn/")) element.type = "module";
         element.async = false;
         element.src = url;
       }
@@ -502,49 +502,44 @@ function renderTrailers(game) {
   }
 }
 
-// Shows one trailer in the player area (video.js for YouTube and video files, an iframe for
+// Shows one trailer in the player area (Video.js for YouTube and video files, an iframe for
 // Vimeo, otherwise a link).
 function playTrailer(url) {
   const container = document.getElementById("details-trailer");
-  detailsTrailerPlayer?.dispose();
-  detailsTrailerPlayer = null;
   container.replaceChildren();
   if (!url) return;
 
-  let videoSource = null;
+  let media = null;
   const youtubeId = youtubeIdOf(url);
   if (youtubeId) {
-    videoSource = {
-      src: `https://www.youtube.com/watch?v=${encodeURIComponent(youtubeId)}`,
-      type: "video/youtube",
-    };
+    media = document.createElement("youtube-video");
+    media.setAttribute("src", `https://www.youtube.com/watch?v=${encodeURIComponent(youtubeId)}`);
   } else if (/\.(mp4|webm|ogg)$/i.test(url.pathname)) {
-    const extension = url.pathname.match(/\.(mp4|webm|ogg)$/i)[1].toLowerCase();
-    videoSource = {
-      src: url.href,
-      type: { mp4: "video/mp4", webm: "video/webm", ogg: "video/ogg" }[extension],
-    };
+    media = document.createElement("video");
+    media.src = url.href;
+    media.preload = "metadata";
+    media.playsInline = true;
   }
 
-  if (videoSource) {
-    const video = document.createElement("video");
-    video.className = "video-js vjs-big-play-centered details-trailer-video";
-    video.controls = true;
-    video.preload = "metadata";
-    container.append(video);
-    loadAssets(VIDEO_PLAYER_ASSETS).then(() => {
-      // The dialog may have closed or switched games while the player was loading.
-      if (!video.isConnected || !detailsDialog.open) return;
-      detailsTrailerPlayer = window.videojs(video, {
-        aspectRatio: "16:9",
-        controls: true,
-        fluid: true,
-        preload: "metadata",
-        techOrder: ["youtube", "html5"],
-        sources: [videoSource],
-      });
-    }, () => {
-      if (video.isConnected) video.replaceWith(trailerLink(url));
+  if (media) {
+    const player = document.createElement("video-player");
+    const skin = document.createElement("video-skin");
+    skin.className = "details-trailer-video";
+    skin.style.display = "block";
+    skin.style.width = "100%";
+    skin.style.aspectRatio = "16 / 9";
+    if (youtubeId) {
+      media.addEventListener("error", () => {
+        if (player.isConnected) {
+          player.replaceWith(trailerLink(url, "Embedded playback failed. Watch on YouTube"));
+        }
+      }, { once: true });
+    }
+    skin.append(media);
+    player.append(skin);
+    container.append(player);
+    loadAssets(VIDEO_PLAYER_ASSETS).catch(() => {
+      if (player.isConnected) player.replaceWith(trailerLink(url));
     });
     return;
   }
@@ -571,12 +566,12 @@ function playTrailer(url) {
   container.append(trailerLink(url));
 }
 
-function trailerLink(url) {
+function trailerLink(url, text = "Watch trailer") {
   const link = document.createElement("a");
   link.href = url.href;
   link.target = "_blank";
   link.rel = "noopener noreferrer";
-  link.textContent = "Watch trailer";
+  link.textContent = text;
   return link;
 }
 
@@ -1287,8 +1282,7 @@ function initShelf({ load, reset = () => {}, refresh = null, gameActions = null 
     if (screenshotGalleryOpen) screenshotGallery?.closeGallery();
     screenshotGalleryOpen = false;
     if (lightboxDialog.open) lightboxDialog.close();
-    detailsTrailerPlayer?.dispose();
-    detailsTrailerPlayer = null;
+    document.getElementById("details-trailer").replaceChildren();
   });
   // Escape now targets the lightbox dialog: let lightGallery animate out, then close it.
   lightboxDialog.addEventListener("cancel", (event) => {
