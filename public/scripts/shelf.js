@@ -689,10 +689,46 @@ function renderReleaseCountdown(game) {
       stopReleaseCountdown();
       section.dataset.released = "true";
       heading.textContent = window.i18n.t("Out now!");
+      renderGameResources(game);
     }
   };
   tick();
   countdownTimer = window.setInterval(tick, 1000);
+}
+
+function isReleasedGame(game) {
+  const releaseTime = releaseTimeOf(game);
+  if (releaseTime !== null) return releaseTime <= Date.now();
+
+  const releaseYear = Number(game.release_year);
+  return Number.isInteger(releaseYear) && releaseYear > 0 && releaseYear < new Date().getUTCFullYear();
+}
+
+function renderGameResources(game) {
+  const section = document.getElementById("details-resources-section");
+  const links = document.getElementById("details-resource-links");
+  if (!section || !links) return;
+
+  links.replaceChildren();
+  section.hidden = !isReleasedGame(game);
+  if (section.hidden) return;
+
+  const resources = [
+    ["100% checklist", "100% checklist"],
+    ["Interactive map", "interactive map"],
+    ["Walkthroughs", "walkthrough"],
+    ["Hints & tricks", "hints and tricks"],
+    ["Speedruns", "speedrun"],
+  ];
+  for (const [label, search] of resources) {
+    const link = document.createElement("a");
+    link.className = "btn btn-outline-primary btn-sm";
+    link.href = `https://www.google.com/search?q=${encodeURIComponent(`${game.title} ${search}`)}`;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = window.i18n.t(label);
+    links.append(link);
+  }
 }
 
 function showGameDetails(game) {
@@ -729,6 +765,7 @@ function showGameDetails(game) {
   );
   document.getElementById("details-description").textContent =
     game.description || "No description yet.";
+  renderGameResources(game);
   renderReleaseCountdown(game);
   document.getElementById("details-grid").innerHTML = [
     ["Genre", game.genre],

@@ -78,6 +78,7 @@ def test_custom_page_routes_preserve_games_api_route(client, auth_headers):
         assert 'id="details-trailer-section"' in page.text
         assert 'id="details-screenshots-section"' in page.text
         assert 'id="details-requirements-warning"' in page.text
+        assert 'id="details-resources-section"' in page.text
     for asset in (
         "/nmodules/@videojs/cdn/global.css",
         "/nmodules/@videojs/cdn/video.css",

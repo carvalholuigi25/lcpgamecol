@@ -5545,7 +5545,57 @@
       "Update": "アップデート",
     },
   };
-  for (const added of [seasonalAndXpTranslations, moderationTranslations, filtersTrailersBadgesTranslations]) {
+  const gameGuideTranslations = {
+    pt: {
+      "Helpful game links": "Links úteis do jogo",
+      "100% checklist": "Lista para 100%",
+      "Interactive map": "Mapa interativo",
+      "Walkthroughs": "Guias passo a passo",
+      "Hints & tricks": "Dicas e truques",
+      "Speedruns": "Speedruns",
+    },
+    de: {
+      "Helpful game links": "Nützliche Spielelinks",
+      "100% checklist": "100%-Checkliste",
+      "Interactive map": "Interaktive Karte",
+      "Walkthroughs": "Komplettlösungen",
+      "Hints & tricks": "Tipps & Tricks",
+      "Speedruns": "Speedruns",
+    },
+    fr: {
+      "Helpful game links": "Liens utiles pour le jeu",
+      "100% checklist": "Checklist 100 %",
+      "Interactive map": "Carte interactive",
+      "Walkthroughs": "Guides pas à pas",
+      "Hints & tricks": "Astuces et conseils",
+      "Speedruns": "Speedruns",
+    },
+    it: {
+      "Helpful game links": "Link utili sul gioco",
+      "100% checklist": "Checklist 100%",
+      "Interactive map": "Mappa interattiva",
+      "Walkthroughs": "Soluzioni",
+      "Hints & tricks": "Suggerimenti e trucchi",
+      "Speedruns": "Speedrun",
+    },
+    es: {
+      "Helpful game links": "Enlaces útiles del juego",
+      "100% checklist": "Lista para el 100 %",
+      "Interactive map": "Mapa interactivo",
+      "Walkthroughs": "Guías",
+      "Hints & tricks": "Consejos y trucos",
+      "Speedruns": "Speedruns",
+    },
+    ja: {
+      "Helpful game links": "ゲームのお役立ちリンク",
+      "100% checklist": "100%チェックリスト",
+      "Interactive map": "インタラクティブマップ",
+      "Walkthroughs": "攻略ガイド",
+      "Hints & tricks": "ヒントとコツ",
+      "Speedruns": "スピードラン",
+    },
+  };
+  for (const added of [seasonalAndXpTranslations, moderationTranslations, filtersTrailersBadgesTranslations, gameGuideTranslations]) {
     for (const [language, messages] of Object.entries(added)) Object.assign(translations[language], messages);
   }
 
