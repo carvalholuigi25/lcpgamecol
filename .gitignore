@@ -21,5 +21,6 @@ config.env
 styles/css/*.css
 styles/css/*.css.map
 uploads/
+/certs/
 tests/reports/
 .venv-wsl/

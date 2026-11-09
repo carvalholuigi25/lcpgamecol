@@ -44,6 +44,7 @@ Edit `config.env` before starting the app:
 - Replace the sample passwords in `AUTH_USERS` with strong, unique passwords. This setting takes precedence over `AUTH_USERNAME` and `AUTH_PASSWORD`.
 - Set `JWT_SECRET` to a long, random secret. Generate one with `python -c "import secrets; print(secrets.token_urlsafe(32))"` and paste the output into the file.
 - For local HTTP development, set `AUTH_COOKIE_SECURE=false`. Set it to `true` when serving the app over HTTPS.
+- For local HTTPS, generate a self-signed certificate with `npm run cert` on Windows or `npm run certlinux` on Linux/WSL. Start the HTTPS development server with `npm run starthttps` on Windows or `npm run starthttpslinux` on Linux/WSL. The certificate covers `localhost`, `127.0.0.1`, and `::1`; browsers will show a trust warning because it is self-signed. Use it only for local development.
 - Set `IGDB_CLIENT_ID` and `IGDB_CLIENT_SECRET` if you want to use IGDB features.
 
 `config.env` is local configuration and is ignored by Git. Do not commit it or share its credentials.
@@ -65,6 +66,7 @@ npm run startapp
 The app is available at:
 
 - Games library: <http://127.0.0.1:8000/library>
+- Local HTTPS games library: <https://localhost:8000/library> (after generating the development certificate and starting the HTTPS server)
 - Upcoming releases: <http://127.0.0.1:8000/library/releases>
 - Your profile (any signed-in user): <http://127.0.0.1:8000/profile>
 - Feedback (any signed-in user; administrators also answer it here): <http://127.0.0.1:8000/feedback>
