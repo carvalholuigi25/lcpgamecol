@@ -88,7 +88,7 @@ $xp-badge-colors: (
   gap: 6px;
   text-align: center;
 
-  strong { font-size: 0.8rem; }
+  strong { font-size: 0.8rem; margin-top: 0.4rem; display: block; }
   small { opacity: 0.75; font-size: 0.7rem; }
 
   &[data-locked] .xp-medal-shape {
