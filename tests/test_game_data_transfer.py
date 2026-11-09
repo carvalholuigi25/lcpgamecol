@@ -47,6 +47,9 @@ def test_admin_page_exposes_all_transfer_formats(client):
     assert response.status_code == 200
     for file_format in ("json", "xml", "csv", "markdown", "pdf"):
         assert f'<option value="{file_format}">' in response.text
+    assert '<select name="category" id="game-category">' in response.text
+    assert '<option value="Remaster">Remaster</option>' in response.text
+    assert 'name="category" list=' not in response.text
 
 
 @pytest.fixture()

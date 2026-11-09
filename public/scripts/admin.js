@@ -191,7 +191,16 @@ function selectGameRecord(gameId) {
     return;
   }
   for (const [name, value] of Object.entries(game)) {
-    if (name !== "id") setFormField(gameRecordForm, name, value);
+    if (name !== "id") {
+      const field = gameRecordForm.elements.namedItem(name);
+      if (name === "category" && value && !Array.from(field.options).some((option) => option.value === value)) {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = value;
+        field.append(option);
+      }
+      setFormField(gameRecordForm, name, value);
+    }
   }
   document.getElementById("game-form-title").textContent = window.i18n.t("Edit game #{id}", { id: game.id });
   setRecordFormMode(gameRecordForm, "edit-game-button", "delete-game-button", true, false, "Edit game");

@@ -51,6 +51,7 @@
   },
   "devDependencies": {
     "lighthouse": "^13.5.0",
+    "quill": "^2.0.2",
     "sass": "^1.77.8"
   },
   "dependencies": {
@@ -63,5 +64,8 @@
     "js-cookie": "^3.0.8",
     "lightgallery": "^2.8.3",
     "video.js": "10.3.0"
+  },
+  "allowScripts": {
+    "@parcel/watcher@2.6.0": true
   }
 }

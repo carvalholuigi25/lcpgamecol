@@ -132,6 +132,34 @@ def test_unknown_release_is_not_imported(client, viewer_headers, igdb_calls):
     assert client.post("/games/igdb/7/import", headers=viewer_headers).status_code == 404
 
 
+def test_fetch_igdb_game_requires_credentials(monkeypatch):
+    monkeypatch.delenv("IGDB_CLIENT_ID", raising=False)
+    monkeypatch.delenv("IGDB_CLIENT_SECRET", raising=False)
+
+    with pytest.raises(HTTPException) as error:
+        igdb_imports._fetch_igdb_game(1942)
+
+    assert error.value.status_code == 503
+    assert error.value.detail == "IGDB credentials are not configured"
+
+
+def test_fetch_igdb_game_returns_not_found_for_empty_response(monkeypatch):
+    from unittest.mock import MagicMock
+
+    monkeypatch.setenv("IGDB_CLIENT_ID", "test-client")
+    monkeypatch.setenv("IGDB_CLIENT_SECRET", "test-secret")
+    monkeypatch.setattr(igdb_imports, "_fetch_igdb_token", lambda *_args: "test-token")
+    client = MagicMock()
+    client.__enter__.return_value.post.return_value.json.return_value = []
+    monkeypatch.setattr(igdb_imports.httpx, "Client", lambda **_kwargs: client)
+
+    with pytest.raises(HTTPException) as error:
+        igdb_imports._fetch_igdb_game(1942)
+
+    assert error.value.status_code == 404
+    assert error.value.detail == "That game was not found on IGDB"
+
+
 def test_release_without_a_date_cannot_be_imported():
     with pytest.raises(HTTPException) as error:
         igdb_imports.game_create_from_igdb({"name": "Untitled", "first_release_date": None})

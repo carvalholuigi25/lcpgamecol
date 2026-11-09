@@ -221,6 +221,66 @@ def test_oauth_routes_require_a_configured_provider(client, monkeypatch):
     assert client.get("/auth/oauth/google").status_code == 404
 
 
+def test_oauth_callback_redirects_when_provider_is_unconfigured(client, monkeypatch):
+    monkeypatch.setattr(oauth, "get_client", lambda _provider: None)
+
+    response = client.get("/auth/oauth/google/callback", follow_redirects=False)
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/admin?oauth_error=provider"
+
+
+def test_oauth_callback_redirects_after_provider_error(client, monkeypatch):
+    class FailingOAuthClient:
+        async def authorize_access_token(self, _request):
+            raise ValueError("provider response rejected")
+
+    monkeypatch.setattr(oauth, "get_client", lambda _provider: FailingOAuthClient())
+
+    response = client.get("/auth/oauth/google/callback", follow_redirects=False)
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/admin?oauth_error=sign-in"
+
+
+def test_oauth_callback_issues_a_session_for_viewer(client, monkeypatch):
+    class OAuthClient:
+        async def authorize_access_token(self, _request):
+            return {"userinfo": {"sub": "google-subject-123"}}
+
+    principal = auth.Principal("oauth_player", auth.ROLE_VIEWER)
+    monkeypatch.setattr(oauth, "get_client", lambda _provider: OAuthClient())
+    monkeypatch.setattr(oauth, "get_or_create_principal", lambda *_args: principal)
+    monkeypatch.setattr(two_factor, "enabled_method", lambda _username: None)
+
+    response = client.get("/auth/oauth/google/callback", follow_redirects=False)
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/library"
+    assert auth.AUTH_COOKIE_NAME in response.cookies
+
+
+def test_two_factor_routes_map_domain_errors_to_bad_request(client, monkeypatch):
+    def refuse_verification(*_args, **_kwargs):
+        raise two_factor.TwoFactorError("Challenge expired")
+
+    def refuse_resend(*_args, **_kwargs):
+        raise two_factor.TwoFactorError("Wait before requesting another code")
+
+    monkeypatch.setattr(two_factor, "verify_challenge", refuse_verification)
+    monkeypatch.setattr(two_factor, "resend_challenge_code", refuse_resend)
+
+    verify = client.post(
+        "/auth/two-factor/verify", json={"challenge_token": "challenge", "code": "123456"}
+    )
+    resend = client.post("/auth/two-factor/resend", json={"challenge_token": "challenge"})
+
+    assert verify.status_code == 400
+    assert verify.json()["detail"] == "Challenge expired"
+    assert resend.status_code == 400
+    assert resend.json()["detail"] == "Wait before requesting another code"
+
+
 # --- email codes ---------------------------------------------------------------------
 
 

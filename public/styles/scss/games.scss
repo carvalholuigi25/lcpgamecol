@@ -518,6 +518,23 @@ a.link-button {
   width: 100%;
 }
 
+.details-resource-links, #details-resource-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: calc(12px / 2);
+  margin-top: 12px;
+  font-size: 0.9rem;
+
+  a {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    border-radius: calc(16px + 8px);
+  }
+}
+
 // Kept on one line: a longer realtime status ("Connecting...") is truncated instead of
 // wrapping the menu onto two lines and pushing the shelf down.
 .user-info {
