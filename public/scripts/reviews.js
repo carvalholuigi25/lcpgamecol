@@ -24,6 +24,12 @@ const DISCUSSION_TOOLBAR = [
   ["clean"],
 ];
 const REPORT_REASONS = { spam: "Spam", offensive: "Offensive", spoilers: "Spoilers", off_topic: "Off topic", other: "Other" };
+const STANDARD_REACTIONS = [
+  { emoji: "👍", label: "Like" },
+  { emoji: "👎", label: "Dislike" },
+  { emoji: "❤️", label: "Love" },
+  { emoji: "😡", label: "Hate" },
+];
 const hasMarkup = (value) => /<[a-z][\s\S]*>/i.test(value);
 
 // Returns null when Quill could not load; the plain textarea is shown instead.
@@ -91,10 +97,30 @@ function starsHtml(rating) {
   return `<span class="review-rating" role="img" aria-label="${rating} out of 5" title="${rating} out of 5">${stars}</span>`;
 }
 
+function reactionControls(kind, post) {
+  const counts = new Map((post.reactions || []).map(({ emoji, count }) => [emoji, count]));
+  const reactions = [
+    ...STANDARD_REACTIONS,
+    ...[...counts.keys()]
+      .filter((emoji) => !STANDARD_REACTIONS.some((reaction) => reaction.emoji === emoji))
+      .map((emoji) => ({ emoji, label: emoji })),
+  ];
+  const buttons = reactions.map(({ emoji, label }) => {
+    const count = counts.get(emoji) || 0;
+    const pressed = post.my_reaction === emoji;
+    return `<button class="discussion-reaction" type="button" data-reaction-kind="${kind}" data-reaction-id="${escapeHtml(post.id)}" data-emoji="${escapeHtml(emoji)}" aria-pressed="${pressed}" aria-label="${escapeHtml(label)} ${count}" title="${escapeHtml(label)}" ${post.locked ? "disabled" : ""}>${escapeHtml(emoji)} <span>${count}</span></button>`;
+  }).join("");
+  const customButton = `<button class="discussion-reaction" type="button" data-custom-reaction-kind="${kind}" data-custom-reaction-id="${escapeHtml(post.id)}" aria-label="Add a custom emoji reaction" title="Add a custom emoji reaction" ${post.locked ? "disabled" : ""}>＋</button>`;
+  return `<div class="discussion-reactions" aria-label="Reactions">${buttons}${customButton}${post.locked ? '<span class="discussion-lock-status">Reactions locked</span>' : ""}</div>`;
+}
+
 // User-written names and text are marked translate="no" so i18n.js leaves them alone.
 function postItem(kind, post) {
-  const deleteButton = isOwnPost(post) || isAdmin()
+  const deleteButton = (isOwnPost(post) && !post.locked) || isAdmin()
     ? `<button class="details-action details-action-danger discussion-delete" type="button" data-delete-kind="${kind}" data-delete-id="${escapeHtml(post.id)}" aria-label="Delete" title="Delete"><i class="bi bi-trash3" aria-hidden="true"></i></button>`
+    : "";
+  const lockButton = isAdmin()
+    ? `<button class="details-action discussion-lock" type="button" data-lock-kind="${kind}" data-lock-id="${escapeHtml(post.id)}" aria-label="${post.locked ? "Unlock" : "Lock"}" title="${post.locked ? "Unlock" : "Lock"}"><i class="bi ${post.locked ? "bi-unlock" : "bi-lock"}" aria-hidden="true"></i></button>`
     : "";
   let reportButton = "";
   if (currentProfile && !isOwnPost(post)) {
@@ -105,10 +131,11 @@ function postItem(kind, post) {
   const badges = [];
   if (post.status === "pending") badges.push(["pending", "Waiting for review"]);
   if (post.status === "hidden") badges.push(["hidden", "Hidden"]);
+  if (post.locked) badges.push(["locked", "Locked"]);
   if (post.open_reports) {
     badges.push(["reported", window.i18n.t(post.open_reports === 1 ? "{count} report" : "{count} reports", { count: post.open_reports })]);
   }
-  return `<li class="discussion-item${isOwnPost(post) ? " is-mine" : ""}" data-status="${escapeHtml(post.status || "visible")}">
+  return `<li class="discussion-item${isOwnPost(post) ? " is-mine" : ""}" data-status="${escapeHtml(post.status || "visible")}" data-locked="${Boolean(post.locked)}">
     <div class="discussion-meta">
       <strong translate="no">${escapeHtml(post.display_name || post.username)}</strong>
       ${post.display_name ? `<span translate="no">@${escapeHtml(post.username)}</span>` : ""}
@@ -116,18 +143,26 @@ function postItem(kind, post) {
       ${kind === "reviews" ? starsHtml(post.rating) : ""}
       <time datetime="${escapeHtml(post.updated_at || post.created_at)}" translate="no">${escapeHtml(discussionDate(post.updated_at || post.created_at))}</time>
       ${badges.map(([status, label]) => `<span class="discussion-badge" data-status="${status}">${escapeHtml(window.i18n.t(label))}</span>`).join("")}
-      <span class="discussion-tools">${reportButton}${deleteButton}</span>
+      <span class="discussion-tools">${reportButton}${lockButton}${deleteButton}</span>
     </div>
     ${postBody(post.body)}
+    ${reactionControls(kind, post)}
   </li>`;
 }
 
 function fillReviewForm() {
+  const locked = Boolean(myReview?.locked);
   reviewForm.reset();
   if (myReview) reviewForm.elements.namedItem("rating").value = String(myReview.rating);
   setDiscussionText(reviewEditor, reviewForm.elements.namedItem("body"), myReview?.body);
-  reviewForm.querySelector('[type="submit"]').textContent = myReview ? "Update review" : "Post review";
-  reviewDeleteButton.hidden = !myReview;
+  const submitButton = reviewForm.querySelector('[type="submit"]');
+  submitButton.textContent = myReview ? "Update review" : "Post review";
+  submitButton.disabled = locked;
+  reviewForm.querySelector(".review-stars").disabled = locked;
+  reviewForm.elements.namedItem("body").disabled = locked;
+  reviewEditor?.enable(!locked);
+  reviewDeleteButton.hidden = !myReview || (locked && !isAdmin());
+  if (locked) reviewFormStatus.textContent = window.i18n.t("This review is locked by an administrator.");
   reviewDraft = false;
 }
 
@@ -337,7 +372,56 @@ for (const list of [reviewsList, commentsList]) {
       item.append(form);
       form.elements.namedItem("reason").focus();
     }
+    const reaction = event.target.closest("[data-reaction-id]");
+    if (reaction) updateReaction(reaction.dataset.reactionKind, reaction.dataset.reactionId, reaction.dataset.emoji, reaction);
+    const custom = event.target.closest("[data-custom-reaction-id]");
+    if (custom) {
+      const emoji = window.prompt(window.i18n.t("Enter one emoji reaction"));
+      if (emoji?.trim()) updateReaction(custom.dataset.customReactionKind, custom.dataset.customReactionId, emoji.trim(), custom);
+    }
+    const lock = event.target.closest("[data-lock-id]");
+    if (lock) updateLock(lock.dataset.lockKind, lock.dataset.lockId, lock);
   });
+}
+
+async function updateReaction(kind, id, emoji, button) {
+  const libraryId = activeLibraryId();
+  if (libraryId === null) return;
+  button.disabled = true;
+  const status = kind === "reviews" ? reviewFormStatus : commentFormStatus;
+  try {
+    await sendDiscussion(
+      `/games/${encodeURIComponent(libraryId)}/${kind}/${encodeURIComponent(id)}/reactions`,
+      "POST",
+      { emoji },
+      "Your reaction could not be saved.",
+    );
+    await (kind === "reviews" ? loadReviews : loadComments)(activeDetailsGameId, libraryId);
+  } catch (error) {
+    status.textContent = window.i18n.t(error.message);
+    button.disabled = false;
+  }
+}
+
+async function updateLock(kind, id, button) {
+  const libraryId = activeLibraryId();
+  if (libraryId === null) return;
+  const post = button.closest(".discussion-item");
+  const locked = post.dataset.locked === "true";
+  button.disabled = true;
+  const status = kind === "reviews" ? reviewFormStatus : commentFormStatus;
+  try {
+    await sendDiscussion(
+      `/admin/moderation/${kind === "reviews" ? "review" : "comment"}/${encodeURIComponent(id)}/${locked ? "unlock" : "lock"}`,
+      "POST",
+      {},
+      "The post lock could not be updated.",
+    );
+    await (kind === "reviews" ? loadReviews : loadComments)(activeDetailsGameId, libraryId);
+  } catch (error) {
+    status.textContent = window.i18n.t(error.message);
+    button.disabled = false;
+  }
 }
 
 commentForm.addEventListener("submit", async (event) => {

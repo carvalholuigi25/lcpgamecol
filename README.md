@@ -72,6 +72,7 @@ The app is available at:
 - Feedback (any signed-in user; administrators also answer it here): <http://127.0.0.1:8000/feedback>
 - Reset a forgotten password: <http://127.0.0.1:8000/reset-password>
 - Administrator dashboard: <http://127.0.0.1:8000/admin>
+- User permissions (admin only): <http://127.0.0.1:8000/admin/permissions>
 - Special features (admin tools such as file upload): <http://127.0.0.1:8000/admin/special-features>
 - Interactive API docs (Swagger UI): <http://127.0.0.1:8000/docs>
 - ReDoc API docs: <http://127.0.0.1:8000/redocs>
@@ -96,7 +97,10 @@ The seed data is defined in `backend/database/seed.sql`; running the seeder more
 - Upload images and PDFs safely from the Special features page (admin only).
 - Create a viewer account from the library or dashboard sign-in panel.
 - Add games to your own wishlist and favorites from the game details. Administrators also get **Edit** and **Delete** buttons there.
-- Review games (1 to 5 stars, with optional text) and comment on them from the game details. You can delete what you wrote; administrators can delete any review or comment.
+- Choose from multiple library themes, including Cool Modern Gaming and an Anniversary palette in the Seasonal theme group.
+- Review games (1 to 5 stars, with optional text) and comment on them from the game details. Users can react with preset or custom emoji; administrators can lock or unlock posts, and locked posts cannot be edited, deleted by their author, or reacted to.
+- Manage individual account capabilities from the admin-only User permissions page. Grants cover creating, editing, and deleting games or editing user profiles; administrator accounts retain all capabilities.
+- Read-only accounts with grants can use the separate `/workspace` page to perform only those enabled actions. The admin dashboard and permission-granting page remain administrator-only.
 - See changes as they happen: the library and dashboard update by themselves through a SignalR hub at `/hubs/library`. Python clients can subscribe with `signalrcore`; run a single server worker, because live connections are kept in memory.
 - Send feedback from the feedback page. Administrators are notified, can set its status and reply, and replies are emailed to users who added an address to their profile.
 - Get notifications (bell) and direct messages (envelope) at the top of the sidebar on every page, with live unread counts. Messages to users with an email address are also emailed.
@@ -126,7 +130,7 @@ Instead of a plaintext password, you can use a password hash in `AUTH_USERS` or 
 python -m backend.auth.users hash
 ```
 
-Both `admin` and `viewer` accounts can read games and achievements. Only `admin` accounts can create, update, or delete records and access administrator data. If `AUTH_USERS` is set, it is used instead of `AUTH_USERNAME` and `AUTH_PASSWORD`.
+Both `admin` and `viewer` accounts can read games and achievements. Only `admin` accounts can access administrator pages and data. Administrators can grant individual viewers the `games.create`, `games.edit`, `games.delete`, and `users.edit_profile` capabilities; grants do not change the account's role or expose admin-only pages. These grants cover the corresponding direct management APIs; the existing authenticated IGDB release import remains available to viewers. If `AUTH_USERS` is set, it is used instead of `AUTH_USERNAME` and `AUTH_PASSWORD`.
 
 ### Registration
 
@@ -192,14 +196,21 @@ The interactive API documentation at `/docs` lists all routes and their request/
 | `GET` | `/users` | Get the signed-in user's profile |
 | `GET` | `/admin/users` | List every account with its profile and favorite games (admin only) |
 | `GET` | `/admin/users/{username}` | Get one user's profile (admin only) |
-| `PUT` | `/admin/users/{username}` | Update a user's display name, bio, location, avatar, cover, and favorite games (admin only) |
+| `PUT` | `/admin/users/{username}` | Update a user's profile (admin or a viewer granted `users.edit_profile`) |
+| `GET` | `/admin/permissions/api` | List accounts and available capabilities (admin only) |
+| `PUT` | `/admin/permissions/api/{username}` | Replace an account's granted capabilities (admin only) |
+| `GET` | `/users/me/permissions` | Return the signed-in account's granted capabilities |
+| `GET` | `/users/manageable` | List account names (requires `users.edit_profile`) |
+| `GET`, `PUT` | `/users/manageable/{username}` | Read or update the allowlisted profile fields (requires `users.edit_profile`) |
 | `GET` | `/games` | List games; supports `skip` and `limit` |
 | `GET` | `/games/page` | List a page of games with the total count |
 | `GET` | `/games/search` | Search games by title, genre, platform, or release year |
 | `GET` | `/games/{game_id}` | Get a game |
-| `POST` | `/games` | Create a game (admin only) |
-| `PUT` | `/games/{game_id}` | Update a game (admin only) |
-| `DELETE` | `/games/{game_id}` | Delete a game (admin only) |
+| `POST` | `/games` | Create a game (admin or `games.create`) |
+| `PUT` | `/games/{game_id}` | Update a game (admin or `games.edit`) |
+| `DELETE` | `/games/{game_id}` | Delete a game (admin or `games.delete`) |
+| `POST` | `/games/{game_id}/{kind}/{item_id}/reactions` | Toggle an emoji reaction; `kind` is `reviews` or `comments` |
+| `POST` | `/admin/moderation/{kind}/{item_id}/{action}` | Lock or unlock a post; `kind` is `review` or `comment`, `action` is `lock` or `unlock` (admin only) |
 | `GET` | `/games/next-releases` | Get upcoming IGDB releases |
 | `GET` | `/games/external-search` | Search for games outside the local collection |
 | `GET` | `/games/{game_id}/achievements` | List a game's achievements |

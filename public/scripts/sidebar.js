@@ -23,7 +23,9 @@
     profile: "M19 20v-1a5 5 0 0 0-5-5h-4a5 5 0 0 0-5 5v1M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z",
     docs: "M9 8l-4 4 4 4m6-8l4 4-4 4",
     shield: "M12 3l8 3v6c0 5-3.4 8.3-8 9-4.6-.7-8-4-8-9V6zm-3 9l2 2 4-4",
+    permissions: "M12 3l8 3v6c0 5-3.4 8.3-8 9-4.6-.7-8-4-8-9V6zm-3 9l2 2 4-4",
   };
+  const WORKSPACE_CAPABILITIES = "games.create,games.edit,games.delete,users.edit_profile";
   const GROUPS = [
     { label: "ACTIVITY", inbox: true, links: [["/feedback", "feedback", "Feedback"]] },
     {
@@ -43,6 +45,7 @@
       links: [
         ["/admin/special-features", "star", "Special features"],
         ["/admin/user-directory", "users", "Users"],
+        ["/admin/permissions", "permissions", "User permissions"],
         ["/admin/moderation", "shield", "Moderation"],
         ["/feedback#manage", "feedback", "Manage feedback"],
       ],
@@ -55,6 +58,11 @@
         ["/profile", "profile", "My profile"],
         ["/docs", "docs", "API docs"],
       ],
+    },
+    {
+      label: "MY TOOLS",
+      capabilities: WORKSPACE_CAPABILITIES,
+      links: [["/workspace", "settings", "Manage granted actions"]],
     },
   ];
 
@@ -70,6 +78,7 @@
       const section = document.createElement("div");
       section.className = "sidebar-section";
       if (group.admin) section.dataset.adminOnly = "";
+      if (group.capabilities) section.dataset.capabilities = group.capabilities;
       const label = document.createElement("p");
       label.className = "sidebar-group";
       label.textContent = group.label;
@@ -163,13 +172,33 @@
     }
   }
 
+  let permissionRequest = 0;
   function setAvailable(available, role = null) {
     sidebar.hidden = !available;
     toggleButton.hidden = !available;
     for (const section of sidebar.querySelectorAll("[data-admin-only]")) section.hidden = role !== "admin";
+    for (const section of sidebar.querySelectorAll("[data-capabilities]")) section.hidden = true;
     document.body.classList.toggle("has-sidebar", available);
     if (!available) document.body.classList.remove("sidebar-open");
     syncToggle();
+    const requestId = ++permissionRequest;
+    if (available) {
+      fetch("/users/me/permissions", { headers: { Accept: "application/json" } })
+        .then((response) => {
+          if (!response.ok) throw new Error(`Permission lookup failed (${response.status}).`);
+          return response.json();
+        })
+        .then(({ permissions = [] }) => {
+          if (requestId !== permissionRequest) return;
+          for (const section of sidebar.querySelectorAll("[data-capabilities]")) {
+            const granted = section.dataset.capabilities.split(",").some((capability) => permissions.includes(capability));
+            section.hidden = role !== "admin" && !granted;
+          }
+        })
+        .catch((error) => {
+          if (requestId === permissionRequest) console.error("Could not load granted actions.", error);
+        });
+    }
   }
 
   toggleButton.addEventListener("click", () => setOpen(!isOpen()));

@@ -162,10 +162,80 @@ def test_only_the_author_or_an_admin_can_delete_a_comment(client, admin_headers,
 
 
 def test_deleting_a_game_removes_its_reviews_and_comments(client, admin_headers, viewer_headers, game_id):
-    client.put(f"/games/{game_id}/reviews/mine", json={"rating": 4}, headers=viewer_headers)
+    review_id = client.put(f"/games/{game_id}/reviews/mine", json={"rating": 4}, headers=viewer_headers).json()["id"]
     client.post(f"/games/{game_id}/comments", json={"body": "Nice"}, headers=viewer_headers)
+    client.post(
+        f"/games/{game_id}/reviews/{review_id}/reactions",
+        json={"emoji": "❤️"},
+        headers=viewer_headers,
+    )
 
     assert client.delete(f"/games/{game_id}", headers=admin_headers).status_code == 204
     with database.get_connection() as connection:
         assert connection.execute("SELECT COUNT(*) FROM game_reviews").fetchone()[0] == 0
         assert connection.execute("SELECT COUNT(*) FROM game_comments").fetchone()[0] == 0
+        assert connection.execute("SELECT COUNT(*) FROM content_reactions").fetchone()[0] == 0
+
+
+def test_users_can_toggle_one_emoji_reaction_per_post(client, viewer_headers, other_headers, game_id):
+    review_id = client.put(
+        f"/games/{game_id}/reviews/mine", json={"rating": 5}, headers=viewer_headers
+    ).json()["id"]
+    url = f"/games/{game_id}/reviews/{review_id}/reactions"
+
+    first = client.post(url, json={"emoji": "👍"}, headers=other_headers)
+    assert first.status_code == 200
+    assert first.json() == {"reactions": [{"emoji": "👍", "count": 1}], "my_reaction": "👍"}
+
+    changed = client.post(url, json={"emoji": "❤️"}, headers=other_headers)
+    assert changed.json() == {"reactions": [{"emoji": "❤️", "count": 1}], "my_reaction": "❤️"}
+    removed = client.post(url, json={"emoji": "🫠"}, headers=other_headers)
+    assert removed.json() == {"reactions": [{"emoji": "🫠", "count": 1}], "my_reaction": "🫠"}
+    removed = client.post(url, json={"emoji": "🫠"}, headers=other_headers)
+    assert removed.json() == {"reactions": [], "my_reaction": None}
+
+    assert client.post(url, json={"emoji": "not emoji"}, headers=other_headers).status_code == 422
+    assert client.post(url, json={"emoji": "👍🥰"}, headers=other_headers).status_code == 422
+
+
+def test_admin_can_lock_and_unlock_reviews_and_comments(client, admin_headers, viewer_headers, game_id):
+    review_id = client.put(
+        f"/games/{game_id}/reviews/mine", json={"rating": 4}, headers=viewer_headers
+    ).json()["id"]
+    comment_id = client.post(
+        f"/games/{game_id}/comments", json={"body": "Nice"}, headers=viewer_headers
+    ).json()["id"]
+
+    for kind, item_id in (("review", review_id), ("comment", comment_id)):
+        assert client.post(
+            f"/admin/moderation/{kind}/{item_id}/lock", headers=viewer_headers
+        ).status_code == 403
+        locked = client.post(f"/admin/moderation/{kind}/{item_id}/lock", headers=admin_headers)
+        assert locked.status_code == 200
+        assert locked.json()["locked"] is True
+        assert client.get(f"/games/{game_id}/{kind}s", headers=viewer_headers).json()["items"][0]["locked"] is True
+
+    assert client.put(
+        f"/games/{game_id}/reviews/mine", json={"rating": 2}, headers=viewer_headers
+    ).status_code == 409
+    assert client.delete(
+        f"/games/{game_id}/reviews/{review_id}", headers=viewer_headers
+    ).status_code == 409
+    assert client.post(
+        f"/games/{game_id}/comments/{comment_id}/reactions",
+        json={"emoji": "❤️"},
+        headers=viewer_headers,
+    ).status_code == 409
+    assert client.delete(
+        f"/games/{game_id}/comments/{comment_id}", headers=viewer_headers
+    ).status_code == 409
+    assert client.delete(
+        f"/games/{game_id}/comments/{comment_id}", headers=admin_headers
+    ).status_code == 204
+
+    assert client.post(
+        f"/admin/moderation/review/{review_id}/unlock", headers=admin_headers
+    ).json()["locked"] is False
+    assert client.delete(
+        f"/games/{game_id}/reviews/{review_id}", headers=viewer_headers
+    ).status_code == 204

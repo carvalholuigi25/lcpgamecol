@@ -12,7 +12,7 @@ from xml.etree import ElementTree as ET
 from xml.sax.saxutils import escape
 
 from defusedxml import ElementTree as SafeET
-from fastapi import APIRouter, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import Response
 from pydantic import BaseModel, ValidationError
 from pypdf import PdfReader, PdfWriter
@@ -23,12 +23,13 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
+from backend.auth.auth import require_admin
 from backend.database.database import get_connection
 from backend.realtime.hub import hub
 from routes.games.routes import game_from_row, insert_game
 from routes.games.schemas import Game, GameCreate
 
-router = APIRouter(tags=["admin"])
+router = APIRouter(tags=["admin"], dependencies=[Depends(require_admin)])
 logger = logging.getLogger(__name__)
 
 MAX_IMPORT_BYTES = 10 * 1024 * 1024

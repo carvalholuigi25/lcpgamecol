@@ -142,6 +142,8 @@ body {
   background: var(--green);
   color: #fffefa;
   font: 600 1.3rem var(--display);
+  border-radius: 50%;
+  box-shadow: 2px 4px 6px;
 }
 .main-nav {
   display: flex;

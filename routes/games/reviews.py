@@ -11,6 +11,7 @@ only for their author and administrators, and don't count in the rating.
 """
 
 from contextlib import closing
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from pydantic import BaseModel, Field, field_validator
@@ -64,6 +65,43 @@ class CommentCreate(BaseModel):
         return cleaned
 
 
+class ReactionWrite(BaseModel):
+    emoji: str = Field(min_length=1, max_length=16)
+
+    @field_validator("emoji")
+    @classmethod
+    def validate_emoji(cls, value: str) -> str:
+        value = value.strip()
+        if not value or len(value) > 16:
+            raise ValueError("Choose a single emoji reaction.")
+        components = value.split("\u200d")
+        if any(not component for component in components):
+            raise ValueError("Choose a single emoji reaction.")
+        for component in components:
+            bases = []
+            for character in component:
+                codepoint = ord(character)
+                if (
+                    0x1F3FB <= codepoint <= 0x1F3FF
+                    or character in ("\ufe0e", "\ufe0f", "\u20e3")
+                    or 0xE0020 <= codepoint <= 0xE007F
+                ):
+                    continue
+                if character in "0123456789#*" and "\u20e3" in component:
+                    bases.append(codepoint)
+                elif 0x1F1E6 <= codepoint <= 0x1F1FF or 0x1F000 <= codepoint <= 0x1FAFF:
+                    bases.append(codepoint)
+                elif 0x2600 <= codepoint <= 0x27BF:
+                    bases.append(codepoint)
+                else:
+                    raise ValueError("Choose a single emoji reaction.")
+            if len(bases) == 2 and all(0x1F1E6 <= base <= 0x1F1FF for base in bases):
+                continue
+            if len(bases) != 1:
+                raise ValueError("Choose a single emoji reaction.")
+        return value
+
+
 def _screen(body: str | None) -> str:
     try:
         return moderation.screen(rich_text.plain_text(body or ""))
@@ -84,13 +122,24 @@ def _require_game(connection, game_id: int) -> None:
 
 
 def _moderation_fields(row, principal: Principal, reports: dict[int, int], mine: set[int]) -> dict:
-    fields = {"status": row["status"], "reported": row["id"] in mine}
+    fields = {"status": row["status"], "reported": row["id"] in mine, "locked": bool(row["locked"])}
     if principal.role == auth.ROLE_ADMIN:
         fields["open_reports"] = reports.get(row["id"], 0)
     return fields
 
 
-def _review(row, principal: Principal, reports: dict[int, int] | None = None, mine: set[int] | None = None) -> dict:
+def _reaction_fields(row, summaries: dict[int, dict] | None) -> dict:
+    summary = (summaries or {}).get(row["id"], {})
+    return {"reactions": summary.get("reactions", []), "my_reaction": summary.get("mine")}
+
+
+def _review(
+    row,
+    principal: Principal,
+    reports: dict[int, int] | None = None,
+    mine: set[int] | None = None,
+    reactions: dict[int, dict] | None = None,
+) -> dict:
     return {
         "id": row["id"],
         "game_id": row["game_id"],
@@ -102,10 +151,17 @@ def _review(row, principal: Principal, reports: dict[int, int] | None = None, mi
         "created_at": row["created_at"],
         "updated_at": row["updated_at"],
         **_moderation_fields(row, principal, reports or {}, mine or set()),
+        **_reaction_fields(row, reactions),
     }
 
 
-def _comment(row, principal: Principal, reports: dict[int, int] | None = None, mine: set[int] | None = None) -> dict:
+def _comment(
+    row,
+    principal: Principal,
+    reports: dict[int, int] | None = None,
+    mine: set[int] | None = None,
+    reactions: dict[int, dict] | None = None,
+) -> dict:
     return {
         "id": row["id"],
         "game_id": row["game_id"],
@@ -115,7 +171,32 @@ def _comment(row, principal: Principal, reports: dict[int, int] | None = None, m
         "body": row["body"],
         "created_at": row["created_at"],
         **_moderation_fields(row, principal, reports or {}, mine or set()),
+        **_reaction_fields(row, reactions),
     }
+
+
+def _reaction_summaries(connection, kind: str, item_ids: list[int], username: str) -> dict[int, dict]:
+    if not item_ids:
+        return {}
+    placeholders = ", ".join("?" for _ in item_ids)
+    rows = connection.execute(
+        f"""
+        SELECT item_id, emoji, COUNT(*) AS count,
+               MAX(CASE WHEN username = ? THEN 1 ELSE 0 END) AS mine
+        FROM content_reactions
+        WHERE kind = ? AND item_id IN ({placeholders})
+        GROUP BY item_id, emoji
+        ORDER BY count DESC, emoji
+        """,  # only ? placeholders are interpolated  # nosec B608
+        (username, kind, *item_ids),
+    ).fetchall()
+    summaries: dict[int, dict] = {}
+    for row in rows:
+        summary = summaries.setdefault(row["item_id"], {"reactions": [], "mine": None})
+        summary["reactions"].append({"emoji": row["emoji"], "count": row["count"]})
+        if row["mine"]:
+            summary["mine"] = row["emoji"]
+    return summaries
 
 
 # author_xp is the author's total XP, for the rank badge next to their name.
@@ -134,6 +215,11 @@ COMMENT_SELECT = """
 
 
 def _check_can_delete(row, principal: Principal, what: str) -> None:
+    if row["locked"] and principal.role != auth.ROLE_ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"This {what[:-1]} is locked by an administrator.",
+        )
     if row["username"].lower() != principal.username.lower() and principal.role != auth.ROLE_ADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -169,14 +255,16 @@ def list_reviews(
             (game_id, principal.username),
         ).fetchone()
         ids = [row["id"] for row in rows]
+        reaction_ids = list(dict.fromkeys([*ids, *([mine["id"]] if mine else [])]))
+        reactions = _reaction_summaries(connection, "review", reaction_ids, principal.username)
         reports = moderation_routes.open_report_counts(connection, "review", ids)
         reported = moderation_routes.reported_by(connection, "review", principal.username, ids)
     return {
         "count": count,
         "average": round(average, 1) if average is not None else None,
         "rating_max": REVIEW_RATING_MAX,
-        "mine": _review(mine, principal) if mine else None,
-        "items": [_review(row, principal, reports, reported) for row in rows],
+        "mine": _review(mine, principal, reactions=reactions) if mine else None,
+        "items": [_review(row, principal, reports, reported, reactions) for row in rows],
     }
 
 
@@ -185,8 +273,17 @@ def save_my_review(game_id: int, body: ReviewWrite, principal: Principal = CURRE
     timestamp = now()
     new_status = _screen(body.body)
     with closing(get_connection()) as connection:
+        connection.execute("BEGIN IMMEDIATE")
         _require_game(connection, game_id)
-        # A review an administrator hid stays hidden when its author edits it.
+        existing = connection.execute(
+            "SELECT locked FROM game_reviews WHERE game_id = ? AND username = ?",
+            (game_id, principal.username),
+        ).fetchone()
+        if existing and existing["locked"]:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This review is locked by an administrator.",
+            )
         connection.execute(
             """
             INSERT INTO game_reviews (game_id, username, rating, body, created_at, updated_at, status)
@@ -202,12 +299,13 @@ def save_my_review(game_id: int, body: ReviewWrite, principal: Principal = CURRE
             f"{REVIEW_SELECT} WHERE r.game_id = ? AND r.username = ?",  # nosec B608
             (game_id, principal.username),
         ).fetchone()
+        reactions = _reaction_summaries(connection, "review", [row["id"]], principal.username)
     hub.publish("reviewsChanged", {"game_id": game_id})
     if row["status"] == moderation.STATUS_VISIBLE:
         xp.award(principal.username, "review", game_id)
     elif new_status == moderation.STATUS_PENDING:
         _held("review", game_id, principal, body.body)
-    return _review(row, principal)
+    return _review(row, principal, reactions=reactions)
 
 
 @router.delete("/games/{game_id}/reviews/{review_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -246,9 +344,13 @@ def list_comments(
             (game_id, *parameters, limit),
         ).fetchall()
         ids = [row["id"] for row in rows]
+        reactions = _reaction_summaries(connection, "comment", ids, principal.username)
         reports = moderation_routes.open_report_counts(connection, "comment", ids)
         reported = moderation_routes.reported_by(connection, "comment", principal.username, ids)
-    return {"count": count, "items": [_comment(row, principal, reports, reported) for row in rows]}
+    return {
+        "count": count,
+        "items": [_comment(row, principal, reports, reported, reactions) for row in rows],
+    }
 
 
 @router.post("/games/{game_id}/comments", status_code=status.HTTP_201_CREATED)
@@ -262,12 +364,13 @@ def post_comment(game_id: int, body: CommentCreate, principal: Principal = CURRE
         )
         connection.commit()
         row = connection.execute(f"{COMMENT_SELECT} WHERE c.id = ?", (cursor.lastrowid,)).fetchone()  # nosec B608
+        reactions = _reaction_summaries(connection, "comment", [row["id"]], principal.username)
     hub.publish("commentsChanged", {"game_id": game_id})
     if new_status == moderation.STATUS_VISIBLE:
         xp.award(principal.username, "comment", row["id"])
     else:
         _held("comment", game_id, principal, body.body)
-    return _comment(row, principal)
+    return _comment(row, principal, reactions=reactions)
 
 
 @router.delete("/games/{game_id}/comments/{comment_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -287,3 +390,60 @@ def delete_comment(game_id: int, comment_id: int, principal: Principal = CURRENT
     hub.publish("commentsChanged", {"game_id": game_id})
     hub.publish("moderationChanged", {})
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+REACTION_TABLES = {
+    "reviews": ("review", "game_reviews"),
+    "comments": ("comment", "game_comments"),
+}
+
+
+@router.post("/games/{game_id}/{kind}/{item_id}/reactions")
+def toggle_reaction(
+    game_id: int,
+    item_id: int,
+    body: ReactionWrite,
+    kind: Literal["reviews", "comments"],
+    principal: Principal = CURRENT_PRINCIPAL,
+) -> dict:
+    reaction_kind, table = REACTION_TABLES[kind]
+    with closing(get_connection()) as connection:
+        row = connection.execute(
+            f"SELECT status, locked FROM {table} WHERE id = ? AND game_id = ?",  # table is from REACTION_TABLES  # nosec B608
+            (item_id, game_id),
+        ).fetchone()
+        if row is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"{reaction_kind.capitalize()} not found")
+        if row["locked"]:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="This post is locked.")
+        if row["status"] != moderation.STATUS_VISIBLE:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="This post is not available for reactions.")
+
+        current = connection.execute(
+            """
+            SELECT emoji FROM content_reactions
+            WHERE kind = ? AND item_id = ? AND username = ?
+            """,
+            (reaction_kind, item_id, principal.username),
+        ).fetchone()
+        if current and current["emoji"] == body.emoji:
+            connection.execute(
+                "DELETE FROM content_reactions WHERE kind = ? AND item_id = ? AND username = ?",
+                (reaction_kind, item_id, principal.username),
+            )
+        else:
+            connection.execute(
+                """
+                INSERT INTO content_reactions (kind, item_id, username, emoji, created_at)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT (kind, item_id, username)
+                DO UPDATE SET emoji = excluded.emoji, created_at = excluded.created_at
+                """,
+                (reaction_kind, item_id, principal.username, body.emoji, now()),
+            )
+        connection.commit()
+        summary = _reaction_summaries(connection, reaction_kind, [item_id], principal.username).get(
+            item_id, {"reactions": [], "mine": None}
+        )
+    hub.publish("reviewsChanged" if reaction_kind == "review" else "commentsChanged", {"game_id": game_id})
+    return {"reactions": summary["reactions"], "my_reaction": summary["mine"]}

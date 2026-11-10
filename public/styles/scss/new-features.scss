@@ -1,0 +1,327 @@
+body[data-theme="cool-modern-gaming"] {
+  color-scheme: dark;
+  --ink: #e7f2ff;
+  --muted: #a7bdd4;
+  --line: rgba(68, 214, 255, 0.24);
+  --panel: rgba(17, 29, 49, 0.9);
+  --accent: #44d6ff;
+  --accent-dark: #1592bd;
+  --background: #080f1d;
+  --neon-cyan: #44d6ff;
+  --neon-magenta: #a879ff;
+  --paper: #080f1d;
+  --surface: rgba(17, 29, 49, 0.9);
+  --green: #44d6ff;
+  --green-soft: rgba(68, 214, 255, 0.16);
+  --orange: #a879ff;
+  --yellow: #f6ca5c;
+  background-color: #080f1d;
+  background-image:
+    radial-gradient(ellipse at 12% 8%, rgba(68, 214, 255, 0.2), transparent 40%),
+    radial-gradient(ellipse at 88% 78%, rgba(168, 121, 255, 0.2), transparent 44%);
+}
+
+body[data-theme="anniversary"] {
+  color-scheme: dark;
+  --ink: #fff6df;
+  --muted: #d3c4a0;
+  --line: rgba(246, 202, 92, 0.3);
+  --panel: rgba(41, 29, 60, 0.88);
+  --accent: #f6ca5c;
+  --accent-dark: #c3972c;
+  --background: #19112b;
+  --neon-cyan: #f6ca5c;
+  --neon-magenta: #ec78ae;
+  --paper: #19112b;
+  --surface: rgba(41, 29, 60, 0.88);
+  --green: #f6ca5c;
+  --green-soft: rgba(246, 202, 92, 0.16);
+  --orange: #ec78ae;
+  --yellow: #f6ca5c;
+  background-color: #19112b;
+  background-image:
+    radial-gradient(ellipse at 12% 8%, rgba(246, 202, 92, 0.23), transparent 40%),
+    radial-gradient(ellipse at 88% 78%, rgba(236, 120, 174, 0.2), transparent 44%);
+}
+
+.discussion-reactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 0;
+}
+
+.discussion-reaction,
+.discussion-lock {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 30px;
+  padding: 3px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink);
+  background: var(--panel);
+  cursor: pointer;
+  font: inherit;
+}
+
+.discussion-reaction[aria-pressed="true"] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.discussion-reaction:disabled,
+.discussion-lock:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.discussion-lock {
+  width: 30px;
+  min-width: 30px;
+  padding: 3px;
+}
+
+.discussion-lock-status {
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+
+.permissions-page {
+  max-width: 900px;
+  margin: 46px auto;
+}
+
+.workspace-page {
+  width: 100%;
+  min-width: 0;
+  margin: clamp(24px, 5vw, 46px) auto;
+}
+
+.workspace-topbar {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: clamp(10px, 2vw, 24px);
+}
+
+.workspace-topbar .topbar-start,
+.workspace-topbar .wordmark,
+.workspace-topbar .account-area {
+  min-width: 0;
+}
+
+.workspace-topbar .wordmark > span:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.workspace-topbar .account-area {
+  flex-wrap: wrap;
+}
+
+.workspace-page h1 {
+  font-size: clamp(1.8rem, 5vw, 2.65rem);
+  overflow-wrap: anywhere;
+}
+
+.workspace-page .heading-copy,
+.workspace-page .dashboard-status {
+  overflow-wrap: anywhere;
+}
+
+.permissions-users {
+  display: grid;
+  gap: 14px;
+  margin-top: 24px;
+}
+
+.permissions-user {
+  min-width: 0;
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.permissions-user-heading,
+.permissions-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.permissions-user-heading h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.permissions-note {
+  margin: 12px 0 0;
+  color: var(--muted);
+}
+
+.permissions-form {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.permissions-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+  border-radius: calc(8px + 4px);
+  cursor: pointer;
+}
+
+.permissions-option input {
+  margin-top: 3px;
+  accent-color: var(--green);
+}
+
+.permissions-option strong,
+.permissions-option small {
+  display: block;
+}
+
+.permissions-option small {
+  margin-top: 3px;
+  color: var(--muted);
+}
+
+.permissions-actions {
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.workspace-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.workspace-form label {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+}
+
+.workspace-form .workspace-favorites-label {
+  grid-column: 1 / -1;
+}
+
+.workspace-favorites-label small {
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+.workspace-form input,
+.workspace-form select,
+.workspace-form textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 11px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+
+.workspace-form input:focus,
+.workspace-form select:focus,
+.workspace-form textarea:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.workspace-form button {
+  justify-self: start;
+  align-self: end;
+  min-height: 44px;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 860px) {
+  .workspace-topbar {
+    grid-template-columns: minmax(0, 1fr) auto;
+    height: 78px;
+  }
+}
+
+@media (max-width: 600px) {
+  .workspace-topbar {
+    gap: 8px;
+  }
+
+  .workspace-topbar .topbar-start {
+    gap: 8px;
+  }
+
+  .workspace-topbar .wordmark {
+    gap: 8px;
+    font-size: clamp(0.58rem, 2.5vw, 0.72rem);
+  }
+
+  .workspace-topbar .wordmark small {
+    font-size: 0.52rem;
+    overflow-wrap: anywhere;
+  }
+
+  .workspace-topbar .account-area {
+    gap: 8px;
+  }
+
+  .permissions-page {
+    margin: 28px auto;
+  }
+
+  .workspace-page {
+    margin: 24px auto;
+  }
+
+  .permissions-user {
+    padding: 16px;
+  }
+
+  .workspace-form {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .workspace-form .workspace-favorites-label {
+    grid-column: auto;
+  }
+
+  .workspace-form button {
+    justify-self: stretch;
+    width: 100%;
+  }
+}
+
+@media (max-width: 380px) {
+  .workspace-shell {
+    width: calc(100% - 20px);
+  }
+
+  .workspace-topbar .wordmark-mark {
+    width: 30px;
+  }
+
+  .workspace-page .permissions-user {
+    padding: 14px;
+  }
+}

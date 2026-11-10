@@ -85,6 +85,7 @@ function queueCard(item) {
     element("span", `role-badge moderation-status-${item.status}`, window.i18n.t(STATUS_LABELS[item.status] || item.status)),
     element("span", "role-badge", window.i18n.t(item.kind === "review" ? "Review" : "Comment")),
   );
+  if (item.locked) head.append(element("span", "role-badge moderation-status-hidden", "Locked"));
   if (item.open_reports) {
     head.append(element("span", "role-badge moderation-reports",
       window.i18n.t(item.open_reports === 1 ? "{count} report" : "{count} reports", { count: item.open_reports })));
@@ -118,6 +119,7 @@ function queueCard(item) {
     ["approve", "primary-button", "Approve", "Approved. Everyone can see it again."],
     ["hide", "secondary-button", "Hide", "Hidden from everyone but the author."],
     ["remove", "danger-button", "Delete", "Deleted. The author was told."],
+    [item.locked ? "unlock" : "lock", "secondary-button", item.locked ? "Unlock" : "Lock", item.locked ? "Post unlocked." : "Post locked."],
   ];
   for (const [action, className, label, done] of buttons) {
     if (action === "hide" && item.status === "hidden") continue;

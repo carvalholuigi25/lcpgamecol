@@ -201,21 +201,24 @@ def _get_account(username: str) -> dict:
 
 
 @router.get("")
-def list_users() -> list[dict]:
+def list_users(_principal: auth.Principal = Depends(auth.require_admin)) -> list[dict]:
     accounts = _accounts()
     ordered = sorted(accounts.values(), key=lambda account: (account["role"] != auth.ROLE_ADMIN, account["username"].lower()))
     return _profiles([account["username"] for account in ordered])
 
 
 @router.get("/game-options")
-def list_favorite_game_options() -> list[dict]:
+def list_favorite_game_options(_principal: auth.Principal = Depends(auth.require_admin)) -> list[dict]:
     with closing(get_connection()) as connection:
         rows = connection.execute("SELECT id, title, release_year FROM games ORDER BY title COLLATE NOCASE").fetchall()
     return [{"id": row["id"], "title": row["title"], "release_year": row["release_year"]} for row in rows]
 
 
 @router.get("/{username}")
-def get_user_profile(username: str = PathParam(pattern=USERNAME_PATH_PATTERN)) -> dict:
+def get_user_profile(
+    username: str = PathParam(pattern=USERNAME_PATH_PATTERN),
+    _principal: auth.Principal = Depends(auth.require_admin),
+) -> dict:
     return get_profile(_get_account(username)["username"])
 
 
@@ -274,7 +277,9 @@ def save_profile(username: str, body: ProfileUpdate) -> dict:
 
 @router.put("/{username}")
 def update_user_profile(
-    body: ProfileUpdate, username: str = PathParam(pattern=USERNAME_PATH_PATTERN)
+    body: ProfileUpdate,
+    username: str = PathParam(pattern=USERNAME_PATH_PATTERN),
+    _principal: auth.Principal = Depends(auth.require_permission("users.edit_profile")),
 ) -> dict:
     return save_profile(username, body)
 

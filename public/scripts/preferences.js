@@ -8,9 +8,11 @@ const seasonalThemes = {
   easter: "Easter",
   christmas: "Christmas",
   "new-years-eve": "New Year's Eve",
+  anniversary: "Anniversary",
 };
 const availableThemes = [
   "auto", "dark", "white", "glassmorphism", "liquid-glass", "sunsetvibes", "cyber-retro", "rgb",
+  "cool-modern-gaming",
   "seasonal", ...Object.keys(seasonalThemes),
 ];
 const localeByLanguage = { en: "en-GB", pt: "pt-PT", de: "de-DE", fr: "fr-FR", it: "it-IT", es: "es-ES", ja: "ja-JP" };

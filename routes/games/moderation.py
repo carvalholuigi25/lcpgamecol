@@ -195,7 +195,7 @@ def get_moderation_queue() -> dict:
             rating = "p.rating" if kind == "review" else "NULL"
             rows = connection.execute(
                 f"""
-                SELECT p.id, p.game_id, p.username, p.body, p.status, p.created_at, {rating} AS rating,
+                SELECT p.id, p.game_id, p.username, p.body, p.status, p.locked, p.created_at, {rating} AS rating,
                        g.title AS game_title, u.display_name,
                        (SELECT COUNT(*) FROM content_reports r
                         WHERE r.kind = ? AND r.item_id = p.id AND r.status = 'open') AS open_reports
@@ -259,6 +259,19 @@ def _set_status(kind: str, item_id: int, new_status: str, note: str | None, prin
     return {"kind": kind, "id": item_id, "status": new_status}
 
 
+def _set_locked(kind: str, item_id: int, locked: bool) -> dict:
+    with closing(get_connection()) as connection:
+        row = _get_post(connection, kind, item_id)
+        connection.execute(
+            f"UPDATE {TABLES[kind]} SET locked = ? WHERE id = ?",  # table is from TABLES  # nosec B608
+            (locked, item_id),
+        )
+        connection.commit()
+    hub.publish(CHANGE_EVENTS[kind], {"game_id": row["game_id"]})
+    hub.publish("moderationChanged", {})
+    return {"kind": kind, "id": item_id, "locked": locked}
+
+
 @admin_router.post("/{kind}/{item_id}/approve")
 def approve_post(kind: Kind, item_id: int, body: ModeratorNote | None = None,
                  principal: Principal = Depends(require_admin)) -> dict:
@@ -287,3 +300,14 @@ def remove_post(kind: Kind, item_id: int, body: ModeratorNote | None = None,
     hub.publish(CHANGE_EVENTS[kind], {"game_id": row["game_id"]})
     hub.publish("moderationChanged", {})
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@admin_router.post("/{kind}/{item_id}/lock")
+def lock_post(kind: Kind, item_id: int, _body: ModeratorNote | None = None) -> dict:
+    """Prevent the author from deleting a post and all users from reacting to it."""
+    return _set_locked(kind, item_id, True)
+
+
+@admin_router.post("/{kind}/{item_id}/unlock")
+def unlock_post(kind: Kind, item_id: int, _body: ModeratorNote | None = None) -> dict:
+    return _set_locked(kind, item_id, False)

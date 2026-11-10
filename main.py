@@ -23,6 +23,7 @@ from backend.auth import oauth, two_factor
 from backend.auth.auth import (
     AUTH_COOKIE_NAME,
     AUTH_COOKIE_SECURE,
+    Principal,
     TOKEN_EXPIRE_SECONDS,
     authenticate,
     create_access_token,
@@ -32,6 +33,7 @@ from backend.auth.auth import (
     get_trusted_origins,
     issue_session,
     register_user,
+    require_admin,
 )
 from backend.auth.rate_limit import RateLimitMiddleware
 from backend.auth.routes import router as account_router
@@ -127,6 +129,13 @@ app.add_middleware(GZipMiddleware, minimum_size=1024)
 # Runs after the rate limit (added last, so outermost) so blocked visitors are rate limited too.
 app.add_middleware(AccessControlMiddleware)
 app.add_middleware(RateLimitMiddleware)
+
+
+@app.get("/pages/admin/permissions.html", include_in_schema=False)
+def read_permissions_asset(_principal: Principal = Depends(require_admin)) -> FileResponse:
+    return FileResponse(PAGES_DIRECTORY / "admin" / "permissions.html", media_type="text/html")
+
+
 app.mount(
     "/nmodules",
     CachedStaticFiles(
@@ -358,6 +367,16 @@ def read_moderation_page() -> FileResponse:
 @app.get("/admin/user-directory", include_in_schema=False)
 def read_users_page() -> FileResponse:
     return FileResponse(PAGES_DIRECTORY / "admin" / "users.html", media_type="text/html")
+
+
+@app.get("/admin/permissions", include_in_schema=False)
+def read_permissions_page(_principal=Depends(require_admin)) -> FileResponse:
+    return FileResponse(PAGES_DIRECTORY / "admin" / "permissions.html", media_type="text/html")
+
+
+@app.get("/workspace", include_in_schema=False)
+def read_workspace_page(_username: str = Depends(get_current_user)) -> FileResponse:
+    return FileResponse(PAGES_DIRECTORY / "admin" / "workspace.html", media_type="text/html")
 
 
 @app.get("/health", tags=["health"])

@@ -435,6 +435,27 @@ def require_role(*allowed_roles: str):
 require_admin = require_role(ROLE_ADMIN)
 
 
+def require_permission(permission: str):
+    """Allow administrators or users granted the named capability."""
+
+    def dependency(principal: Principal = _current_principal_dependency) -> Principal:
+        if principal.role == ROLE_ADMIN:
+            return principal
+        with closing(database.get_connection()) as connection:
+            granted = connection.execute(
+                "SELECT 1 FROM user_permissions WHERE username = ? AND permission = ?",
+                (principal.username, permission),
+            ).fetchone()
+        if granted is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Insufficient permissions",
+            )
+        return principal
+
+    return dependency
+
+
 def get_current_user_from_refresh_token(
     token: str | None = _refresh_token_dependency,
 ) -> str:

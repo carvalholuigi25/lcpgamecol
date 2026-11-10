@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f4f5ef" />
+    <title>Granted actions</title>
+    <link rel="stylesheet" href="/public/styles/css/admin.css" />
+    <link rel="stylesheet" href="/public/styles/css/new-features.css" />
+  </head>
+  <body>
+    <aside id="admin-sidebar" class="admin-sidebar" aria-label="Page links" hidden></aside>
+    <div id="sidebar-backdrop" class="sidebar-backdrop" hidden></div>
+    <main class="admin-shell workspace-shell">
+      <header class="topbar workspace-topbar">
+        <div class="topbar-start">
+          <button id="sidebar-toggle" class="icon-button sidebar-toggle" type="button" aria-controls="admin-sidebar" aria-expanded="true" aria-label="Hide page links" title="Hide page links" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+          </button>
+          <a class="wordmark" href="/library" aria-label="Games Library home">
+            <span class="wordmark-mark" aria-hidden="true">G</span>
+            <span>LCPGAMECOL <small>GRANTED ACTIONS</small></span>
+          </a>
+        </div>
+        <div class="account-area">
+          <span id="workspace-account" class="account-name"></span>
+          <a class="secondary-button" href="/library">Library</a>
+        </div>
+      </header>
+      <section class="permissions-page workspace-page">
+        <p class="kicker">ACCOUNT TOOLS</p>
+        <h1>Granted actions</h1>
+        <p class="heading-copy">Use the actions an administrator has enabled for your account.</p>
+        <p id="workspace-status" class="dashboard-status" role="status" aria-live="polite"></p>
+
+        <section id="workspace-games-create" class="permissions-user" hidden>
+          <h2>Create a game</h2>
+          <form id="game-create-form" class="workspace-form">
+            <label>Title<input name="title" required maxlength="200" /></label>
+            <label>Genre<input name="genre" required maxlength="120" /></label>
+            <label>Release year<input name="release_year" type="number" min="1" max="9999" required /></label>
+            <label>Platforms<input name="platforms" value="PC" required /></label>
+            <button class="primary-button" type="submit">Create game</button>
+          </form>
+        </section>
+
+        <section id="workspace-games-edit" class="permissions-user" hidden>
+          <h2>Edit a game</h2>
+          <form id="game-edit-form" class="workspace-form">
+            <label>Game<select name="game_id" required></select></label>
+            <label>Title<input name="title" required maxlength="200" /></label>
+            <label>Genre<input name="genre" required maxlength="120" /></label>
+            <label>Release year<input name="release_year" type="number" min="1" max="9999" required /></label>
+            <label>Platforms<input name="platforms" required /></label>
+            <button class="primary-button" type="submit">Save game</button>
+          </form>
+        </section>
+
+        <section id="workspace-games-delete" class="permissions-user" hidden>
+          <h2>Delete a game</h2>
+          <form id="game-delete-form" class="workspace-form">
+            <label>Game<select name="game_id" required></select></label>
+            <button class="primary-button" type="submit">Delete game</button>
+          </form>
+        </section>
+
+        <section id="workspace-users-edit" class="permissions-user" hidden>
+          <h2>Edit user information</h2>
+          <form id="user-edit-form" class="workspace-form">
+            <label>Account<select name="username" required></select></label>
+            <label>Display name<input name="display_name" maxlength="64" /></label>
+            <label>Bio<textarea name="bio" maxlength="600" rows="4"></textarea></label>
+            <label>Location<input name="location" maxlength="80" /></label>
+            <label>Avatar image URL<input name="avatar_url" type="url" /></label>
+            <label>Cover image URL<input name="cover_url" type="url" /></label>
+            <label class="workspace-favorites-label">Favorite games
+              <select name="favorite_game_ids" multiple size="5" aria-describedby="favorite-games-hint"></select>
+              <small id="favorite-games-hint">Select multiple games with Ctrl or Command.</small>
+            </label>
+            <button class="primary-button" type="submit">Save profile</button>
+          </form>
+        </section>
+      </section>
+    </main>
+    <script defer src="/public/scripts/sidebar.js"></script>
+    <script defer src="/public/scripts/workspace.js"></script>
+  </body>
+</html>

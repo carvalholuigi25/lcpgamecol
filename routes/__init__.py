@@ -30,6 +30,7 @@ def __getattr__(name: str):
     from routes.users.feedback import router as feedback_router
     from routes.users.messages import router as messages_router
     from routes.users.notifications import router as notifications_router
+    from routes.users.permissions import router as user_permissions_router
     from routes.users.profile import router as profile_router
     from routes.users.two_factor import router as two_factor_router
     from routes.users.xp import router as xp_router
@@ -42,6 +43,7 @@ def __getattr__(name: str):
         tags=["users"],
     )
     router.include_router(profile_router)
+    router.include_router(user_permissions_router)
     router.include_router(two_factor_router)
     router.include_router(xp_router)
     router.include_router(notifications_router)

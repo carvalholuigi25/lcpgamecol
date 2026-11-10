@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f4f5ef" />
+    <title>Admin / User permissions</title>
+    <link rel="stylesheet" href="/public/styles/css/admin.css" />
+    <link rel="stylesheet" href="/public/styles/css/new-features.css" />
+  </head>
+  <body>
+    <aside id="admin-sidebar" class="admin-sidebar" aria-label="Page links" hidden></aside>
+    <div id="sidebar-backdrop" class="sidebar-backdrop" hidden></div>
+    <main class="admin-shell">
+      <header class="topbar">
+        <div class="topbar-start">
+          <button id="sidebar-toggle" class="icon-button sidebar-toggle" type="button" aria-controls="admin-sidebar" aria-expanded="true" aria-label="Hide page links" title="Hide page links" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+          </button>
+          <a class="wordmark" href="/admin" aria-label="Games Library admin home">
+            <span class="wordmark-mark" aria-hidden="true">G</span>
+            <span>LCPGAMECOL <small>LIBRARY ADMIN</small></span>
+          </a>
+        </div>
+        <div class="account-area">
+          <span id="account-name" class="account-name"></span>
+          <a class="secondary-button" href="/admin">Dashboard</a>
+        </div>
+      </header>
+      <section class="permissions-page">
+        <p class="kicker">ADMIN TOOLS / ACCESS</p>
+        <h1>User permissions</h1>
+        <p class="heading-copy">Grant specific collection actions to individual accounts. Administrators always have every permission.</p>
+        <p id="permissions-status" class="dashboard-status" role="status" aria-live="polite"></p>
+        <div id="permissions-users" class="permissions-users" aria-live="polite"></div>
+      </section>
+    </main>
+    <script defer src="/public/scripts/sidebar.js"></script>
+    <script defer src="/public/scripts/user_permissions.js"></script>
+  </body>
+</html>

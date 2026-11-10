@@ -9,7 +9,7 @@ from typing import Annotated
 import httpx2 as httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from backend.auth.auth import require_admin
+from backend.auth.auth import require_admin, require_permission
 from backend.database.database import get_autoincrement, get_connection, reset_autoincrement
 from backend.realtime.hub import hub
 from routes.games.schemas import (
@@ -725,7 +725,7 @@ def insert_game(connection, game: GameCreate) -> int:
     response_model=Game,
     status_code=201,
     tags=["games"],
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_permission("games.create"))],
 )
 def create_game(game: GameCreate) -> Game:
     with closing(get_connection()) as connection:
@@ -904,7 +904,7 @@ def get_game(game_id: int) -> Game:
     "/games/{game_id}",
     response_model=Game,
     tags=["games"],
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_permission("games.edit"))],
 )
 def update_game(game_id: int, game: GameCreate) -> Game:
     with closing(get_connection()) as connection:
@@ -949,7 +949,7 @@ def delete_all_games() -> None:
     "/games/{game_id}",
     status_code=204,
     tags=["games"],
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_permission("games.delete"))],
 )
 def delete_game(game_id: int) -> None:
     with closing(get_connection()) as connection:
