@@ -220,6 +220,8 @@ dialog.inbox-dialog {
   cursor: pointer;
 
   &[aria-selected="true"] {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
     border-bottom-color: var(--inbox-accent);
     color: var(--inbox-accent);
   }

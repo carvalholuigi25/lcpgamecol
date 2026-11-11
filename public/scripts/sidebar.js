@@ -71,6 +71,10 @@
   }
 
   function buildNav() {
+    const brand = document.createElement("div");
+    brand.className = "sidebar-brand";
+    brand.innerHTML = '<span class="sidebar-brand-mark" aria-hidden="true">G</span><span class="sidebar-brand-copy"><strong>LCPGAMECOL</strong><small>LIBRARY CONSOLE</small></span>';
+
     const nav = document.createElement("nav");
     nav.className = "sidebar-nav";
     nav.setAttribute("aria-label", "Page links");
@@ -93,6 +97,7 @@
         const link = document.createElement("a");
         link.href = href;
         link.title = text;
+        link.setAttribute("aria-label", text);
         link.innerHTML = svg(ICONS[icon]);
         const span = document.createElement("span");
         span.textContent = text;
@@ -101,7 +106,7 @@
       }
       nav.append(section);
     }
-    sidebar.replaceChildren(nav);
+    sidebar.replaceChildren(brand, nav);
   }
 
   buildNav();

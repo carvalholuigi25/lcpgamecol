@@ -2750,7 +2750,13 @@ body[data-theme="liquid-glass"] {
     label { grid-column: 1 / -1; }
   }
 }
-.game-data-help { margin: 0 0 8px; }
+.game-data-help { 
+  margin: 0 0 8px; 
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  width: auto;
+  max-width: 100%;
+}
 .user-reset-result {
   display: flex;
   gap: 8px;
