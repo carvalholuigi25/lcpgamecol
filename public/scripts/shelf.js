@@ -320,20 +320,37 @@ function resetFilterSwitches() {
   }
 }
 
+// Lower-cases and strips accents so "pokemon" finds "Pokémon".
+function normalizeSearchText(value) {
+  return String(value ?? "").normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+}
+
+// Every word of the query must appear somewhere in the game's searchable text, in any order,
+// so "zelda switch" finds a Zelda game on Switch.
+function searchTermsOf(query) {
+  return normalizeSearchText(query).split(/\s+/).filter(Boolean);
+}
+
+function searchableTextOf(game, titleOnly) {
+  const fields = titleOnly
+    ? [game.title]
+    : [game.title, game.genre, game.category, game.platforms, game.developer_name, game.publisher_name, game.release_year];
+  return normalizeSearchText(fields.map((field) => (Array.isArray(field) ? field.join(" ") : field ?? "")).join(" "));
+}
+
 function filterGames(items) {
-  const query = searchInput.value.trim().toLowerCase();
+  const terms = searchTermsOf(searchInput.value);
   const globalTitleSearch = appPanel.dataset.globalSearch === "true";
-  return items.filter(
-    (game) =>
-      !(hideNsfwInput?.checked && NSFW_RATINGS.has(String(game.esrb ?? "").toLowerCase())) &&
-      gameFilters.every(
-        (filter) => filter.selected.size === 0 || filter.valuesOf(game).some((value) => filter.selected.has(value)),
-      ) &&
-      (globalTitleSearch
-        ? String(game.title ?? "").toLowerCase()
-        : `${game.title ?? ""} ${game.genre ?? ""} ${game.category ?? ""}`.toLowerCase()
-      ).includes(query),
-  );
+  return items.filter((game) => {
+    if (hideNsfwInput?.checked && NSFW_RATINGS.has(String(game.esrb ?? "").toLowerCase())) return false;
+    const matchesFilters = gameFilters.every(
+      (filter) => filter.selected.size === 0 || filter.valuesOf(game).some((value) => filter.selected.has(value)),
+    );
+    if (!matchesFilters) return false;
+    if (terms.length === 0) return true;
+    const text = searchableTextOf(game, globalTitleSearch);
+    return terms.every((term) => text.includes(term));
+  });
 }
 
 // Renders the loaded games, respecting the search box and the dropdown filters.
@@ -345,7 +362,9 @@ function renderGames() {
   });
   gamesContainer.innerHTML = items.map(gameCard).join("");
   gamesEmpty.hidden = items.length > 0;
-  pagination.hidden = items.length === 0 || appPanel.dataset.globalSearch === "true";
+  // Hide pagination only when nothing was loaded: a search that empties this page must still
+  // let the user move on to the next one.
+  pagination.hidden = games.length === 0 || appPanel.dataset.globalSearch === "true";
 }
 
 function replaceSpaces(str) {

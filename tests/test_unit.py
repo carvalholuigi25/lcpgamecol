@@ -870,6 +870,26 @@ def test_fetch_games_by_title_maps_igdb_fields(fake_igdb):
     assert "limit 3;" in query
 
 
+def test_fetch_games_by_title_ranks_closest_titles_first(fake_igdb):
+    names = ["Portal Knights", "Bridge Constructor Portal", "Portal 2", "Portal", "Teleportal"]
+    fake_igdb({"https://api.igdb.com/v4/games": [{**IGDB_GAME, "id": i, "name": n} for i, n in enumerate(names)]})
+
+    games = games_routes._fetch_all_games_by_title("portal", 10)
+
+    assert [game.title for game in games] == [
+        "Portal", "Portal 2", "Portal Knights", "Bridge Constructor Portal", "Teleportal",
+    ]
+
+
+def test_fetch_games_by_title_keeps_accents_and_collapses_spaces(fake_igdb):
+    client = fake_igdb({"https://api.igdb.com/v4/games": []})
+
+    games_routes._fetch_all_games_by_title("  Pokémon   Legends ", 3)
+
+    query = client.requests[-1][1]["content"]
+    assert 'where name ~ *"Pokémon Legends"*' in query
+
+
 def test_fetch_games_by_title_handles_missing_release_date(fake_igdb):
     igdb_game = {**IGDB_GAME}
     del igdb_game["first_release_date"]

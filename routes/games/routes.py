@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import time
 from contextlib import closing
 from datetime import UTC
@@ -297,7 +298,8 @@ def _fetch_ext_artworks_games(game_ids: list[int], limit: int = 10) -> list[dict
 
 def _fetch_all_games_by_title(title: str, limit: int, hide_nsfw: bool = True) -> list[Game]:
     # Docs: https://api-docs.igdb.com/#getting-started
-    title = title.strip()
+    # Collapse runs of whitespace so "  final   fantasy " matches "Final Fantasy".
+    title = " ".join(title.split())
     if not title:
         raise HTTPException(status_code=400, detail="A game title is required")
 
@@ -309,7 +311,8 @@ def _fetch_all_games_by_title(title: str, limit: int, hide_nsfw: bool = True) ->
             detail="IGDB credentials are not configured",
         )
 
-    igdb_title = json.dumps(title)
+    # ensure_ascii=False keeps accented titles ("Pokémon") as UTF-8: IGDB does not decode \u escapes.
+    igdb_title = json.dumps(title, ensure_ascii=False)
     where_clause = f"where name ~ *{igdb_title}*"
     if hide_nsfw:
         where_clause += " & themes != (42)"
@@ -374,7 +377,24 @@ def _fetch_all_games_by_title(title: str, limit: int, hide_nsfw: bool = True) ->
             critic_rating=game.get("aggregated_rating", 0),
             esrb=_igdb_esrb_rating(game.get("age_ratings")),
         ))
+    # IGDB returns substring matches in no useful order; put the closest titles first.
+    mapped_games.sort(key=lambda game: _title_match_rank(game.title, title))
     return mapped_games
+
+
+def _title_match_rank(candidate: str, query: str) -> tuple[int, int, str]:
+    """Sort key for title search results: exact, prefix, word-prefix, then any match."""
+    name = candidate.casefold()
+    needle = query.casefold()
+    if name == needle:
+        rank = 0
+    elif name.startswith(needle):
+        rank = 1
+    elif re.search(rf"(?<!\w){re.escape(needle)}", name):
+        rank = 2
+    else:
+        rank = 3
+    return rank, len(name), name
 
 def _fetch_all_platforms(limit: int) -> list[GamePlatform]:
     # Docs: https://api-docs.igdb.com/#getting-started

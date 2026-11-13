@@ -15,22 +15,31 @@ const previousPageButton = document.getElementById("previous-page");
 const nextPageButton = document.getElementById("next-page");
 const lastPageButton = document.getElementById("last-page");
 const DEFAULT_LIMIT = 12;
-// A sort change during a load would be dropped by the busy guard, so run it afterwards.
-let sortChangedWhileBusy = false;
-function reloadForNewSort() {
+// The backend (and IGDB) return at most this many titles per global search.
+const GLOBAL_SEARCH_LIMIT = 500;
+// One-letter queries match most of IGDB, so wait for a second character.
+const GLOBAL_SEARCH_MIN_LENGTH = 2;
+const GLOBAL_SEARCH_DELAY_MS = 350;
+const LOCAL_SEARCH_PLACEHOLDER = searchInput.getAttribute("placeholder");
+const GLOBAL_SEARCH_PLACEHOLDER = "Search all game titles";
+// A reload requested during a load would be dropped by the busy guard, so run it afterwards.
+let reloadQueued = false;
+function reloadFirstPage() {
   if (globalTitleSearchToggle.checked) return;
   if (paginationBusy) {
-    sortChangedWhileBusy = true;
+    reloadQueued = true;
     return;
   }
   showReleases(1);
 }
-const currentSort = initSortSelect(document.getElementById("release-sort"), "releaseSort", reloadForNewSort);
+const currentSort = initSortSelect(document.getElementById("release-sort"), "releaseSort", reloadFirstPage);
 let releasePage = 1;
 let totalReleasePages = 1;
 let paginationBusy = false;
 let globalSearchTimer = null;
 let globalSearchRequest = 0;
+// The query and NSFW setting of the last global search, to skip identical repeats.
+let lastGlobalSearchKey = null;
 
 function pad(num) {
   return String(num).padStart(2, "0");
@@ -123,6 +132,8 @@ async function loadGamesReleases(page = releasePage) {
     });
     const response = await fetch(`/games/all-releases?${params}`);
     const result = await readReleaseResponse(response);
+    // The global title search was switched on while this page loaded: its results win.
+    if (globalTitleSearchToggle.checked) return;
     games = result.items;
     releasePage = page;
     totalReleasePages = Math.max(1, Math.ceil(result.total / limit));
@@ -130,43 +141,64 @@ async function loadGamesReleases(page = releasePage) {
     await syncReleaseLinks();
     appStatus.textContent = "";
   } finally {
-    window.setStatusLoading(appStatus, false);
+    if (!globalTitleSearchToggle.checked) window.setStatusLoading(appStatus, false);
     paginationBusy = false;
     updatePaginationControls();
-    if (sortChangedWhileBusy) {
-      sortChangedWhileBusy = false;
-      showReleases(1);
+    if (reloadQueued) {
+      reloadQueued = false;
+      reloadFirstPage();
     }
   }
 }
 
 function showReleases(page) {
   loadGamesReleases(page).catch((error) => {
-    appStatus.textContent = error.message;
+    if (!globalTitleSearchToggle.checked) appStatus.textContent = error.message;
   });
 }
 
 function setGlobalSearchMode(enabled) {
-  document.getElementById("app-panel").dataset.globalSearch = String(enabled);
+  appPanel.dataset.globalSearch = String(enabled);
   releaseControls.forEach((control) => control.classList.toggle("hidden", enabled));
+  searchInput.setAttribute("placeholder", enabled ? GLOBAL_SEARCH_PLACEHOLDER : LOCAL_SEARCH_PLACEHOLDER);
 }
 
-async function searchGlobalTitles(query) {
+function normalizeGlobalQuery(query) {
+  return query.trim().replace(/\s+/g, " ");
+}
+
+// Shows a hint instead of the "No games found" panel when no search has run yet.
+function showGlobalSearchHint(message) {
+  games = [];
+  renderGames();
+  gamesEmpty.hidden = true;
+  appStatus.textContent = window.i18n.t(message);
+  window.setStatusLoading(appStatus, false);
+}
+
+async function searchGlobalTitles(query, { force = false } = {}) {
+  clearTimeout(globalSearchTimer);
+  const title = normalizeGlobalQuery(query);
+  const key = `${title.toLowerCase()}|${hideNsfwInput.checked}`;
+  if (!force && key === lastGlobalSearchKey) return;
+  lastGlobalSearchKey = key;
   const request = ++globalSearchRequest;
-  const title = query.trim();
+
   if (!title) {
-    games = [];
-    renderGames();
-    appStatus.textContent = "";
-    window.setStatusLoading(appStatus, false);
+    showGlobalSearchHint("Type a game title to search all games.");
+    return;
+  }
+  if (title.length < GLOBAL_SEARCH_MIN_LENGTH) {
+    showGlobalSearchHint("Type at least 2 characters to search.");
     return;
   }
 
   const params = new URLSearchParams({
-    query: title.toLowerCase(),
+    query: title,
+    limit: GLOBAL_SEARCH_LIMIT,
     hide_nsfw: hideNsfwInput.checked,
   });
-  appStatus.textContent = "Searching all game titles...";
+  appStatus.textContent = window.i18n.t("Searching all game titles...");
   window.setStatusLoading(appStatus, true);
   try {
     const response = await fetch(`/games/external-search?${params}`);
@@ -180,9 +212,20 @@ async function searchGlobalTitles(query) {
     games = result;
     renderGames();
     await syncReleaseLinks();
-    if (request === globalSearchRequest) appStatus.textContent = "";
+    if (request !== globalSearchRequest) return;
+    appStatus.textContent =
+      result.length >= GLOBAL_SEARCH_LIMIT
+        ? window.i18n.t("Showing the first {count} matches. Refine your search to see more.", {
+            count: GLOBAL_SEARCH_LIMIT,
+          })
+        : "";
   } catch (error) {
-    if (request === globalSearchRequest) appStatus.textContent = error.message;
+    if (request !== globalSearchRequest) return;
+    // Let the same query be retried after a failure.
+    lastGlobalSearchKey = null;
+    games = [];
+    renderGames();
+    appStatus.textContent = error.message;
   } finally {
     if (request === globalSearchRequest) window.setStatusLoading(appStatus, false);
   }
@@ -190,20 +233,22 @@ async function searchGlobalTitles(query) {
 
 function scheduleGlobalTitleSearch() {
   clearTimeout(globalSearchTimer);
-  globalSearchTimer = setTimeout(() => searchGlobalTitles(searchInput.value), 300);
+  globalSearchTimer = setTimeout(() => searchGlobalTitles(searchInput.value), GLOBAL_SEARCH_DELAY_MS);
 }
 
 globalTitleSearchToggle.addEventListener("change", () => {
   clearTimeout(globalSearchTimer);
   globalSearchRequest += 1;
+  lastGlobalSearchKey = null;
   const globalSearchActive = globalTitleSearchToggle.checked;
   setGlobalSearchMode(globalSearchActive);
   if (globalSearchActive) {
     releaseDateLabel.textContent = "";
-    searchGlobalTitles(searchInput.value);
+    searchGlobalTitles(searchInput.value, { force: true });
   } else {
+    appStatus.textContent = "";
     window.setStatusLoading(appStatus, false);
-    showReleases(1);
+    reloadFirstPage();
   }
 });
 
@@ -211,12 +256,18 @@ searchInput.addEventListener("input", () => {
   if (globalTitleSearchToggle.checked) scheduleGlobalTitleSearch();
 });
 
+// Enter searches right away instead of waiting for the debounce.
+searchInput.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter" || event.isComposing || !globalTitleSearchToggle.checked) return;
+  event.preventDefault();
+  searchGlobalTitles(searchInput.value);
+});
+
 hideNsfwInput.addEventListener("change", () => {
   if (globalTitleSearchToggle.checked) {
-    clearTimeout(globalSearchTimer);
     searchGlobalTitles(searchInput.value);
   } else {
-    showReleases(1);
+    reloadFirstPage();
   }
 });
 
@@ -242,8 +293,16 @@ document.addEventListener("languagechange", updatePaginationControls);
 
 initShelf({
   gameActions: "releases",
-  load: () => loadGamesReleases(1),
+  load: () => {
+    // Browsers may restore the checkbox state on reload, so honour it on the first load too.
+    if (!globalTitleSearchToggle.checked) return loadGamesReleases(1);
+    setGlobalSearchMode(true);
+    return searchGlobalTitles(searchInput.value, { force: true });
+  },
   reset: () => {
+    clearTimeout(globalSearchTimer);
+    globalSearchRequest += 1;
+    lastGlobalSearchKey = null;
     releasePage = 1;
     totalReleasePages = 1;
     releaseDateLabel.textContent = "";
