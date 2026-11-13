@@ -92,10 +92,14 @@ def test_unknown_game_is_rejected(client, viewer_headers):
     assert client.delete("/games/9999/favorite", headers=viewer_headers).status_code == 404
 
 
-def test_favorites_are_capped(client, admin_headers, viewer_headers):
+def test_favorites_are_capped(client, admin_headers, viewer_headers, monkeypatch):
+    # The real cap is in the thousands; a small one exercises the same check without
+    # creating thousands of games over HTTP (which trips the API rate limiter).
+    favorites_max = 3
+    monkeypatch.setattr("routes.games.lists.FAVORITE_GAMES_MAX", favorites_max)
     ids = [
         client.post("/games", json={**GAME, "title": f"Game {index}"}, headers=admin_headers).json()["id"]
-        for index in range(FAVORITE_GAMES_MAX + 1)
+        for index in range(favorites_max + 1)
     ]
     for game_id in ids[:-1]:
         assert client.put(f"/games/{game_id}/favorite", headers=viewer_headers).status_code == 200
