@@ -865,8 +865,20 @@ def test_fetch_games_by_title_maps_igdb_fields(fake_igdb):
     assert "videos.video_id" in query
     assert "game_type.type" in query
     assert "involved_companies.company.name" in query
-    assert 'where name ~ "Portal \\"2\\""; ' in query  # stripped and JSON-escaped
+    assert 'where name ~ *"Portal \\"2\\""* & themes != (42); ' in query  # stripped and JSON-escaped
+    assert "sort first_release_date" not in query
     assert "limit 3;" in query
+
+
+def test_fetch_games_by_title_handles_missing_release_date(fake_igdb):
+    igdb_game = {**IGDB_GAME}
+    del igdb_game["first_release_date"]
+    fake_igdb({"https://api.igdb.com/v4/games": [igdb_game]})
+
+    [game] = games_routes._fetch_all_games_by_title("Portal", 3)
+
+    assert game.release_year == 0
+    assert game.release_date is None
 
 
 @pytest.mark.parametrize(
@@ -1016,6 +1028,7 @@ def test_fetch_games_by_date_returns_page_with_total(fake_igdb):
     (_, games_request), (_, count_request) = client.requests[-2:]
     assert "game_modes.id,game_modes.name" in games_request["content"]
     assert count_request["content"].startswith("where first_release_date >= ")
+    assert "& themes != (42);" in count_request["content"]
     assert count_request["content"] in games_request["content"]
     assert "offset 20; limit 5;" in games_request["content"]
 
@@ -1122,7 +1135,7 @@ def test_fetch_platform_versions_rejects_non_list_response(fake_igdb):
             games_routes.list_all_releases,
             "_fetch_all_games_by_date",
             (2024, 1, 2, 5, 20),
-            (2024, 1, 2, 20, 5, games_routes.ReleaseSort.RELEASE_DATE, None),
+                (2024, 1, 2, 20, 5, games_routes.ReleaseSort.RELEASE_DATE, None, True),
         ),
         (
             games_routes.list_all_releases_by_title,

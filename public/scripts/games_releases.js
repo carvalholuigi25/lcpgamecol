@@ -1,5 +1,7 @@
 // Requires shelf.js to be loaded first.
 const releaseFilter = document.getElementById("release-filter");
+const globalTitleSearchToggle = document.getElementById("search-all-titles");
+const releaseControls = releaseFilter.querySelectorAll("[data-release-control]");
 const yearInput = document.getElementById("release-year");
 const monthInput = document.getElementById("release-month");
 const dayInput = document.getElementById("release-day");
@@ -16,6 +18,7 @@ const DEFAULT_LIMIT = 12;
 // A sort change during a load would be dropped by the busy guard, so run it afterwards.
 let sortChangedWhileBusy = false;
 function reloadForNewSort() {
+  if (globalTitleSearchToggle.checked) return;
   if (paginationBusy) {
     sortChangedWhileBusy = true;
     return;
@@ -26,6 +29,8 @@ const currentSort = initSortSelect(document.getElementById("release-sort"), "rel
 let releasePage = 1;
 let totalReleasePages = 1;
 let paginationBusy = false;
+let globalSearchTimer = null;
+let globalSearchRequest = 0;
 
 function pad(num) {
   return String(num).padStart(2, "0");
@@ -113,6 +118,7 @@ async function loadGamesReleases(page = releasePage) {
       year,
       month,
       day,
+      hide_nsfw: hideNsfwInput.checked,
       ...currentSort(),
     });
     const response = await fetch(`/games/all-releases?${params}`);
@@ -140,6 +146,80 @@ function showReleases(page) {
   });
 }
 
+function setGlobalSearchMode(enabled) {
+  document.getElementById("app-panel").dataset.globalSearch = String(enabled);
+  releaseControls.forEach((control) => control.classList.toggle("hidden", enabled));
+}
+
+async function searchGlobalTitles(query) {
+  const request = ++globalSearchRequest;
+  const title = query.trim();
+  if (!title) {
+    games = [];
+    renderGames();
+    appStatus.textContent = "";
+    window.setStatusLoading(appStatus, false);
+    return;
+  }
+
+  const params = new URLSearchParams({
+    query: title.toLowerCase(),
+    hide_nsfw: hideNsfwInput.checked,
+  });
+  appStatus.textContent = "Searching all game titles...";
+  window.setStatusLoading(appStatus, true);
+  try {
+    const response = await fetch(`/games/external-search?${params}`);
+    const contentType = response.headers.get("content-type") || "";
+    if (!contentType.includes("json")) {
+      throw new Error("The global game search returned an unexpected response.");
+    }
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || "The global game search failed.");
+    if (request !== globalSearchRequest) return;
+    games = result;
+    renderGames();
+    await syncReleaseLinks();
+    if (request === globalSearchRequest) appStatus.textContent = "";
+  } catch (error) {
+    if (request === globalSearchRequest) appStatus.textContent = error.message;
+  } finally {
+    if (request === globalSearchRequest) window.setStatusLoading(appStatus, false);
+  }
+}
+
+function scheduleGlobalTitleSearch() {
+  clearTimeout(globalSearchTimer);
+  globalSearchTimer = setTimeout(() => searchGlobalTitles(searchInput.value), 300);
+}
+
+globalTitleSearchToggle.addEventListener("change", () => {
+  clearTimeout(globalSearchTimer);
+  globalSearchRequest += 1;
+  const globalSearchActive = globalTitleSearchToggle.checked;
+  setGlobalSearchMode(globalSearchActive);
+  if (globalSearchActive) {
+    releaseDateLabel.textContent = "";
+    searchGlobalTitles(searchInput.value);
+  } else {
+    window.setStatusLoading(appStatus, false);
+    showReleases(1);
+  }
+});
+
+searchInput.addEventListener("input", () => {
+  if (globalTitleSearchToggle.checked) scheduleGlobalTitleSearch();
+});
+
+hideNsfwInput.addEventListener("change", () => {
+  if (globalTitleSearchToggle.checked) {
+    clearTimeout(globalSearchTimer);
+    searchGlobalTitles(searchInput.value);
+  } else {
+    showReleases(1);
+  }
+});
+
 function navigateToReleasePage(page) {
   if (page < 1 || page > totalReleasePages || page === releasePage) return;
   showReleases(page);
@@ -147,6 +227,7 @@ function navigateToReleasePage(page) {
 
 releaseFilter.addEventListener("submit", (event) => {
   event.preventDefault();
+  if (globalTitleSearchToggle.checked) return;
   showReleases(1);
 });
 

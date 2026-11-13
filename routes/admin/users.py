@@ -22,7 +22,7 @@ from backend.gamification import xp
 from backend.mail.mailer import email_problem
 from backend.realtime.hub import hub
 
-FAVORITE_GAMES_MAX = 12
+FAVORITE_GAMES_MAX = 3000
 IMAGE_URL_MAX_LENGTH = 2048
 USERNAME_PATH_PATTERN = r"^[A-Za-z0-9][A-Za-z0-9_.@-]{0,63}$"
 UPLOAD_IMAGE_PATTERN = re.compile(r"^/admin/uploads/[0-9a-f]{32}(\?inline=true)?$")

@@ -576,7 +576,14 @@ def test_reset_autoincrement_keeps_existing_ids_safe(client, auth_headers):
     assert next_achievement["achievement_id"] == achievement["achievement_id"]
 
 
-def test_external_search_uses_query_parameter(client, auth_headers, monkeypatch):
+@pytest.mark.parametrize(
+    "params,expected_where",
+    [
+        ({"query": "Portal"}, 'where name ~ *"Portal"* & themes != (42);'),
+        ({"query": "Portal", "hide_nsfw": "false"}, 'where name ~ *"Portal"*;'),
+    ],
+)
+def test_external_search_uses_query_parameter(client, auth_headers, monkeypatch, params, expected_where):
     import routes.games.routes as games_routes
 
     class FakeResponse:
@@ -604,16 +611,16 @@ def test_external_search_uses_query_parameter(client, auth_headers, monkeypatch)
                     },
                 )()
             assert url == "https://api.igdb.com/v4/games"
-            assert 'where name ~ "Portal";' in kwargs["content"]
+            assert expected_where in kwargs["content"]
+            assert "limit 500;" in kwargs["content"]
+            assert "sort first_release_date" not in kwargs["content"]
             return FakeResponse()
 
     monkeypatch.setenv("IGDB_CLIENT_ID", "client-id")
     monkeypatch.setenv("IGDB_CLIENT_SECRET", "client-secret")
     monkeypatch.setattr(games_routes.httpx, "Client", lambda **kwargs: FakeClient())
 
-    response = client.get(
-        "/games/external-search?query=Portal&limit=1", headers=auth_headers
-    )
+    response = client.get("/games/external-search", params=params, headers=auth_headers)
 
     assert response.status_code == 200
     assert response.json()[0]["title"] == "Portal"

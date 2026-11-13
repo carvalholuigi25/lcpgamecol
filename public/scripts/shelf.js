@@ -12,6 +12,7 @@ const count = document.getElementById("count");
 const gamesEmpty = document.getElementById("games-empty");
 const pagination = document.querySelector(".pagination");
 const searchInput = document.getElementById("search");
+const hideNsfwInput = document.getElementById("hide-nsfw");
 const detailsDialog = document.getElementById("game-details");
 // Own modal dialog so the lightbox stacks above (and stays interactive over) the details dialog.
 const lightboxDialog = document.getElementById("screenshot-lightbox");
@@ -23,6 +24,11 @@ const clearFiltersButton = document.getElementById("clear-filters");
 const detailsActions = document.getElementById("details-actions");
 const detailsActionsStatus = document.getElementById("details-actions-status");
 const DEFAULT_GAME_COVER = "/public/images/default-game-cover.svg";
+const NSFW_RATINGS = new Set([
+  "m", "ao", "sixteen", "eighteen", "cero_d", "cero_z", "usk_16", "usk_18",
+  "grac_fifteen", "grac_eighteen", "class_ind_sixteen", "class_ind_eighteen",
+  "acb_m", "acb_ma15", "acb_r18", "acb_rc",
+]);
 // Covers of the first cards are above the fold: fetch them right away instead of lazily.
 const EAGER_COVER_COUNT = 4;
 // The trailer player and screenshot lightbox are only needed inside the details dialog,
@@ -316,12 +322,17 @@ function resetFilterSwitches() {
 
 function filterGames(items) {
   const query = searchInput.value.trim().toLowerCase();
+  const globalTitleSearch = appPanel.dataset.globalSearch === "true";
   return items.filter(
     (game) =>
+      !(hideNsfwInput?.checked && NSFW_RATINGS.has(String(game.esrb ?? "").toLowerCase())) &&
       gameFilters.every(
         (filter) => filter.selected.size === 0 || filter.valuesOf(game).some((value) => filter.selected.has(value)),
       ) &&
-      `${game.title ?? ""} ${game.genre ?? ""} ${game.category ?? ""}`.toLowerCase().includes(query),
+      (globalTitleSearch
+        ? String(game.title ?? "").toLowerCase()
+        : `${game.title ?? ""} ${game.genre ?? ""} ${game.category ?? ""}`.toLowerCase()
+      ).includes(query),
   );
 }
 
@@ -334,7 +345,7 @@ function renderGames() {
   });
   gamesContainer.innerHTML = items.map(gameCard).join("");
   gamesEmpty.hidden = items.length > 0;
-  pagination.hidden = items.length === 0;
+  pagination.hidden = items.length === 0 || appPanel.dataset.globalSearch === "true";
 }
 
 function replaceSpaces(str) {
@@ -814,7 +825,7 @@ function showGameDetails(game) {
     ["Developer", game.developer_name],
     ["Publisher", game.publisher_name],
     ["Website", game.website_url],
-    ["Release date", game.release_date || game.release_year],
+    ["Release date", game.release_date || game.release_year || null],
     ["Platforms", game.platforms],
     ["Game modes", Array.isArray(game.gamemodes) ? game.gamemodes.map((mode) => mode.name).join(", ") : game.gamemodes],
     ["Edition", game.editions],
@@ -1273,6 +1284,7 @@ function initShelf({ load, reset = () => {}, refresh = null, gameActions = null 
   });
 
   searchInput.addEventListener("input", renderGames);
+  hideNsfwInput?.addEventListener("change", renderGames);
 
   function syncFilterCheckboxes(filter) {
     filter.menu.querySelectorAll("input").forEach((input) => {

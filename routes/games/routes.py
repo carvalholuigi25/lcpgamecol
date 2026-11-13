@@ -295,7 +295,7 @@ def _fetch_ext_artworks_games(game_ids: list[int], limit: int = 10) -> list[dict
     return artworks
 
 
-def _fetch_all_games_by_title(title: str, limit: int) -> list[Game]:
+def _fetch_all_games_by_title(title: str, limit: int, hide_nsfw: bool = True) -> list[Game]:
     # Docs: https://api-docs.igdb.com/#getting-started
     title = title.strip()
     if not title:
@@ -310,13 +310,15 @@ def _fetch_all_games_by_title(title: str, limit: int) -> list[Game]:
         )
 
     igdb_title = json.dumps(title)
+    where_clause = f"where name ~ *{igdb_title}*"
+    if hide_nsfw:
+        where_clause += " & themes != (42)"
     query = (
         "fields name,first_release_date,summary,game_modes.id,game_modes.name,cover.url,screenshots.url,websites.category,websites.url,videos.video_id,game_type.type,"
         "involved_companies.developer,involved_companies.publisher,involved_companies.company.name,"
         f"{IGDB_AGE_RATING_FIELDS},genres.name,"
         "platforms.name,rating,aggregated_rating; "
-        f"where name ~ {igdb_title}; "
-        "sort first_release_date asc; "
+        f"{where_clause}; "
         f"limit {limit};"
     )
     try:
@@ -338,17 +340,20 @@ def _fetch_all_games_by_title(title: str, limit: int) -> list[Game]:
             detail="Unable to fetch all releases by title from IGDB",
         ) from error
 
-    return [
-        Game(
+    mapped_games = []
+    for game in games:
+        release_timestamp = game.get("first_release_date")
+        release_date = (
+            ndt.fromtimestamp(release_timestamp, tz=UTC).date()
+            if release_timestamp is not None
+            else None
+        )
+        mapped_games.append(Game(
             id=game["id"],
             title=game.get("name", "Untitled game"),
             genre=", ".join(genre["name"] for genre in game.get("genres", [])),
-            release_year=ndt.fromtimestamp(
-                game["first_release_date"], tz=UTC
-            ).year,
-            release_date=ndt.fromtimestamp(
-                game["first_release_date"], tz=UTC
-            ).date().isoformat(),
+            release_year=release_date.year if release_date else 0,
+            release_date=release_date.isoformat() if release_date else None,
             description=game.get("summary", ""),
             gamemodes=", ".join(mode["name"] for mode in game.get("game_modes", [])),
             cover_image_url=_igdb_cover_url(game.get("cover")),
@@ -368,9 +373,8 @@ def _fetch_all_games_by_title(title: str, limit: int) -> list[Game]:
             user_rating=game.get("rating", 0),
             critic_rating=game.get("aggregated_rating", 0),
             esrb=_igdb_esrb_rating(game.get("age_ratings")),
-        )
-        for game in games
-    ]
+        ))
+    return mapped_games
 
 def _fetch_all_platforms(limit: int) -> list[GamePlatform]:
     # Docs: https://api-docs.igdb.com/#getting-started
@@ -557,6 +561,7 @@ def _fetch_all_games_by_date(
     skip: int,
     sort: ReleaseSort = ReleaseSort.RELEASE_DATE,
     order: SortOrder | None = None,
+    hide_nsfw: bool = True,
 ) -> GameReleasePage:
     # Docs: https://api-docs.igdb.com/#getting-started
     client_id = os.environ.get("IGDB_CLIENT_ID") or os.getenv("IGDB_CLIENT_ID")
@@ -570,7 +575,10 @@ def _fetch_all_games_by_date(
 
     tzinfo = UTC
     parsed_date = int(ndt(year, month, day, 0, 0, 0, tzinfo=tzinfo).timestamp())
-    where_clause = f"where first_release_date >= {parsed_date}; "
+    where_clause = f"where first_release_date >= {parsed_date}"
+    if hide_nsfw:
+        where_clause += " & themes != (42)"
+    where_clause += "; "
     query = (
         "fields name,first_release_date,summary,game_modes.id,game_modes.name,cover.url,screenshots.url,websites.category,websites.url,videos.video_id,game_type.type,"
         "involved_companies.developer,involved_companies.publisher,involved_companies.company.name,"
@@ -796,8 +804,9 @@ def list_all_releases(
     limit: int = Query(10, ge=1, le=100),
     sort: ReleaseSort = ReleaseSort.RELEASE_DATE,
     order: Annotated[SortOrder | None, Query(description="Defaults to the natural order of the sort")] = None,
+    hide_nsfw: bool = True,
 ) -> list[Game]:
-    return _fetch_all_games_by_date(year, month, day, limit, skip, sort, order)
+    return _fetch_all_games_by_date(year, month, day, limit, skip, sort, order, hide_nsfw)
 
 @router.get("/games/title", response_model=list[Game], tags=["games"])
 def list_all_releases_by_title(
@@ -868,9 +877,10 @@ def search_games(
 @router.get("/games/external-search", response_model=list[Game], tags=["games"])
 def search_external_games(
     query: str = Query(..., min_length=1, max_length=200),
-    limit: int = Query(10, ge=1, le=100),
+    limit: int = Query(500, ge=1, le=500),
+    hide_nsfw: bool = True,
 ) -> list[Game]:
-    return _fetch_all_games_by_title(query, limit)
+    return _fetch_all_games_by_title(query, limit, hide_nsfw)
 
 @router.get("/games/platforms", response_model=list[GamePlatform], tags=["games"])
 def fetch_platforms_games(
