@@ -766,7 +766,7 @@ function renderGameMap(game) {
   frame.src = mapUrl.href;
   frame.title = `${game.title} interactive map`;
   frame.loading = "lazy";
-  frame.setAttribute("sandbox", "allow-scripts allow-forms allow-popups");
+  frame.setAttribute("sandbox", "allow-same-origin allow-scripts allow-forms allow-popups");
   frame.referrerPolicy = "strict-origin-when-cross-origin";
   frameContainer.append(frame);
 }
