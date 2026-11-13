@@ -97,6 +97,22 @@ def _igdb_website_url(game: dict) -> str:
     return url.replace("//", "https://", 1) if url.startswith("//") else url
 
 
+def _igdb_store_url(game: dict) -> str:
+    store_categories = {13, 16, 17, 20, 21, 22, 23, 25, 26, 27, 28, 29, 30, 32, 33, 34, 35, 42}
+    website = next(
+        (
+            entry
+            for entry in game.get("websites") or []
+            if entry.get("category") in store_categories and entry.get("url")
+        ),
+        None,
+    )
+    if not website:
+        return ""
+    url = website["url"]
+    return url.replace("//", "https://", 1) if url.startswith("//") else url
+
+
 def _igdb_trailers(game: dict) -> list[str]:
     return [
         f"https://www.youtube.com/watch?v={video['video_id']}"
@@ -341,6 +357,7 @@ def _fetch_all_games_by_title(title: str, limit: int) -> list[Game]:
             developer_name=_igdb_company_names(game, "developer"),
             publisher_name=_igdb_company_names(game, "publisher"),
             website_url=_igdb_website_url(game),
+            store_url=_igdb_store_url(game),
             trailer_url=_igdb_trailer_url(game),
             trailers=_igdb_trailers(game),
             category=_igdb_category(game),
@@ -609,6 +626,7 @@ def _fetch_all_games_by_date(
             developer_name=_igdb_company_names(game, "developer"),
             publisher_name=_igdb_company_names(game, "publisher"),
             website_url=_igdb_website_url(game),
+            store_url=_igdb_store_url(game),
             trailer_url=_igdb_trailer_url(game),
             trailers=_igdb_trailers(game),
             category=_igdb_category(game),
@@ -682,6 +700,7 @@ def _fetch_next_releases(limit: int) -> list[Game]:
             developer_name=_igdb_company_names(game, "developer"),
             publisher_name=_igdb_company_names(game, "publisher"),
             website_url=_igdb_website_url(game),
+            store_url=_igdb_store_url(game),
             trailer_url=_igdb_trailer_url(game),
             trailers=_igdb_trailers(game),
             category=_igdb_category(game),
@@ -713,8 +732,8 @@ def insert_game(connection, game: GameCreate) -> int:
     """Insert a game without committing and return its new id."""
     cursor = connection.execute(
         """
-        INSERT INTO games (title, genre, release_year, release_date, description, cover_image_url, image_url, screenshot_url, developer_name, publisher_name, website_url, trailer_url, screenshots, platforms, gamemodes, editions, user_rating, critic_rating, wishlisted, hoursplayed, esrb, minimum_system_requirements, recommended_system_requirements, category, trailers)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO games (title, genre, release_year, release_date, description, cover_image_url, image_url, screenshot_url, developer_name, publisher_name, website_url, store_url, map_url, trailer_url, screenshots, platforms, gamemodes, editions, user_rating, critic_rating, wishlisted, hoursplayed, esrb, minimum_system_requirements, recommended_system_requirements, category, trailers)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         game_database_values(game),
     )
@@ -913,7 +932,8 @@ def update_game(game_id: int, game: GameCreate) -> Game:
             UPDATE games
             SET title = ?, genre = ?, release_year = ?, release_date = ?,
                 description = ?, cover_image_url = ?, image_url = ?, screenshot_url = ?,
-                developer_name = ?, publisher_name = ?, website_url = ?, trailer_url = ?, screenshots = ?,
+                developer_name = ?, publisher_name = ?, website_url = ?, store_url = ?, map_url = ?,
+                trailer_url = ?, screenshots = ?,
                 platforms = ?, gamemodes = ?, editions = ?, user_rating = ?, critic_rating = ?,
                 wishlisted = ?, hoursplayed = ?, esrb = ?,
                 minimum_system_requirements = ?, recommended_system_requirements = ?,

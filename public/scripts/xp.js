@@ -31,10 +31,13 @@
     );
     document.getElementById("xp-bar-fill").style.width = `${state.progress}%`;
     document.getElementById("xp-bar").setAttribute("aria-valuenow", String(state.progress));
-    const toNext = state.next_level_xp - state.xp;
-    let next = t("{xp} XP to level {level}.", { xp: toNext, level: state.level + 1 });
-    if (state.next_rank) {
-      next += ` ${t("Rank {rank} at level {level}.", { rank: t(state.next_rank.name), level: state.next_rank.level })}`;
+    let next = t("Maximum level reached.");
+    if (state.level < state.max_level) {
+      const toNext = state.next_level_xp - state.xp;
+      next = t("{xp} XP to level {level}.", { xp: toNext, level: state.level + 1 });
+      if (state.next_rank) {
+        next += ` ${t("Rank {rank} at level {level}.", { rank: t(state.next_rank.name), level: state.next_rank.level })}`;
+      }
     }
     document.getElementById("xp-next").textContent = next;
 

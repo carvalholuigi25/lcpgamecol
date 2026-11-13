@@ -330,6 +330,8 @@ function gameFormPayload() {
     developer_name: values.get("developer_name") || "",
     publisher_name: values.get("publisher_name") || "",
     website_url: values.get("website_url") || "",
+    store_url: values.get("store_url") || "",
+    map_url: values.get("map_url") || "",
     trailer_url: values.get("trailer_url") || "",
     screenshots: values.get("screenshots").split(/\r?\n/).map((url) => url.trim()).filter(Boolean),
     trailers: values.get("trailers").split(/\r?\n/).map((url) => url.trim()).filter(Boolean),

@@ -460,6 +460,8 @@ def test_game_developer_publisher_website_trailer_and_screenshots_round_trip(
         "developer_name": "Valve",
         "publisher_name": "Valve",
         "website_url": "https://www.thinkwithportals.com/",
+        "store_url": "https://store.steampowered.com/app/400/Portal/",
+        "map_url": "https://example.com/portal-map",
         "trailer_url": "https://www.youtube.com/watch?v=abc123",
         "screenshots": [
             "https://cdn.example.com/portal-1.jpg",
@@ -490,6 +492,8 @@ def test_game_developer_publisher_website_trailer_and_screenshots_round_trip(
     assert updated.json()["developer_name"] == "Valve Corporation"
     assert updated.json()["publisher_name"] == game["publisher_name"]
     assert updated.json()["website_url"] == game["website_url"]
+    assert updated.json()["store_url"] == game["store_url"]
+    assert updated.json()["map_url"] == game["map_url"]
     assert updated.json()["trailer_url"] == game["trailer_url"]
     assert updated.json()["screenshots"] == updated_game["screenshots"]
 

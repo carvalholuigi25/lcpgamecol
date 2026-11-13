@@ -13,6 +13,15 @@ $xp-badge-colors: (
   elite: (#6a1b9a, #ba68c8, #fff),
   champion: (#c62828, #ff8a50, #fff),
   legend: (#b8860b, #ffe082, #2b1d00),
+  master: (#283593, #7986cb, #fff),
+  grandmaster: (#4527a0, #9575cd, #fff),
+  mythic: (#6a1b9a, #ce93d8, #fff),
+  immortal: (#00695c, #4db6ac, #fff),
+  celestial: (#0277bd, #80deea, #102027),
+  transcendent: (#ad1457, #f48fb1, #2b0012),
+  eternal: (#37474f, #b0bec5, #102027),
+  ascendant: (#ef6c00, #ffca28, #2b1600),
+  apex: (#5d4037, #ffca28, #2b1600),
 );
 
 .xp-badge {
@@ -57,8 +66,8 @@ $xp-badge-colors: (
 }
 
 // The top rank gets a slow shine.
-.xp-badge[data-rank="legend"],
-.xp-medal[data-rank="legend"] .xp-medal-shape {
+.xp-badge[data-rank="apex"],
+.xp-medal[data-rank="apex"] .xp-medal-shape {
   background-size: 200% 200%;
   animation: xp-badge-shine 4s ease-in-out infinite;
 }
@@ -119,8 +128,8 @@ $xp-badge-colors: (
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .xp-badge[data-rank="legend"],
-  .xp-medal[data-rank="legend"] .xp-medal-shape {
+  .xp-badge[data-rank="apex"],
+  .xp-medal[data-rank="apex"] .xp-medal-shape {
     animation: none;
   }
 }

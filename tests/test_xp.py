@@ -58,14 +58,27 @@ def test_levels_grow_further_apart():
 def test_ranks_follow_levels():
     assert xp.rank_for(1) == "Rookie"
     assert xp.rank_for(4) == "Explorer"
-    assert xp.rank_for(25) == "Legend"
+    assert xp.rank_for(20) == "Legend"
+    assert xp.rank_for(25) == "Master"
     assert xp.next_rank(4) == {"name": "Adventurer", "level": 5, "key": "adventurer"}
-    assert xp.next_rank(20) is None
+    assert xp.next_rank(20) == {"name": "Master", "level": 25, "key": "master"}
+    assert xp.next_rank(xp.MAX_LEVEL) is None
+
+
+def test_levels_stop_at_100():
+    assert xp.xp_for_level(100) == 495_000
+    assert xp.level_for(xp.xp_for_level(100)) == 100
+    assert xp.level_for(1_000_000) == 100
+    state = xp.summary(1_000_000)
+    assert (state["level"], state["rank"], state["next_level_xp"], state["progress"]) == (
+        100, "Apex", None, 100,
+    )
 
 
 def test_summary_reports_progress_through_the_level():
     assert xp.summary(150) == {
         "xp": 150, "level": 2, "rank": "Rookie", "rank_key": "rookie",
+        "max_level": 100,
         "next_rank": {"name": "Explorer", "level": 3, "key": "explorer"},
         "level_xp": 100, "next_level_xp": 300, "progress": 25,
     }
@@ -141,6 +154,7 @@ def test_leaderboard_orders_by_xp(client, admin_headers, viewer_headers, game_id
 def test_badge_names_the_rank_and_its_key():
     assert xp.badge(0) == {"level": 1, "rank": "Rookie", "rank_key": "rookie"}
     assert xp.badge(xp.xp_for_level(20)) == {"level": 20, "rank": "Legend", "rank_key": "legend"}
+    assert xp.badge(xp.xp_for_level(100)) == {"level": 100, "rank": "Apex", "rank_key": "apex"}
 
 
 def test_describe_lists_every_rank_with_its_badge_key(client, viewer_headers):

@@ -48,5 +48,5 @@ Planned work and known gaps. Move items to `CHANGELOG.md` when they ship.
 
 - [ ] Find and fix the `Unexpected token 'export'` error logged when the library loads (one of the scripts loaded from `/nmodules` is an ES module but is loaded as a classic script).
 - [ ] Add placeholder images for seed achievements whose icons return 404.
-- [ ] Add browser tests for the library and dashboard (Playwright).
+- [ ] Add browser tests for the library, releases, and dashboard (Playwright), including countdown completion, purchase links, map embeds, and review unlocking.
 - [ ] Add a check that fails when a UI string has no translation.

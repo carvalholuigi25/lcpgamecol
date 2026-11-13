@@ -166,6 +166,18 @@ def test_release_without_a_date_cannot_be_imported():
     assert error.value.status_code == 422
 
 
+def test_imported_game_carries_its_igdb_store_url():
+    game = igdb_imports.game_create_from_igdb(
+        {
+            "name": "Portal",
+            "first_release_date": 1191888000,
+            "websites": [{"category": 13, "url": "https://store.steampowered.com/app/400/Portal/"}],
+        }
+    )
+
+    assert game.store_url == "https://store.steampowered.com/app/400/Portal/"
+
+
 def test_invalid_igdb_ids_are_rejected(client, viewer_headers):
     assert client.get("/games/igdb/0", headers=viewer_headers).status_code == 422
 

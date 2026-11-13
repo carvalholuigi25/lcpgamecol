@@ -9,6 +9,15 @@
     elite: "bi-gem",
     champion: "bi-trophy-fill",
     legend: "bi-stars",
+    master: "bi-award-fill",
+    grandmaster: "bi-mortarboard-fill",
+    mythic: "bi-moon-stars-fill",
+    immortal: "bi-shield-fill",
+    celestial: "bi-sun-fill",
+    transcendent: "bi-lightning-charge-fill",
+    eternal: "bi-infinity",
+    ascendant: "bi-rocket-takeoff-fill",
+    apex: "bi-gem",
   };
 
   const t = (message, values) => window.i18n?.t(message, values) ?? message;

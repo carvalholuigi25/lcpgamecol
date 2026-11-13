@@ -1072,6 +1072,22 @@ dialog::backdrop {
   .release-countdown-caption { margin: 6px 0 0; color: var(--muted); font-size: 0.82rem; }
 
   &[data-released="true"] .release-countdown-units { opacity: 0.5; }
+
+  .release-countdown-buy-now { display: inline-flex; margin-top: 12px; }
+  .release-countdown-buy-now[hidden] { display: none; }
+}
+
+.details-map-section {
+  .details-map-frame { margin-bottom: 12px; }
+
+  .details-map-embed {
+    display: block;
+    width: 100%;
+    min-height: 360px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--panel);
+  }
 }
 
 .details-grid {

@@ -21,6 +21,7 @@ from backend.database.database import get_connection
 from backend.realtime.hub import hub
 
 LEVEL_STEP_XP = 100
+MAX_LEVEL = 100
 ONCE = "once"
 RECENT_EVENTS = 10
 LEADERBOARD_MAX = 50
@@ -55,6 +56,15 @@ RANKS = (
     (12, "Elite"),
     (16, "Champion"),
     (20, "Legend"),
+    (25, "Master"),
+    (30, "Grandmaster"),
+    (40, "Mythic"),
+    (50, "Immortal"),
+    (60, "Celestial"),
+    (70, "Transcendent"),
+    (80, "Eternal"),
+    (90, "Ascendant"),
+    (100, "Apex"),
 )
 
 
@@ -64,7 +74,7 @@ def xp_for_level(level: int) -> int:
 
 def level_for(xp: int) -> int:
     level = 1
-    while xp_for_level(level + 1) <= xp:
+    while level < MAX_LEVEL and xp_for_level(level + 1) <= xp:
         level += 1
     return level
 
@@ -94,16 +104,18 @@ def badge(xp: int) -> dict:
 
 def summary(xp: int) -> dict:
     level = level_for(xp)
-    floor, ceiling = xp_for_level(level), xp_for_level(level + 1)
+    floor = xp_for_level(level)
+    ceiling = xp_for_level(level + 1) if level < MAX_LEVEL else None
     return {
         "xp": xp,
         "level": level,
+        "max_level": MAX_LEVEL,
         "rank": rank_for(level),
         "rank_key": rank_key(rank_for(level)),
         "next_rank": next_rank(level),
         "level_xp": floor,
         "next_level_xp": ceiling,
-        "progress": round((xp - floor) / (ceiling - floor) * 100),
+        "progress": round((xp - floor) / (ceiling - floor) * 100) if ceiling else 100,
     }
 
 

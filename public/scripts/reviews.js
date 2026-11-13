@@ -230,20 +230,34 @@ function loadGameDiscussion(gameId) {
   reviewForm.hidden = !currentProfile;
   commentForm.hidden = !currentProfile;
   const game = games.find((item) => item.id === gameId);
+  const releaseTime = game ? releaseTimeOf(game) : null;
+  const reviewsLocked = releaseTime !== null && releaseTime > Date.now();
   const libraryId = game ? libraryIdOf(game) : null;
+  reviewForm.hidden = !currentProfile || reviewsLocked;
+  if (reviewsLocked) {
+    myReview = null;
+    reviewsList.replaceChildren();
+    reviewsStatus.textContent = window.i18n.t("Reviews unlock when this game is released.");
+  }
   if (libraryId === null) {
     // A release that is not in the library yet; posting imports it first.
     myReview = null;
     if (!reviewDraft) fillReviewForm();
     reviewsList.replaceChildren();
+    if (!reviewsLocked) reviewsStatus.textContent = window.i18n.t("No reviews yet.");
     commentsList.replaceChildren();
-    reviewsStatus.textContent = window.i18n.t("No reviews yet.");
     commentsStatus.textContent = window.i18n.t("No comments yet.");
     return;
   }
-  loadReviews(gameId, libraryId);
+  if (!reviewsLocked) loadReviews(gameId, libraryId);
   loadComments(gameId, libraryId);
 }
+
+window.gameReviews = {
+  unlock(gameId) {
+    if (discussionGameId === gameId) loadGameDiscussion(gameId);
+  },
+};
 
 async function sendDiscussion(url, method, body, fallback) {
   const response = await fetch(url, {

@@ -655,19 +655,26 @@ function renderReleaseCountdown(game) {
   const section = document.getElementById("details-countdown");
   if (!section) return;
   const releaseTime = releaseTimeOf(game);
-  section.hidden = releaseTime === null || releaseTime <= Date.now();
+  section.hidden = releaseTime === null;
   if (section.hidden) return;
 
   const heading = document.getElementById("details-countdown-title");
   const releaseDate = document.getElementById("details-countdown-date");
   const progress = document.getElementById("details-countdown-progress");
   const caption = document.getElementById("details-countdown-caption");
+  const buyNow = document.getElementById("details-buy-now");
   const units = Object.fromEntries(
     [...section.querySelectorAll("[data-countdown-unit]")].map((element) => [element.dataset.countdownUnit, element]),
   );
   const windowMs = COUNTDOWN_WINDOW_DAYS * DAY_MS;
   delete section.dataset.released;
-  heading.textContent = window.i18n.t("Coming soon");
+  const storeUrl = safeWebUrl(game.store_url);
+  buyNow.hidden = !storeUrl || releaseTime > Date.now();
+  if (storeUrl) {
+    buyNow.href = storeUrl.href;
+  } else {
+    buyNow.removeAttribute("href");
+  }
 
   const tick = () => {
     const remaining = Math.max(0, releaseTime - Date.now());
@@ -682,18 +689,25 @@ function renderReleaseCountdown(game) {
     });
     const percent = Math.round(Math.min(1, Math.max(0, 1 - remaining / windowMs)) * 100);
     progress.value = percent;
-    caption.textContent = remaining > windowMs
-      ? window.i18n.t("More than a year to go.")
-      : window.i18n.t("{percent}% of the final year before launch", { percent });
-    if (remaining === 0) {
-      stopReleaseCountdown();
-      section.dataset.released = "true";
-      heading.textContent = window.i18n.t("Out now!");
-      renderGameResources(game);
+    if (remaining > 0) {
+      heading.textContent = window.i18n.t("Coming soon");
+      caption.textContent = remaining > windowMs
+        ? window.i18n.t("More than a year to go.")
+        : window.i18n.t("{percent}% of the final year before launch", { percent });
+      return;
     }
+
+    stopReleaseCountdown();
+    section.dataset.released = "true";
+    buyNow.hidden = !storeUrl;
+    heading.textContent = window.i18n.t("Out now!");
+    caption.textContent = window.i18n.t("The game is out now.");
+    renderGameResources(game);
+    renderGameMap(game);
+    window.gameReviews?.unlock(game.id);
   };
   tick();
-  countdownTimer = window.setInterval(tick, 1000);
+  if (releaseTime > Date.now()) countdownTimer = window.setInterval(tick, 1000);
 }
 
 function isReleasedGame(game) {
@@ -715,7 +729,6 @@ function renderGameResources(game) {
 
   const resources = [
     ["100% checklist", "100% checklist"],
-    ["Interactive map", "interactive map"],
     ["Walkthroughs", "walkthrough"],
     ["Hints & tricks", "hints and tricks"],
     ["Speedruns", "speedrun"],
@@ -729,6 +742,33 @@ function renderGameResources(game) {
     link.textContent = window.i18n.t(label);
     links.append(link);
   }
+}
+
+function renderGameMap(game) {
+  const section = document.getElementById("details-map-section");
+  const frameContainer = document.getElementById("details-map-frame");
+  const link = document.getElementById("details-map-link");
+  if (!section || !frameContainer || !link) return;
+
+  frameContainer.replaceChildren();
+  section.hidden = !isReleasedGame(game);
+  if (section.hidden) return;
+
+  const mapUrl = safeWebUrl(game.map_url);
+  const url = mapUrl || new URL(`https://www.google.com/search?q=${encodeURIComponent(`${game.title} interactive map`)}`);
+  link.href = url.href;
+  link.textContent = window.i18n.t(mapUrl ? "Open interactive map" : "Find an interactive map");
+
+  if (!mapUrl) return;
+
+  const frame = document.createElement("iframe");
+  frame.className = "details-map-embed";
+  frame.src = mapUrl.href;
+  frame.title = `${game.title} interactive map`;
+  frame.loading = "lazy";
+  frame.setAttribute("sandbox", "allow-scripts allow-forms allow-popups");
+  frame.referrerPolicy = "strict-origin-when-cross-origin";
+  frameContainer.append(frame);
 }
 
 function showGameDetails(game) {
@@ -766,6 +806,7 @@ function showGameDetails(game) {
   document.getElementById("details-description").textContent =
     game.description || "No description yet.";
   renderGameResources(game);
+  renderGameMap(game);
   renderReleaseCountdown(game);
   document.getElementById("details-grid").innerHTML = [
     ["Genre", game.genre],

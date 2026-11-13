@@ -74,6 +74,18 @@
           "default": null
         },
         {
+          "name": "store_url",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "map_url",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null
+        },
+        {
           "name": "trailer_url",
           "type": "TEXT",
           "nullable": true,

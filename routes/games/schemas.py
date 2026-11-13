@@ -151,6 +151,8 @@ class GameCreate(BaseModel):
     developer_name: str | None = ""
     publisher_name: str | None = ""
     website_url: str | None = ""
+    store_url: str | None = ""
+    map_url: str | None = ""
     trailer_url: str | None = ""
     screenshots: list[str] = Field(default_factory=list)
     platforms: list[Gameplatforms] | str | None = Gameplatforms.PC

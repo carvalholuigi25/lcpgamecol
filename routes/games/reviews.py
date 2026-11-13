@@ -11,6 +11,7 @@ only for their author and administrators, and don't count in the rating.
 """
 
 from contextlib import closing
+from datetime import UTC, date, datetime, time
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
@@ -119,6 +120,29 @@ def _visible_to(principal: Principal, alias: str) -> tuple[str, tuple]:
 def _require_game(connection, game_id: int) -> None:
     if connection.execute("SELECT 1 FROM games WHERE id = ?", (game_id,)).fetchone() is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Game not found")
+
+
+def _require_reviews_available(connection, game_id: int) -> None:
+    game = connection.execute(
+        "SELECT release_date FROM games WHERE id = ?", (game_id,)
+    ).fetchone()
+    if game is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Game not found")
+
+    release_date = game["release_date"]
+    if not isinstance(release_date, str) or not release_date:
+        return
+    try:
+        release_time = datetime.combine(date.fromisoformat(release_date), time.min, tzinfo=UTC)
+    except ValueError:
+        return
+    if release_time.date().isoformat() != release_date:
+        return
+    if release_time > datetime.now(UTC):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Reviews are locked until the game is released.",
+        )
 
 
 def _moderation_fields(row, principal: Principal, reports: dict[int, int], mine: set[int]) -> dict:
@@ -242,7 +266,7 @@ def list_reviews(
 ) -> dict:
     visible, parameters = _visible_to(principal, "r")
     with closing(get_connection()) as connection:
-        _require_game(connection, game_id)
+        _require_reviews_available(connection, game_id)
         count, average = connection.execute(
             "SELECT COUNT(*), AVG(rating) FROM game_reviews WHERE game_id = ? AND status = 'visible'", (game_id,)
         ).fetchone()
@@ -274,7 +298,7 @@ def save_my_review(game_id: int, body: ReviewWrite, principal: Principal = CURRE
     new_status = _screen(body.body)
     with closing(get_connection()) as connection:
         connection.execute("BEGIN IMMEDIATE")
-        _require_game(connection, game_id)
+        _require_reviews_available(connection, game_id)
         existing = connection.execute(
             "SELECT locked FROM game_reviews WHERE game_id = ? AND username = ?",
             (game_id, principal.username),

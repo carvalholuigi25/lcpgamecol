@@ -17,6 +17,7 @@ All notable changes to this project are documented here. The format follows
   - Reviews and comments show their author's badge (new `author_rank` field), and the user directory shows each user's badge and XP (new `xp` and `rank` fields).
   - `GET /users/me/xp` and the leaderboard now include `rank_key`, and each rank in `ranks` has a `key`.
 - Migration `0001_add_game_category_trailers` adds the `category` and `trailers` columns to `games`; it runs when the app starts.
+- Migration `0003_add_game_store_and_map_urls` adds optional store and interactive-map URLs to `games`; it runs when the app starts.
 - Seasonal themes: **Spring**, **Summer**, **Fall**, **Winter**, **Halloween**, **Easter**, **Christmas**, and **New Year's Eve**, in the **Theme** menu of every page, each with slowly falling decorations (still when the system asks for reduced motion). **Seasonal (auto)** picks one by date: Halloween from 17 October to 1 November, Easter from Palm Sunday to Easter Monday, Christmas from 1 to 26 December, New Year's Eve from 27 December to 1 January, and otherwise the season.
 - Reviews and comments are written in a rich text editor (Quill): bold, italic, underline, strike-through, lists, quotes, and links.
   - The server keeps only that formatting and drops everything else, including scripts and unsafe links. Links open in a new tab.
@@ -30,10 +31,11 @@ All notable changes to this project are documented here. The format follows
   - Held and hidden posts don't count in the review count or average, and earn their XP only once approved.
   - New endpoints: `POST /games/{game_id}/reviews/{review_id}/report`, `POST /games/{game_id}/comments/{comment_id}/report`, `GET`/`PUT /admin/moderation/settings`, `GET /admin/moderation/queue`, and `POST /admin/moderation/{kind}/{id}/approve`, `/hide`, and `/remove`. Reviews and comments now include `status` and `reported` (and `open_reports` for administrators).
   - New event: `moderationChanged`.
-- A countdown in the game details for games that are not out yet, on the library and releases pages: days, hours, minutes and seconds to the release date, and a bar that fills over the final year before launch.
+- A countdown in the game details for games that are not out yet, on the library and releases pages: days, hours, minutes and seconds to the release date, and a bar that fills over the final year before launch. When the countdown ends, the details show **Buy now** when a store URL is available and unlock reviews. The API also locks reviews until release. Store URLs are imported from IGDB when available and can be edited by administrators.
+- Released game details show an interactive map when a map URL is set, with a link to open it and a search link when no map URL is configured. Administrators can edit the map URL.
 - XP, levels and ranks. Users earn XP for a daily visit, reviews, comments, wishlist and favorite picks, feedback, completing their profile, and turning on two-step sign-in.
   - Each action pays once per game, comment or feedback, so undoing and redoing it never pays twice. Comments pay up to 5 times a day and feedback up to 3. XP is never taken away.
-  - Level L needs 50 × L × (L − 1) XP in total. Ranks go from **Rookie** (level 1) through Explorer, Adventurer, Veteran, Elite and Champion to **Legend** (level 20).
+  - Level L needs 50 × L × (L − 1) XP in total, up to a maximum of level 100. Ranks now extend from **Rookie** (level 1) through **Apex** (level 100), with nine new ranks beyond **Legend**.
   - **My profile** shows the level, rank, progress to the next level, recent XP, how to earn more, and a leaderboard. It updates live (new event `xpChanged`), and reaching a new level sends a notification.
   - New endpoints: `GET /users/me/xp` and `GET /users/xp/leaderboard`.
 - A **Development switches** panel on the dashboard, to skip two-step sign-in for every account while developing. It only works when the server runs with the new setting `APP_ENV=development` (the default is `production`); otherwise turning it on is refused and a saved "on" is ignored. New endpoints: `GET`/`PUT /admin/development/two-factor`.

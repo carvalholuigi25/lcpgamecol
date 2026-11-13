@@ -118,6 +118,21 @@ def test_reviewing_an_unknown_game_is_rejected(client, viewer_headers):
     assert client.post("/games/9999/comments", json={"body": "Hi"}, headers=viewer_headers).status_code == 404
 
 
+def test_reviews_stay_locked_until_the_release_date(client, admin_headers, viewer_headers):
+    game_id = client.post(
+        "/games",
+        json={**GAME, "release_year": 2999, "release_date": "2999-01-01"},
+        headers=admin_headers,
+    ).json()["id"]
+
+    response = client.get(f"/games/{game_id}/reviews", headers=viewer_headers)
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Reviews are locked until the game is released."
+    assert client.put(
+        f"/games/{game_id}/reviews/mine", json={"rating": 5}, headers=viewer_headers
+    ).status_code == 409
+
+
 def test_only_the_author_or_an_admin_can_delete_a_review(client, admin_headers, viewer_headers, other_headers, game_id):
     review_id = client.put(f"/games/{game_id}/reviews/mine", json={"rating": 1}, headers=viewer_headers).json()["id"]
     other_id = client.put(f"/games/{game_id}/reviews/mine", json={"rating": 2}, headers=other_headers).json()["id"]

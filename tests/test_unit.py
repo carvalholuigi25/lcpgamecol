@@ -813,7 +813,10 @@ def test_fetch_games_by_title_maps_igdb_fields(fake_igdb):
             {"developer": True, "publisher": False, "company": {"name": "Valve"}},
             {"developer": False, "publisher": True, "company": {"name": "Valve"}},
         ],
-        "websites": [{"category": 1, "url": "https://www.thinkwithportals.com/"}],
+        "websites": [
+            {"category": 1, "url": "https://www.thinkwithportals.com/"},
+            {"category": 13, "url": "https://store.steampowered.com/app/400/Portal/"},
+        ],
         "videos": [{"video_id": "abc123"}, {"name": "No id"}, {"video_id": "def456"}],
         "game_type": {"type": "Main Game"},
     }
@@ -841,6 +844,7 @@ def test_fetch_games_by_title_maps_igdb_fields(fake_igdb):
     assert game.developer_name == "Valve"
     assert game.publisher_name == "Valve"
     assert game.website_url == "https://www.thinkwithportals.com/"
+    assert game.store_url == "https://store.steampowered.com/app/400/Portal/"
     assert game.trailer_url == "https://www.youtube.com/watch?v=abc123"
     assert game.trailers == [
         "https://www.youtube.com/watch?v=abc123",
