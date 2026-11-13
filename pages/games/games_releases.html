@@ -246,12 +246,14 @@
               <div class="platform-switch-menu" role="group" aria-label="Filter by category"></div>
             </details>
             <label class="filter-toggle">
-              <input id="search-all-titles" type="checkbox" />
-              <span>Search all game titles (case-insensitive)</span>
+              <input id="search-all-titles" type="checkbox" role="switch" />
+              <i class="bi bi-globe2" aria-hidden="true"></i>
+              <span class="filter-toggle-text">Search all game titles (case-insensitive)</span>
             </label>
             <label class="filter-toggle">
-              <input id="hide-nsfw" type="checkbox" checked />
-              <span>Hide NSFW games</span>
+              <input id="hide-nsfw" type="checkbox" role="switch" checked />
+              <i class="bi bi-eye-slash" aria-hidden="true"></i>
+              <span class="filter-toggle-text">Hide NSFW games</span>
             </label>
             <button id="clear-filters" class="link-button clear-filters" type="button" hidden>Clear filters</button>
           </div>
