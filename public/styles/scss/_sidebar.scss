@@ -173,8 +173,10 @@
   display: inline-grid;
   flex: none;
   place-items: center;
+  place-content: center;
   width: 36px;
   height: 36px;
+  min-height: 36px;
   padding: 8px;
   border: 1px solid var(--line);
   border-radius: 999px;
@@ -239,7 +241,8 @@ body.has-sidebar.sidebar-collapsed {
 
   .admin-sidebar,
   body.has-sidebar.sidebar-collapsed .admin-sidebar {
-    width: min(280px, 82vw);
+    // width: min(280px, 82vw);
+    width: var(--sidebar-collapsed-width);
     transform: translateX(-100%);
     box-shadow: 4px 0 24px rgba(0, 0, 0, 0.18);
   }

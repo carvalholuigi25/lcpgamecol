@@ -141,11 +141,23 @@ function uploadWithProgress(file) {
   });
 }
 
-function actionLink(label, href, options = {}) {
+function setUploadActionIcon(control, label, path) {
+  control.title = label;
+  control.setAttribute("aria-label", label);
+  const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  icon.setAttribute("viewBox", "0 0 24 24");
+  icon.setAttribute("aria-hidden", "true");
+  const iconPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  iconPath.setAttribute("d", path);
+  icon.append(iconPath);
+  control.append(icon);
+}
+
+function actionLink(label, href, iconPath, options = {}) {
   const link = document.createElement("a");
   link.className = "secondary-button upload-action";
   link.href = href;
-  link.textContent = label;
+  setUploadActionIcon(link, label, iconPath);
   if (options.download) link.setAttribute("download", "");
   if (options.newTab) {
     link.target = "_blank";
@@ -179,12 +191,24 @@ function renderUploads(uploads) {
     const actions = document.createElement("td");
     actions.className = "upload-actions-cell";
     const fileUrl = `/admin/uploads/${encodeURIComponent(upload.id)}`;
-    if (upload.previewable) actions.append(actionLink("Preview", `${fileUrl}?inline=true`, { newTab: true }));
-    actions.append(actionLink("Download", fileUrl, { download: true }));
+    if (upload.previewable) {
+      actions.append(actionLink(
+        "Preview",
+        `${fileUrl}?inline=true`,
+        "M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7zm10-3a3 3 0 1 0 0 6 3 3 0 0 0 0-6z",
+        { newTab: true },
+      ));
+    }
+    actions.append(actionLink(
+      "Download",
+      fileUrl,
+      "M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4",
+      { download: true },
+    ));
     const deleteButton = document.createElement("button");
     deleteButton.type = "button";
     deleteButton.className = "danger-button upload-action";
-    deleteButton.textContent = "Delete";
+    setUploadActionIcon(deleteButton, "Delete", "M4 7h16M10 11v6m4-6v6M6 7l1 13h10l1-13M9 7V4h6v3");
     deleteButton.addEventListener("click", () => deleteUpload(upload));
     actions.append(deleteButton);
     row.append(name, type, size, uploaded, actions);

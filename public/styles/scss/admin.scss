@@ -926,6 +926,9 @@ td a {
   font: 500 0.72rem var(--mono);
   text-decoration: none;
 }
+.t-left { text-align: left !important; }
+.t-center { text-align: center !important; }
+.t-right { text-align: right !important; }
 .recent-title {
   width: 70%;
   color: var(--ink);
@@ -1385,6 +1388,8 @@ a.feature-card:hover {
   border: 1px solid var(--line);
   border-radius: 24px;
   background: var(--green-soft);
+  place-content: center;
+  place-items: flex-start;
 
   h3 { margin: 0 0 10px; font-size: 0.95rem; }
   ul { display: grid; gap: 7px; margin: 0; padding-left: 18px; color: var(--ink); font-size: 0.8rem; line-height: 1.45; }
@@ -1404,7 +1409,13 @@ a.feature-card:hover {
 }
 
 .tbl-upload-wrap {
-  table-layout: auto;
+  // table-layout: auto;
+  table-layout: fixed;
+  word-wrap: break-word;
+
+  td, th {
+    text-align: center;
+  }
 }
 
 .upload-name {
@@ -1415,18 +1426,40 @@ a.feature-card:hover {
 }
 
 td.upload-actions-cell {
-  display: flex;
-  justify-content: flex-end;
-  gap: 6px;
+  // display: flex;
+  // justify-content: flex-end;
+  // gap: 6px;
+  // white-space: nowrap;
+
+  display: table-cell;
+  padding: 6px;
   white-space: nowrap;
+  place-content: center;
+  place-items: center;
+  text-align: center;
 }
 
 .upload-action {
   display: inline-flex;
   align-items: center;
-  min-height: 32px;
-  border-radius: 12px;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  min-height: 34px;
+  margin: 0 3px;
+  padding: 0;
+  border-radius: 24px;
   text-decoration: none;
+
+  svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.8;
+  }
 }
 
 @media (max-width: 860px) {
