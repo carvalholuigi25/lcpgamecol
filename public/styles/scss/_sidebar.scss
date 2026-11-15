@@ -242,9 +242,14 @@ body.has-sidebar.sidebar-collapsed {
   .admin-sidebar,
   body.has-sidebar.sidebar-collapsed .admin-sidebar {
     // width: min(280px, 82vw);
-    width: var(--sidebar-collapsed-width);
+    // width: var(--sidebar-collapsed-width);
+    width: auto;
     transform: translateX(-100%);
     box-shadow: 4px 0 24px rgba(0, 0, 0, 0.18);
+  }
+
+  body.has-sidebar.sidebar-collapsed.sidebar-open .admin-sidebar {
+    width: var(--sidebar-collapsed-width);
   }
 
   body.sidebar-collapsed .sidebar-brand { justify-content: flex-start; padding: 2px 8px 10px; }

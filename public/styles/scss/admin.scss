@@ -1462,6 +1462,25 @@ td.upload-actions-cell {
   }
 }
 
+.sub-upload-actions-btns {
+  display: grid;
+  grid-auto-rows: 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(calc(100% / 3), 1fr));
+  place-content: center;
+  place-items: center;
+  text-align: center;
+  width: auto;
+  max-width: 100%;
+  margin: 0px auto;
+  gap: 0;
+}
+
+@media (max-width: 992px) {
+  .sub-upload-actions-btns {
+    grid-template-columns: repeat(auto-fit, minmax(calc(100% / 2), 1fr));
+  }
+}
+
 @media (max-width: 860px) {
   .upload-layout {
     grid-template-columns: 1fr;
