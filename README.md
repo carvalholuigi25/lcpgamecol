@@ -2,6 +2,10 @@
 
 A FastAPI application for managing and exploring a video game collection. It includes a SQLite-backed API, a browser-based games library and administrator dashboard, and optional IGDB integration for game searches and upcoming releases.
 
+## AI disclosure
+
+This project was developed with assistance from AI coding tools. AI was used to help draft code, suggest implementations, and refine documentation, but all changes were reviewed, tested, and approved by the human maintainer before being kept. AI-generated content is not a substitute for human judgment, validation, or responsibility.
+
 ## Requirements
 
 - Python and Node.js with npm

@@ -22,6 +22,7 @@ const FAVORITE_GAMES_MAX = 3000;
 let users = [];
 let gameOptions = null;
 let activeUser = null;
+let favoriteGamesPage = 0;
 let toastTimer = null;
 
 function showToast(message) {
@@ -273,13 +274,23 @@ function renderUserPage(user) {
   document.getElementById("user-access-status").textContent = "";
   document.getElementById("user-reset-result").hidden = true;
 
+  renderFavoriteGames(user);
+}
+
+function renderFavoriteGames(user) {
+  const allGames = user.favorite_games;
+  const pageSize = Number(document.getElementById("user-page-favorites-limit").value);
+  const pageCount = Math.max(1, Math.ceil(allGames.length / pageSize));
+  favoriteGamesPage = Math.min(favoriteGamesPage, pageCount - 1);
+  const start = favoriteGamesPage * pageSize;
+  const pageGames = allGames.slice(start, start + pageSize);
   const favorites = document.getElementById("user-page-favorites");
-  favorites.replaceChildren(...user.favorite_games.map((game, index) => {
+  favorites.replaceChildren(...pageGames.map((game, index) => {
     const item = document.createElement("li");
     item.className = "favorite-game";
     const rank = document.createElement("span");
     rank.className = "favorite-rank";
-    rank.textContent = String(index + 1).padStart(2, "0");
+    rank.textContent = String(start + index + 1).padStart(2, "0");
     const title = document.createElement("strong");
     title.setAttribute("translate", "no");
     title.textContent = game.title;
@@ -289,9 +300,16 @@ function renderUserPage(user) {
     item.append(gameCover(game), rank, title, meta);
     return item;
   }));
-  document.getElementById("user-page-favorites-empty").hidden = user.favorite_games.length > 0;
+  const controls = document.getElementById("user-page-favorites-controls");
+  controls.hidden = allGames.length === 0;
+  document.getElementById("user-page-favorites-pagination").hidden = pageCount <= 1;
+  document.getElementById("user-page-favorites-previous").disabled = favoriteGamesPage === 0;
+  document.getElementById("user-page-favorites-next").disabled = favoriteGamesPage >= pageCount - 1;
+  document.getElementById("user-page-favorites-page").textContent =
+    window.i18n.t("Page {page} of {total}", { page: favoriteGamesPage + 1, total: pageCount });
+  document.getElementById("user-page-favorites-empty").hidden = allGames.length > 0;
   document.getElementById("user-page-favorites-note").textContent =
-    window.i18n.t("{count} OF {max}", { count: user.favorite_games.length, max: FAVORITE_GAMES_MAX });
+    window.i18n.t("{count} OF {max}", { count: allGames.length, max: FAVORITE_GAMES_MAX });
 }
 
 function setEditing(editing) {
@@ -304,6 +322,7 @@ function setEditing(editing) {
 function openUserPage(username) {
   activeUser = users.find((user) => user.username === username);
   if (!activeUser) return;
+  favoriteGamesPage = 0;
   renderUserPage(activeUser);
   setEditing(false);
   userDialog.showModal();
@@ -397,6 +416,20 @@ editButton.addEventListener("click", async () => {
 pickerSearch.addEventListener("input", filterPicker);
 document.getElementById("user-profile-cancel").addEventListener("click", () => setEditing(false));
 document.getElementById("user-page-close").addEventListener("click", () => userDialog.close());
+document.getElementById("user-page-favorites-limit").addEventListener("change", () => {
+  favoriteGamesPage = 0;
+  if (activeUser) renderFavoriteGames(activeUser);
+});
+document.getElementById("user-page-favorites-previous").addEventListener("click", () => {
+  if (!activeUser || favoriteGamesPage === 0) return;
+  favoriteGamesPage -= 1;
+  renderFavoriteGames(activeUser);
+});
+document.getElementById("user-page-favorites-next").addEventListener("click", () => {
+  if (!activeUser) return;
+  favoriteGamesPage += 1;
+  renderFavoriteGames(activeUser);
+});
 userDialog.addEventListener("click", (event) => {
   if (event.target === userDialog) userDialog.close();
 });

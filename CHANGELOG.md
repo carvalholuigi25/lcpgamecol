@@ -8,6 +8,10 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- The language menu now shows a flag beside the current language and every available language option.
+- Password sign-in panels now offer input-only, numpad, and full letters-and-symbols entry modes. The numpad and on-screen keyboard provide touch-friendly alternatives while preserving normal password input.
+- Favorite games on profiles and in the administrator user details can now be browsed in pages, with page-size choices of 12, 24, or 48 games.
+- Added an AI disclosure to the README explaining that AI coding tools assist the project while changes are reviewed, tested, and approved by the human maintainer.
 - **Genre**, **Age rating** and **Category** filters on the library and upcoming releases pages, next to the **Platform** filter on the library. Each one is a dropdown with a checkbox for every value in the games on screen; pick several to see games matching any of them. Filters combine with each other and with the search box, and **Clear filters** resets them all.
   - Games have a new **category** (the IGDB game type: Main Game, DLC, Expansion, Remake, Remaster...). It is filled in when a game is imported from IGDB and can be set on the dashboard.
   - Age ratings now show their full name (for example "PEGI 16" or "CERO B (Ages 12+)") instead of "Not set" for ratings outside ESRB.

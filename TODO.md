@@ -50,3 +50,15 @@ Planned work and known gaps. Move items to `CHANGELOG.md` when they ship.
 - [ ] Add placeholder images for seed achievements whose icons return 404.
 - [ ] Add browser tests for the library, releases, and dashboard (Playwright), including countdown completion, purchase links, map embeds, and review unlocking.
 - [ ] Add a check that fails when a UI string has no translation.
+
+
+## Other
+
+- [ ] Add the language hungary
+- [ ] Add small and responsive logos for platform in game details (if unavaliable, hide it)
+- [ ] In admin page, when the records is hidden by clicked showed records button, hide export / import games stuff.
+- [ ] Change the format of checkbox from square to circle.
+- [ ] Add replies to comments section.
+- [ ] Add more favorite-games page-size choices (5, 10, 15, 20, 25, 50, 100, all); currently offers 12, 24, or 48.
+- [ ] Modify pagination links names content to replace name with their respective icons (& move the name to the attribute title)
+- [ ] Build a Cross-platform app in React Native by following PLANS.md

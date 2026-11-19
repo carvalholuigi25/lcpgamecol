@@ -58,7 +58,7 @@
           <label for="username">Username</label>
           <input id="username" name="username" autocomplete="username" maxlength="64" required />
           <label for="password">Password</label>
-          <input id="password" name="password" type="password" autocomplete="current-password" maxlength="256" required />
+          <input id="password" name="password" type="password" data-password-entry autocomplete="current-password" maxlength="256" required />
           <button class="primary-button" type="submit">Open dashboard <span aria-hidden="true">↗</span></button>
         </form>
         <div id="oauth-login-options" hidden aria-label="Sign in with a provider">
@@ -389,10 +389,12 @@
     </main>
     <script src="/public/scripts/loading.js"></script>
     <script src="/public/scripts/i18n.js"></script>
+    <script src="/public/scripts/language_flags.js?v=2"></script>
     <script src="/public/scripts/preferences.js"></script>
     <script src="/public/scripts/sidebar.js"></script>
     <script src="/public/scripts/register.js"></script>
     <script src="/public/scripts/two_factor_login.js"></script>
+    <script src="/public/scripts/login_numpad.js"></script>
     <script src="/nmodules/@microsoft/signalr/dist/browser/signalr.min.js"></script>
     <script src="/public/scripts/realtime.js"></script>
     <script src="/public/scripts/inbox.js"></script>

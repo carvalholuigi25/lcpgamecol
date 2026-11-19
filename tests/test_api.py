@@ -67,10 +67,20 @@ def test_custom_page_routes_preserve_games_api_route(client, auth_headers):
 
     assert library.status_code == 200
     assert 'id="login-form"' in library.text
+    assert 'data-password-entry' in library.text
+    assert "/public/scripts/login_numpad.js" in library.text
     for control_id in ("first-page", "previous-page", "page-selector", "next-page", "last-page"):
         assert f'id="{control_id}"' in library.text
     assert releases.status_code == 200
     assert 'id="login-form"' in releases.text
+    assert 'data-password-entry' in releases.text
+    assert "/public/scripts/login_numpad.js" in releases.text
+    assert admin.status_code == 200
+    assert 'data-password-entry' in admin.text
+    assert "/public/scripts/login_numpad.js" in admin.text
+    login_script = client.get("/public/scripts/login_numpad.js")
+    assert login_script.status_code == 200
+    assert "Letters & symbols" in login_script.text
     # The trailer player is fetched on demand by shelf.js, not loaded by the pages.
     shelf_script = client.get("/public/scripts/shelf.js").text
     for page in (library, releases):
@@ -271,6 +281,15 @@ def test_site_pages_offer_the_api_docs_themes(client, theme):
     assert f'"{theme}"' in client.get("/public/scripts/preferences.js").text
     for stylesheet in ("/public/styles/css/games.css", "/public/styles/css/admin.css"):
         assert f"body[data-theme={theme}]" in client.get(stylesheet).text
+
+
+def test_portuguese_language_picker_uses_portugal_flag(client):
+    flag = client.get("/public/images/flags/pt.svg")
+
+    assert flag.status_code == 200
+    assert flag.headers["content-type"].startswith("image/svg+xml")
+    assert "language_flags.js" in client.get("/pages/games/games.html").text
+    assert 'pt: "pt"' in client.get("/public/scripts/language_flags.js").text
 
 
 def test_admin_dashboard_page_settings_are_available(client):

@@ -165,6 +165,20 @@
               <h3 id="user-favorites-title">Favorite games</h3>
               <span id="user-page-favorites-note" class="chart-note"></span>
             </div>
+            <div id="user-page-favorites-controls" class="favorite-pagination-controls">
+              <label for="user-page-favorites-limit">Games per page
+                <select id="user-page-favorites-limit">
+                  <option value="12">12</option>
+                  <option value="24">24</option>
+                  <option value="48">48</option>
+                </select>
+              </label>
+              <nav id="user-page-favorites-pagination" class="favorite-pagination" aria-label="Favorite games pages">
+                <button id="user-page-favorites-previous" class="secondary-button" type="button">Previous</button>
+                <span id="user-page-favorites-page" aria-live="polite"></span>
+                <button id="user-page-favorites-next" class="secondary-button" type="button">Next</button>
+              </nav>
+            </div>
             <ol id="user-page-favorites" class="favorite-grid"></ol>
             <p id="user-page-favorites-empty" class="empty-note" hidden>No favorite games yet.</p>
           </section>
@@ -195,6 +209,7 @@
     </main>
     <script src="/public/scripts/loading.js"></script>
     <script src="/public/scripts/i18n.js"></script>
+    <script src="/public/scripts/language_flags.js?v=2"></script>
     <script src="/public/scripts/preferences.js"></script>
     <script src="/public/scripts/sidebar.js"></script>
     <script src="/nmodules/@microsoft/signalr/dist/browser/signalr.min.js"></script>

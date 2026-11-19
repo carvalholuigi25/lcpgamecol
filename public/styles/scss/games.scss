@@ -203,6 +203,112 @@ form {
   }
 }
 
+.password-entry-controls {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  max-width: 300px;
+  margin-inline: auto;
+}
+
+.password-entry-controls.is-keyboard {
+  max-width: 540px;
+}
+
+.password-entry-mode {
+  display: grid;
+  gap: 6px;
+  text-align: center;
+
+  select {
+    min-height: 42px;
+    width: 100%;
+    padding: 0 12px;
+    border: 1px solid var(--line);
+    border-radius: calc(16px + 8px);
+    color: var(--ink);
+    background: var(--panel);
+    font: 1rem Arial, sans-serif;
+  }
+}
+
+.password-entry-keypad {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+
+  &[hidden] {
+    display: none;
+  }
+
+  button {
+    width: 100%;
+    min-height: 48px;
+    padding: 0 6px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    color: var(--ink);
+    background: var(--panel);
+  }
+
+  button:hover {
+    background: #343844;
+  }
+}
+
+.password-entry-keyboard {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.password-entry-keyboard-row {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 4px;
+
+  &--home {
+    width: 90%;
+    margin-inline: auto;
+    grid-template-columns: repeat(9, minmax(0, 1fr));
+  }
+
+  &--bottom {
+    grid-template-columns: 1.5fr repeat(7, minmax(0, 1fr)) 1.5fr;
+  }
+
+  &--actions {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  &--symbols-actions {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  button {
+    min-width: 0;
+    min-height: 42px;
+    padding: 0 3px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    color: var(--ink);
+    background: var(--panel);
+    font-size: 0.85rem;
+  }
+
+  button:hover {
+    background: #343844;
+  }
+
+  [data-password-action="space"] {
+    grid-column: span 2;
+  }
+}
+
 label {
   display: grid;
   flex: 1 1 15px;
@@ -2172,6 +2278,71 @@ header {
   letter-spacing: normal;
   text-transform: none;
   white-space: nowrap;
+
+  .language-picker {
+    position: relative;
+  }
+
+  .language-picker-trigger,
+  .language-picker-option {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    border: 0;
+    background: var(--panel);
+    color: var(--ink);
+    font: 0.75rem var(--sans);
+    cursor: pointer;
+  }
+
+  .language-picker-trigger {
+    min-width: 112px;
+    min-height: 34px;
+    padding: 0 8px;
+    border: 1px solid var(--line);
+    border-radius: 20px;
+  }
+
+  .language-picker-menu {
+    position: absolute;
+    z-index: 100;
+    top: calc(100% + 6px);
+    right: 0;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    width: 150px !important;
+    padding: 4px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel);
+    box-shadow: 0 8px 20px rgba(32, 40, 35, 0.14);
+
+    &[hidden] {
+      display: none !important;
+    }
+  }
+
+  .language-picker-option {
+    width: 100%;
+    min-height: 36px;
+    padding: 7px 9px;
+    border-radius: 6px;
+    text-align: left;
+
+    &:hover,
+    &:focus-visible {
+      background: var(--green-soft);
+    }
+  }
+
+  .language-picker-flag {
+    width: 22px;
+    height: 15px;
+    flex: 0 0 22px;
+    object-fit: cover;
+    border: 1px solid rgba(32, 40, 35, 0.12);
+  }
 
   select {
     max-width: 155px;

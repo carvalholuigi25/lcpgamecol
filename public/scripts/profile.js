@@ -18,6 +18,7 @@ const ICONS = {
 };
 let profile = null;
 let busy = false;
+let favoritesPage = 0;
 let toastTimer = null;
 
 function showToast(message) {
@@ -128,18 +129,29 @@ function gameItem(game, rank, tools) {
 
 function renderFavorites() {
   const favorites = profile.favorite_games;
+  const pageSize = Number(document.getElementById("user-page-favorites-limit").value);
+  const pageCount = Math.max(1, Math.ceil(favorites.length / pageSize));
+  favoritesPage = Math.min(favoritesPage, pageCount - 1);
+  const start = favoritesPage * pageSize;
   const last = favorites.length - 1;
-  document.getElementById("user-page-favorites").replaceChildren(...favorites.map((game, index) => {
+  document.getElementById("user-page-favorites").replaceChildren(...favorites.slice(start, start + pageSize).map((game, index) => {
+    const position = start + index;
     const name = { title: game.title };
-    return gameItem(game, index + 1, [
-      toolButton("earlier", window.i18n.t("Move {title} earlier", name), () => moveFavorite(index, -1), index === 0),
-      toolButton("later", window.i18n.t("Move {title} later", name), () => moveFavorite(index, 1), index === last),
+    return gameItem(game, position + 1, [
+      toolButton("earlier", window.i18n.t("Move {title} earlier", name), () => moveFavorite(position, -1), position === 0),
+      toolButton("later", window.i18n.t("Move {title} later", name), () => moveFavorite(position, 1), position === last),
       toolButton("remove", window.i18n.t("Remove {title} from favorites", name), () => saveFavorites(
         favorites.filter((favorite) => favorite.id !== game.id).map((favorite) => favorite.id),
         window.i18n.t("Removed from your favorites."),
       )),
     ]);
   }));
+  document.getElementById("user-page-favorites-controls").hidden = favorites.length === 0;
+  document.getElementById("user-page-favorites-pagination").hidden = pageCount <= 1;
+  document.getElementById("user-page-favorites-previous").disabled = favoritesPage === 0;
+  document.getElementById("user-page-favorites-next").disabled = favoritesPage >= pageCount - 1;
+  document.getElementById("user-page-favorites-page").textContent =
+    window.i18n.t("Page {page} of {total}", { page: favoritesPage + 1, total: pageCount });
   document.getElementById("user-page-favorites-empty").hidden = favorites.length > 0;
   document.getElementById("user-page-favorites-note").textContent =
     window.i18n.t("{count} OF {max}", { count: favorites.length, max: profile.favorites_max });
@@ -281,6 +293,21 @@ editButton.addEventListener("click", () => {
 document.getElementById("user-profile-cancel").addEventListener("click", () => {
   setEditing(false);
   editButton.focus();
+});
+
+document.getElementById("user-page-favorites-limit").addEventListener("change", () => {
+  favoritesPage = 0;
+  if (profile) renderFavorites();
+});
+document.getElementById("user-page-favorites-previous").addEventListener("click", () => {
+  if (!profile || favoritesPage === 0) return;
+  favoritesPage -= 1;
+  renderFavorites();
+});
+document.getElementById("user-page-favorites-next").addEventListener("click", () => {
+  if (!profile) return;
+  favoritesPage += 1;
+  renderFavorites();
 });
 
 profileForm.addEventListener("submit", async (event) => {
