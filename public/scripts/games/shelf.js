@@ -230,6 +230,33 @@ function platformsOf(game) {
   return splitList(game.platforms);
 }
 
+// Bootstrap Icons brand glyphs per platform family. Platforms without a known logo
+// (Linux, retro consoles, ...) are shown by name only.
+const PLATFORM_LOGOS = [
+  [/playstation|ps[1-5p]?|ps vita/i, "bi-playstation"],
+  [/xbox/i, "bi-xbox"],
+  [/nintendo switch|^switch/i, "bi-nintendo-switch"],
+  [/steam/i, "bi-steam"],
+  [/^pc|windows/i, "bi-windows"],
+  [/mac|ios|ipad|iphone|apple/i, "bi-apple"],
+  [/android/i, "bi-android2"],
+];
+
+function platformLogoOf(platform) {
+  return PLATFORM_LOGOS.find(([pattern]) => pattern.test(platform))?.[1] || null;
+}
+
+function platformDetail(key, value) {
+  const platforms = splitList(value);
+  if (!platforms.length) return `<dd class="val${key}">${formatDetail(null)}</dd>`;
+  const items = platforms.map((platform) => {
+    const logo = platformLogoOf(platform);
+    const icon = logo ? `<i class="bi ${logo} platform-logo" aria-hidden="true"></i>` : "";
+    return `<li class="platform-chip" title="${escapeHtml(platform)}">${icon}<span>${escapeHtml(platform)}</span></li>`;
+  }).join("");
+  return `<dd class="val${key}"><ul class="platform-list">${items}</ul></dd>`;
+}
+
 // Dropdown filters with checkboxes. Each one lists the values found in the loaded games,
 // and an empty selection means "all". A game must match every filter that has a selection.
 // Pages only include the dropdowns they want; missing ones are skipped.
@@ -443,6 +470,8 @@ function getGamesDetailsRes(label, value) {
     detail = ratingDetail(label, value);
   } else if (label.toLowerCase().includes("system requirements")) {
     detail = richTextDetail(key, value);
+  } else if (label === "Platforms") {
+    detail = platformDetail(key, value);
   } else if (label === "Website" && safeWebUrl(value)) {
     const url = safeWebUrl(value);
     detail = `<dd class="val${key}"><a href="${escapeHtml(url.href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(url.hostname)}</a></dd>`;

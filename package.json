@@ -6,17 +6,20 @@
   "scripts": {
     "build-css": "sass public/styles/scss:public/styles/css --no-source-map --style=compressed",
     "build-css-w": "sass --watch public/styles/scss:public/styles/css --style=compressed",
-    "start": "npm run build-css && .\\.venv\\Scripts\\activate.bat && python -m uvicorn main:app --reload --env-file config.env",
+    "build-js": "node scripts/minify_js.mjs",
+    "build-js-w": "node scripts/minify_js.mjs --watch",
+    "build": "npm run build-css && npm run build-js",
+    "start": "npm run build && .\\.venv\\Scripts\\activate.bat && python -m uvicorn main:app --reload --env-file config.env",
     "startapp": ".\\.venv\\Scripts\\activate.bat && python -m uvicorn main:app --reload --env-file config.env",
     "cert": ".\\.venv\\Scripts\\python.exe scripts\\generate_dev_certificate.py",
     "certlinux": "bash scripts/activate.sh python scripts/generate_dev_certificate.py",
-    "starthttps": "npm run build-css && .\\.venv\\Scripts\\activate.bat && python -m uvicorn main:app --reload --env-file config.env --ssl-certfile certs/localhost.pem --ssl-keyfile certs/localhost-key.pem",
-    "starthttpslinux": "npm run build-css && bash scripts/activate.sh python -m uvicorn main:app --reload --env-file config.env --ssl-certfile certs/localhost.pem --ssl-keyfile certs/localhost-key.pem",
+    "starthttps": "npm run build && .\\.venv\\Scripts\\activate.bat && python -m uvicorn main:app --reload --env-file config.env --ssl-certfile certs/localhost.pem --ssl-keyfile certs/localhost-key.pem",
+    "starthttpslinux": "npm run build && bash scripts/activate.sh python -m uvicorn main:app --reload --env-file config.env --ssl-certfile certs/localhost.pem --ssl-keyfile certs/localhost-key.pem",
     "startapplinux": "bash scripts/activate.sh python -m uvicorn main:app --reload --env-file config.env",
-    "startw": "conc \"npm:build-css-w\" \"npm:startapp\"",
-    "startwlinux": "conc \"npm:build-css-w\" \"npm:startapplinux\"",
-    "startwhttps": "conc \"npm:build-css-w\" \"npm:starthttps\"",
-    "startwhttpslinux": "conc \"npm:build-css-w\" \"npm:starthttpslinux\"",
+    "startw": "conc \"npm:build-css-w\" \"npm:build-js-w\" \"npm:startapp\"",
+    "startwlinux": "conc \"npm:build-css-w\" \"npm:build-js-w\" \"npm:startapplinux\"",
+    "startwhttps": "conc \"npm:build-css-w\" \"npm:build-js-w\" \"npm:starthttps\"",
+    "startwhttpslinux": "conc \"npm:build-css-w\" \"npm:build-js-w\" \"npm:starthttpslinux\"",
     "test": "python -m pytest",
     "db:make": "python -m backend.database.migrate make",
     "db:migrate": "python -m backend.database.migrate migrate",
@@ -52,7 +55,8 @@
   "devDependencies": {
     "lighthouse": "^13.5.0",
     "quill": "^2.0.2",
-    "sass": "^1.77.8"
+    "sass": "^1.77.8",
+    "terser": "^5.51.3"
   },
   "dependencies": {
     "@microsoft/signalr": "^8.0.7",

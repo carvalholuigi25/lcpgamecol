@@ -12,7 +12,7 @@
   const dayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   const reasonLabels = { geoblock: "Geoblock", vpn: "VPN or proxy", lockdown: "Lockdown" };
   const localeByLanguage = {
-    en: "en-GB", pt: "pt-PT", de: "de-DE", fr: "fr-FR", it: "it-IT", es: "es-ES", ja: "ja-JP",
+    en: "en-GB", pt: "pt-PT", de: "de-DE", fr: "fr-FR", it: "it-IT", es: "es-ES", ja: "ja-JP", hu: "hu-HU",
   };
 
   const panel = document.getElementById("access-panel");

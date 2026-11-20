@@ -24,3 +24,4 @@ uploads/
 /certs/
 tests/reports/
 .venv-wsl/
+public/dist/

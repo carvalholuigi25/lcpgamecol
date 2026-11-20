@@ -15,7 +15,7 @@ const availableThemes = [
   "cool-modern-gaming",
   "seasonal", ...Object.keys(seasonalThemes),
 ];
-const localeByLanguage = { en: "en-GB", pt: "pt-PT", de: "de-DE", fr: "fr-FR", it: "it-IT", es: "es-ES", ja: "ja-JP" };
+const localeByLanguage = { en: "en-GB", pt: "pt-PT", de: "de-DE", fr: "fr-FR", it: "it-IT", es: "es-ES", ja: "ja-JP", hu: "hu-HU" };
 const themeSelector = document.getElementById("theme-selector");
 const liveClock = document.getElementById("live-clock");
 const lockoutTimers = new WeakMap();

@@ -8,7 +8,7 @@ they can't be farmed (comments, feedback).
 Levels grow a little further apart each time: reaching level L takes
 LEVEL_STEP_XP * L * (L - 1) / 2 XP in total (100 for level 2, 300 for level 3...).
 Ranks are names for level ranges. Each rank has a badge; the pages draw it from the
-rank's key (public/scripts/xp_badges.js).
+rank's key (public/scripts/users/xp_badges.js).
 """
 
 import logging

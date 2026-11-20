@@ -4,7 +4,7 @@
   selector.dataset.flagPickerEnhanced = "true";
   selector.hidden = true;
 
-  const flagFiles = { en: "us", pt: "pt", de: "de", fr: "fr", it: "it", es: "es", ja: "jp" };
+  const flagFiles = { en: "us", pt: "pt", de: "de", fr: "fr", it: "it", es: "es", ja: "jp", hu: "hu" };
 
   const picker = document.createElement("div");
   picker.className = "language-picker";

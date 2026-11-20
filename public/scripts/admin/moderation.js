@@ -50,7 +50,7 @@ async function requestJson(path, options = {}, fallback = "The request failed.")
 }
 
 function formatDate(value) {
-  const locale = { en: "en-GB", pt: "pt-PT", de: "de-DE", fr: "fr-FR", it: "it-IT", es: "es-ES", ja: "ja-JP" }[window.i18n.language];
+  const locale = { en: "en-GB", pt: "pt-PT", de: "de-DE", fr: "fr-FR", it: "it-IT", es: "es-ES", ja: "ja-JP", hu: "hu-HU" }[window.i18n.language];
   return value ? new Date(value).toLocaleString(locale, { dateStyle: "medium", timeStyle: "short" }) : "—";
 }
 

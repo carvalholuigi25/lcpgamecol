@@ -170,7 +170,7 @@ function renderUploads(uploads) {
   uploadRows.replaceChildren();
   document.getElementById("upload-empty").hidden = uploads.length > 0;
   document.getElementById("upload-count").textContent = window.i18n.t("{count} FILES", { count: uploads.length });
-  const locale = { en: "en-GB", pt: "pt-PT", de: "de-DE", fr: "fr-FR", it: "it-IT", es: "es-ES", ja: "ja-JP" }[window.i18n.language];
+  const locale = { en: "en-GB", pt: "pt-PT", de: "de-DE", fr: "fr-FR", it: "it-IT", es: "es-ES", ja: "ja-JP", hu: "hu-HU" }[window.i18n.language];
 
   for (const upload of uploads) {
     const row = document.createElement("tr");

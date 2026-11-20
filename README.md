@@ -61,7 +61,7 @@ Start the app from the project folder:
 npm start
 ```
 
-This builds the CSS and starts the development server with `config.env`. To start the server without rebuilding CSS:
+This builds the CSS, minifies the JavaScript, and starts the development server with `config.env`. Pages load the minified scripts from `public/dist/scripts/` (built from `public/scripts/` by `npm run build-js`; the folder is not committed), so run `npm run build` or `npm start` at least once after cloning and after editing scripts. The `startw*` commands rebuild CSS and scripts on every change. To start the server without rebuilding anything:
 
 ```powershell
 npm run startapp

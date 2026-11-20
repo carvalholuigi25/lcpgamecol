@@ -1366,6 +1366,40 @@ dialog::backdrop {
   font: 0.95rem / 1.4 Arial, sans-serif;
 }
 
+// Platform names with small brand logos; chips wrap on narrow screens.
+.platform-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.platform-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  max-width: 100%;
+  padding: 2px 8px;
+  border: 1px solid rgba(0, 240, 255, 0.3);
+  border-radius: 999px;
+  font-size: clamp(0.72rem, 0.68rem + 0.25vw, 0.85rem);
+
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.platform-logo {
+  flex: none;
+  font-size: 1.1em;
+  line-height: 1;
+  color: var(--neon-cyan);
+}
+
 .details-grid .valminimumsystemrequirements,
 .details-grid .valrecommendedsystemrequirements,
 .details-grid-info .valminimumsystemrequirements,

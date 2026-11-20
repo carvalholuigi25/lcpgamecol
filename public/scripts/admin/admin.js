@@ -122,7 +122,7 @@ async function loadDashboard() {
     loadDevelopmentSettings();
     if (dirtyRecordForms.size === 0) await loadRecordGames(gameRecordSelect.value || undefined);
     dashboardStatus.textContent = "";
-    const locale = { en: "en-GB", pt: "pt-PT", de: "de-DE", fr: "fr-FR", it: "it-IT", es: "es-ES", ja: "ja-JP" }[window.i18n.language];
+    const locale = { en: "en-GB", pt: "pt-PT", de: "de-DE", fr: "fr-FR", it: "it-IT", es: "es-ES", ja: "ja-JP", hu: "hu-HU" }[window.i18n.language];
     document.getElementById("updated-label").textContent = window.i18n.t("UPDATED {time}", {
       time: new Date().toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" }),
     });
@@ -383,6 +383,8 @@ document.getElementById("toggle-records-button").addEventListener("click", (even
   const expanded = button.getAttribute("aria-expanded") === "true";
   content.hidden = expanded;
   tabs.hidden = expanded;
+  const transfer = document.getElementById("game-data-transfer-section");
+  if (transfer) transfer.hidden = expanded;
   button.setAttribute("aria-expanded", String(!expanded));
   button.textContent = expanded ? "Show records" : "Hide records";
   saveDashboardSettings({ ...getDashboardSettings(), recordsExpanded: !expanded });
@@ -776,6 +778,8 @@ function applyDashboardSettings() {
   if (recordsContent && recordsToggle) {
     recordsContent.hidden = !settings.recordsExpanded;
     recordTabs.hidden = !settings.recordsExpanded;
+    const transferSection = document.getElementById("game-data-transfer-section");
+    if (transferSection) transferSection.hidden = !settings.recordsExpanded;
     recordsToggle.setAttribute("aria-expanded", String(settings.recordsExpanded));
     recordsToggle.textContent = settings.recordsExpanded ? "Hide records" : "Show records";
   }

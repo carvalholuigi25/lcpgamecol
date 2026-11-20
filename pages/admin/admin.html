@@ -39,7 +39,7 @@
             <select id="language-selector" aria-label="Language">
               <option value="en">English</option><option value="pt">Português</option>
               <option value="de">Deutsch</option><option value="fr">Français</option>
-              <option value="it">Italiano</option><option value="es">Español</option><option value="ja">日本語</option>
+              <option value="it">Italiano</option><option value="es">Español</option><option value="ja">日本語</option><option value="hu">Magyar</option>
             </select>
           </label>
           <span class="realtime-status" data-realtime-status role="status" hidden></span>
@@ -151,6 +151,7 @@
             </div>
           </div>
 
+          <div id="game-data-transfer-section">
           <div class="game-data-transfer" aria-label="Game data import and export">
             <label for="game-data-format">File format
               <select id="game-data-format">
@@ -167,6 +168,7 @@
           </div>
           <p class="game-data-help chart-note">Imports add new records and assign new IDs. PDF import requires a PDF exported by this app.</p>
           <p id="game-transfer-status" class="records-status" role="status" aria-live="polite"></p>
+          </div>
 
           <div id="records-content">
           <p id="records-status" class="records-status" role="status" aria-live="polite"></p>
@@ -387,19 +389,19 @@
       </section>
       <div id="toast-region" class="toast-region" role="status" aria-live="polite" aria-atomic="true"></div>
     </main>
-    <script src="/public/scripts/loading.js"></script>
-    <script src="/public/scripts/i18n.js"></script>
-    <script src="/public/scripts/language_flags.js?v=2"></script>
-    <script src="/public/scripts/preferences.js"></script>
-    <script src="/public/scripts/sidebar.js"></script>
-    <script src="/public/scripts/register.js"></script>
-    <script src="/public/scripts/two_factor_login.js"></script>
-    <script src="/public/scripts/login_numpad.js"></script>
+    <script src="/public/dist/scripts/core/loading.min.js"></script>
+    <script src="/public/dist/scripts/core/i18n.min.js"></script>
+    <script src="/public/dist/scripts/core/language_flags.min.js?v=3"></script>
+    <script src="/public/dist/scripts/core/preferences.min.js"></script>
+    <script src="/public/dist/scripts/core/sidebar.min.js"></script>
+    <script src="/public/dist/scripts/auth/register.min.js"></script>
+    <script src="/public/dist/scripts/auth/two_factor_login.min.js"></script>
+    <script src="/public/dist/scripts/auth/login_numpad.min.js"></script>
     <script src="/nmodules/@microsoft/signalr/dist/browser/signalr.min.js"></script>
-    <script src="/public/scripts/realtime.js"></script>
-    <script src="/public/scripts/inbox.js"></script>
+    <script src="/public/dist/scripts/realtime/realtime.min.js"></script>
+    <script src="/public/dist/scripts/realtime/inbox.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
-    <script src="/public/scripts/functions.js"></script>
-    <script src="/public/scripts/admin.js"></script>
+    <script src="/public/dist/scripts/core/functions.min.js"></script>
+    <script src="/public/dist/scripts/admin/admin.min.js"></script>
   </body>
 </html>

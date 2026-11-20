@@ -1,3 +1,6 @@
+import re
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -68,21 +71,21 @@ def test_custom_page_routes_preserve_games_api_route(client, auth_headers):
     assert library.status_code == 200
     assert 'id="login-form"' in library.text
     assert 'data-password-entry' in library.text
-    assert "/public/scripts/login_numpad.js" in library.text
+    assert "/public/dist/scripts/auth/login_numpad.min.js" in library.text
     for control_id in ("first-page", "previous-page", "page-selector", "next-page", "last-page"):
         assert f'id="{control_id}"' in library.text
     assert releases.status_code == 200
     assert 'id="login-form"' in releases.text
     assert 'data-password-entry' in releases.text
-    assert "/public/scripts/login_numpad.js" in releases.text
+    assert "/public/dist/scripts/auth/login_numpad.min.js" in releases.text
     assert admin.status_code == 200
     assert 'data-password-entry' in admin.text
-    assert "/public/scripts/login_numpad.js" in admin.text
-    login_script = client.get("/public/scripts/login_numpad.js")
+    assert "/public/dist/scripts/auth/login_numpad.min.js" in admin.text
+    login_script = client.get("/public/scripts/auth/login_numpad.js")
     assert login_script.status_code == 200
     assert "Letters & symbols" in login_script.text
     # The trailer player is fetched on demand by shelf.js, not loaded by the pages.
-    shelf_script = client.get("/public/scripts/shelf.js").text
+    shelf_script = client.get("/public/scripts/games/shelf.js").text
     for page in (library, releases):
         assert "/nmodules/@videojs/cdn/video.js" not in page.text
         assert 'id="details-trailer-section"' in page.text
@@ -253,11 +256,11 @@ def test_admin_dashboard_page_and_assets_are_served(client):
     assert 'id="theme-selector"' in page.text
     assert 'id="page-loader"' in page.text
     assert 'data-lockout' in page.text
-    assert 'src="/public/scripts/loading.js"' in page.text
-    assert 'src="/public/scripts/preferences.js"' in page.text
-    assert client.get("/public/scripts/admin.js").status_code == 200
-    assert client.get("/public/scripts/loading.js").status_code == 200
-    assert client.get("/public/scripts/preferences.js").status_code == 200
+    assert 'src=\"/public/dist/scripts/core/loading.min.js\"' in page.text
+    assert 'src=\"/public/dist/scripts/core/preferences.min.js\"' in page.text
+    assert client.get("/public/scripts/admin/admin.js").status_code == 200
+    assert client.get("/public/scripts/core/loading.js").status_code == 200
+    assert client.get("/public/scripts/core/preferences.js").status_code == 200
     assert client.get("/public/styles/css/admin.css").status_code == 200
     games_page = client.get("/pages/games/games.html").text
     releases_page = client.get("/pages/games/games_releases.html").text
@@ -268,8 +271,8 @@ def test_admin_dashboard_page_and_assets_are_served(client):
         assert 'id="theme-selector"' in shelf_page
         assert 'id="page-loader"' in shelf_page
         assert 'data-lockout' in shelf_page
-        assert 'src="/public/scripts/loading.js"' in shelf_page
-        assert 'src="/public/scripts/preferences.js"' in shelf_page
+        assert 'src=\"/public/dist/scripts/core/loading.min.js\"' in shelf_page
+        assert 'src=\"/public/dist/scripts/core/preferences.min.js\"' in shelf_page
 
 
 @pytest.mark.parametrize("theme", ["sunsetvibes", "cyber-retro", "rgb"])
@@ -278,7 +281,7 @@ def test_site_pages_offer_the_api_docs_themes(client, theme):
     for path in pages:
         assert f'<option value="{theme}">' in client.get(path).text
 
-    assert f'"{theme}"' in client.get("/public/scripts/preferences.js").text
+    assert f'"{theme}"' in client.get("/public/scripts/core/preferences.js").text
     for stylesheet in ("/public/styles/css/games.css", "/public/styles/css/admin.css"):
         assert f"body[data-theme={theme}]" in client.get(stylesheet).text
 
@@ -288,8 +291,48 @@ def test_portuguese_language_picker_uses_portugal_flag(client):
 
     assert flag.status_code == 200
     assert flag.headers["content-type"].startswith("image/svg+xml")
-    assert "language_flags.js" in client.get("/pages/games/games.html").text
-    assert 'pt: "pt"' in client.get("/public/scripts/language_flags.js").text
+    assert "language_flags.min.js" in client.get("/pages/games/games.html").text
+    assert 'pt: "pt"' in client.get("/public/scripts/core/language_flags.js").text
+
+
+def test_pages_load_minified_scripts_built_from_sources():
+    root = Path(__file__).resolve().parent.parent
+    sources = {
+        path.relative_to(root / "public" / "scripts").as_posix()
+        for path in (root / "public" / "scripts").rglob("*.js")
+    }
+    referenced = set()
+    for page in (root / "pages").rglob("*.html"):
+        text = page.read_text(encoding="utf-8")
+        assert "/public/scripts/" not in text, page.name
+        referenced.update(re.findall(r'/public/dist/scripts/([\w/]+)\.min\.js', text))
+    missing = {name for name in referenced if f"{name}.js" not in sources}
+    assert referenced and not missing
+
+
+def test_hungarian_language_is_available(client):
+    assert client.get("/public/images/flags/hu.svg").status_code == 200
+    assert 'hu: "hu"' in client.get("/public/scripts/core/language_flags.js").text
+    i18n_script = client.get("/public/scripts/core/i18n.js").text
+    assert 'hu: "Magyar"' in i18n_script
+    assert '"Sign in": "Bejelentkezés"' in i18n_script
+    for page in ("/pages/games/games.html", "/pages/admin/admin.html", "/pages/users/profile.html"):
+        assert '<option value="hu">Magyar</option>' in client.get(page).text
+
+
+def test_game_details_show_platform_logos(client):
+    shelf_script = client.get("/public/scripts/games/shelf.js").text
+    assert "function platformDetail" in shelf_script
+    assert "bi-playstation" in shelf_script
+    assert 'bootstrap-icons.min.css' in client.get("/pages/games/games.html").text
+
+
+def test_admin_game_transfer_hides_with_records(client):
+    page = client.get("/pages/admin/admin.html").text
+    section_start = page.index('id="game-data-transfer-section"')
+    assert section_start < page.index('id="export-games-button"') < page.index('id="records-content"')
+    admin_script = client.get("/public/scripts/admin/admin.js").text
+    assert admin_script.count('getElementById("game-data-transfer-section")') == 2
 
 
 def test_admin_dashboard_page_settings_are_available(client):
