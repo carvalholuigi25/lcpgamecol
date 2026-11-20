@@ -1,7 +1,7 @@
 import enum
 from datetime import datetime
 
-from pydantic import BaseModel, Field, field_serializer, field_validator
+from pydantic import BaseModel, Field, field_serializer, field_validator, model_validator
 
 
 class Gameplatforms(str, enum.Enum):
@@ -176,6 +176,8 @@ class GameCreate(BaseModel):
     category: str | None = ""
     # Every trailer link; trailer_url stays the first (main) one.
     trailers: list[str] = Field(default_factory=list)
+    # Every store link (Steam, GOG, PlayStation Store, ...); store_url stays the first (main) one.
+    store_urls: list[str] = Field(default_factory=list)
 
     @field_validator("esrb", mode="before")
     @classmethod
@@ -187,6 +189,33 @@ class GameCreate(BaseModel):
         if isinstance(value, int):
             return IGDB_AGE_RATING_BY_ID.get(value, value)
         return value
+
+    @field_validator("store_urls", mode="before")
+    @classmethod
+    def parse_store_urls(cls, value):
+        if value is None:
+            return []
+        if isinstance(value, str):
+            # A plain string holds one link per line (URLs may contain commas).
+            return value.splitlines()
+        return value
+
+    @model_validator(mode="after")
+    def sync_store_links(self):
+        """Keep store_url (the main link) and store_urls (every link) consistent.
+
+        store_url always comes first, so clients that only know store_url keep working, and
+        empty or repeated links are dropped.
+        """
+        links: list[str] = []
+        for url in ([self.store_url] if self.store_url else []) + list(self.store_urls):
+            url = url.strip()
+            if url and url not in links:
+                links.append(url)
+        self.store_urls = links
+        if links:
+            self.store_url = links[0]
+        return self
 
     @field_serializer("esrb", when_used="json")
     def serialize_esrb_name(self, value: GamesESRB | None) -> str | None:

@@ -533,6 +533,111 @@ h1 {
 .record-fields textarea {
   resize: vertical;
 }
+// Multi-choice dropdowns (platforms, game modes, editions) and the store links list.
+.record-fields > .multi-select-field,
+.record-fields > .store-links-field {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  color: var(--muted);
+  font: 500 0.61rem var(--mono);
+  text-transform: uppercase;
+}
+.multi-select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: 37px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font: 0.79rem var(--sans);
+  text-align: left;
+  text-transform: none;
+  cursor: pointer;
+  &::after {
+    content: "";
+    flex: 0 0 auto;
+    width: 7px;
+    height: 7px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: translateY(-2px) rotate(45deg);
+    opacity: 0.6;
+  }
+  &[aria-expanded="true"]::after { transform: translateY(2px) rotate(-135deg); }
+  &:focus-visible { outline: 2px solid #9ab5a1; outline-offset: 1px; }
+}
+.multi-select-summary {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  &.is-empty { color: var(--muted); }
+}
+.multi-select-menu {
+  position: absolute;
+  z-index: 20;
+  top: 100%;
+  left: 0;
+  right: 0;
+  display: grid;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+  text-transform: none;
+  &[hidden] { display: none; }
+}
+.multi-select-options {
+  display: grid;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.multi-select-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  color: var(--ink);
+  font: 0.79rem var(--sans);
+  cursor: pointer;
+  &:hover { background: var(--green-soft); }
+}
+.record-fields .multi-select-option input {
+  width: auto;
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--green);
+}
+.store-links-list {
+  display: grid;
+  gap: 6px;
+}
+.store-link-row {
+  display: flex;
+  gap: 6px;
+  input { flex: 1 1 auto; }
+  .store-link-remove {
+    flex: 0 0 auto;
+    width: 37px;
+    height: auto;
+    font: 600 1.1rem var(--sans);
+    line-height: 1;
+  }
+}
+.record-fields .store-link-add {
+  justify-self: start;
+  min-height: 34px;
+  padding: 8px 12px;
+  text-transform: none;
+}
 .record-fields :disabled {
   background: #f3f4ef;
   color: var(--muted);
@@ -1092,9 +1197,11 @@ td a {
   font-size: 0.78rem;
 }
 
-.metric, .records-panel, .settings-panel, .chart-panel, .recent-table-wrap, .login-view, .toast-region, #toggle-records-button, #theme-selector, .refresh-button, #language-selector, .icon-button, .primary-button, .secondary-button, .danger-button, .record-form > .primary-button, form input, form select, form textarea, .record-list select, .record-fields input, .record-fields textarea, .record-fields select, .login-view input, .setting-option, .setting-field {
+.metric, .records-panel, .settings-panel, .chart-panel, .recent-table-wrap, .login-view, .toast-region, #toggle-records-button, #theme-selector, .refresh-button, #language-selector, .icon-button, .primary-button, .secondary-button, .danger-button, .record-form > .primary-button, form input, form select, form textarea, .record-list select, .record-fields input, .record-fields textarea, .record-fields select, .login-view input, .setting-option, .setting-field, .multi-select-trigger {
   border-radius: calc(8px + 16px);
 }
+.multi-select-menu { border-radius: 18px; }
+.multi-select-option { border-radius: 12px; }
 
 
 .metric, .records-panel, .settings-panel, .chart-panel, .recent-table-wrap, .login-view, .toast-region {
@@ -1358,11 +1465,17 @@ td a {
   }
 
   .language-picker-flag {
+    display: block;
+    box-sizing: content-box;
     width: 22px;
     height: 15px;
     flex: 0 0 22px;
     object-fit: cover;
-    border: 1px solid rgba(32, 40, 35, 0.12);
+    border: 0;
+    border-radius: 2px;
+    // An outline that does not shrink the flag and stays visible on light and dark themes,
+    // so mostly white flags (Japan, France, Italy) keep their edges.
+    box-shadow: 0 0 0 1px rgba(127, 127, 127, 0.35);
   }
 
   select {

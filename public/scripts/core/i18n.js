@@ -6722,7 +6722,65 @@
       "Eternal": "Örökkévaló", "Ascendant": "Felemelkedett", "Apex": "Csúcs",
     },
   };
-  for (const added of [seasonalAndXpTranslations, moderationTranslations, filtersTrailersBadgesTranslations, gameGuideTranslations, gameReleaseAndRankTranslations]) {
+  const adminGameFormTranslations = {
+    pt: {
+      "Store links": "Ligações de loja", "Store link": "Ligação de loja", "Add store link": "Adicionar ligação de loja",
+      "Remove store link": "Remover ligação de loja", "None selected": "Nenhuma seleção",
+      "Add another option and press Enter": "Adicione outra opção e prima Enter", "All game modes": "Todos os modos de jogo",
+      "Single Player": "Um jogador", "Multiplayer": "Multijogador", "Co-op": "Cooperativo",
+      "Standard": "Padrão", "Deluxe": "Deluxe", "Collector's Edition": "Edição de colecionador",
+      "Ultimate Edition": "Edição Ultimate", "Game of the Year": "Jogo do Ano",
+    },
+    de: {
+      "Store links": "Shop-Links", "Store link": "Shop-Link", "Add store link": "Shop-Link hinzufügen",
+      "Remove store link": "Shop-Link entfernen", "None selected": "Nichts ausgewählt",
+      "Add another option and press Enter": "Weitere Option eingeben und Enter drücken", "All game modes": "Alle Spielmodi",
+      "Single Player": "Einzelspieler", "Multiplayer": "Mehrspieler", "Co-op": "Koop",
+      "Standard": "Standard", "Deluxe": "Deluxe", "Collector's Edition": "Sammleredition",
+      "Ultimate Edition": "Ultimate Edition", "Game of the Year": "Game of the Year",
+    },
+    fr: {
+      "Store links": "Liens de boutique", "Store link": "Lien de boutique", "Add store link": "Ajouter un lien de boutique",
+      "Remove store link": "Supprimer le lien de boutique", "None selected": "Aucune sélection",
+      "Add another option and press Enter": "Ajoutez une autre option et appuyez sur Entrée", "All game modes": "Tous les modes de jeu",
+      "Single Player": "Solo", "Multiplayer": "Multijoueur", "Co-op": "Coopération",
+      "Standard": "Standard", "Deluxe": "Deluxe", "Collector's Edition": "Édition collector",
+      "Ultimate Edition": "Édition Ultimate", "Game of the Year": "Jeu de l'année",
+    },
+    it: {
+      "Store links": "Link ai negozi", "Store link": "Link al negozio", "Add store link": "Aggiungi link al negozio",
+      "Remove store link": "Rimuovi link al negozio", "None selected": "Nessuna selezione",
+      "Add another option and press Enter": "Aggiungi un'altra opzione e premi Invio", "All game modes": "Tutte le modalità di gioco",
+      "Single Player": "Giocatore singolo", "Multiplayer": "Multigiocatore", "Co-op": "Cooperativa",
+      "Standard": "Standard", "Deluxe": "Deluxe", "Collector's Edition": "Edizione da collezione",
+      "Ultimate Edition": "Edizione Ultimate", "Game of the Year": "Gioco dell'anno",
+    },
+    es: {
+      "Store links": "Enlaces de tienda", "Store link": "Enlace de tienda", "Add store link": "Añadir enlace de tienda",
+      "Remove store link": "Quitar enlace de tienda", "None selected": "Nada seleccionado",
+      "Add another option and press Enter": "Añade otra opción y pulsa Intro", "All game modes": "Todos los modos de juego",
+      "Single Player": "Un jugador", "Multiplayer": "Multijugador", "Co-op": "Cooperativo",
+      "Standard": "Estándar", "Deluxe": "Deluxe", "Collector's Edition": "Edición coleccionista",
+      "Ultimate Edition": "Edición Ultimate", "Game of the Year": "Juego del Año",
+    },
+    ja: {
+      "Store links": "ストアリンク", "Store link": "ストアリンク", "Add store link": "ストアリンクを追加",
+      "Remove store link": "ストアリンクを削除", "None selected": "未選択",
+      "Add another option and press Enter": "別の項目を入力して Enter を押してください", "All game modes": "すべてのゲームモード",
+      "Single Player": "シングルプレイヤー", "Multiplayer": "マルチプレイヤー", "Co-op": "協力プレイ",
+      "Standard": "スタンダード", "Deluxe": "デラックス", "Collector's Edition": "コレクターズエディション",
+      "Ultimate Edition": "アルティメットエディション", "Game of the Year": "ゲーム・オブ・ザ・イヤー",
+    },
+    hu: {
+      "Store links": "Áruházlinkek", "Store link": "Áruházlink", "Add store link": "Áruházlink hozzáadása",
+      "Remove store link": "Áruházlink eltávolítása", "None selected": "Nincs kiválasztva",
+      "Add another option and press Enter": "Adjon meg egy másik lehetőséget, és nyomja meg az Entert", "All game modes": "Minden játékmód",
+      "Single Player": "Egyjátékos", "Multiplayer": "Többjátékos", "Co-op": "Kooperatív",
+      "Standard": "Normál", "Deluxe": "Deluxe", "Collector's Edition": "Gyűjtői kiadás",
+      "Ultimate Edition": "Ultimate kiadás", "Game of the Year": "Az év játéka",
+    },
+  };
+  for (const added of [seasonalAndXpTranslations, moderationTranslations, filtersTrailersBadgesTranslations, gameGuideTranslations, gameReleaseAndRankTranslations, adminGameFormTranslations]) {
     for (const [language, messages] of Object.entries(added)) Object.assign(translations[language], messages);
   }
 

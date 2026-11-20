@@ -42,6 +42,204 @@ for (const value of AGE_RATING_OPTIONS) {
   gameEsrbRating.append(option);
 }
 
+// Choices for the list fields of a game. They mirror the Gameplatforms, GameModes and
+// GameEdition enums in routes/games/schemas.py; values imported from IGDB that are not in
+// these lists are added as extra choices when a game is opened.
+const GAME_LIST_OPTIONS = {
+  platforms: [
+    "PC", "Windows", "Linux", "MAC", "SteamOS",
+    "PlayStation", "PlayStation 2", "PlayStation 3", "PlayStation 4", "PlayStation 5",
+    "PlayStation Portable", "PlayStation Vita", "PlayStation Remote Play",
+    "Xbox", "Xbox 360", "Xbox One", "Xbox Series X", "Xbox Series S",
+    "Nintendo", "Nintendo 64", "Nintendo GameCube", "Nintendo Wii", "Nintendo Wii U", "Nintendo Switch",
+    "Nintendo 2DS", "Nintendo 3DS",
+    "Sega", "Sega Genesis Mega Drive", "Arcade", "Android", "iOS", "Mobile", "Other",
+  ],
+  gamemodes: ["all", "Single Player", "Multiplayer", "Co-op", "Online", "Offline"],
+  editions: ["Standard", "Deluxe", "Collector's Edition", "Ultimate Edition", "Game of the Year"],
+};
+const GAME_LIST_OPTION_LABELS = { all: "All game modes" };
+const multiSelects = new Map();
+
+function splitListValue(value) {
+  const items = Array.isArray(value) ? value : String(value ?? "").split(",");
+  const values = [];
+  for (const item of items) {
+    const text = String(typeof item === "object" && item ? item.name ?? item.value ?? "" : item).trim();
+    if (text && !values.includes(text)) values.push(text);
+  }
+  return values;
+}
+
+function listOptionLabel(value) {
+  return window.i18n.t(GAME_LIST_OPTION_LABELS[value] || value);
+}
+
+// A dropdown of checkboxes that keeps the comma-separated value in the field's hidden input,
+// so the form payload and the API stay unchanged.
+function createMultiSelect(field) {
+  const name = field.dataset.multiSelect;
+  const input = field.querySelector(`input[name="${name}"]`);
+  const choices = [...GAME_LIST_OPTIONS[name]];
+  const menuId = `${name}-options`;
+
+  const trigger = document.createElement("button");
+  trigger.type = "button";
+  trigger.className = "multi-select-trigger";
+  trigger.setAttribute("aria-haspopup", "true");
+  trigger.setAttribute("aria-expanded", "false");
+  trigger.setAttribute("aria-controls", menuId);
+  const summary = document.createElement("span");
+  summary.className = "multi-select-summary";
+  summary.id = `${name}-summary`;
+  trigger.setAttribute("aria-labelledby", `${name}-label ${summary.id}`);
+  trigger.append(summary);
+
+  const menu = document.createElement("div");
+  menu.className = "multi-select-menu";
+  menu.id = menuId;
+  menu.hidden = true;
+  const list = document.createElement("div");
+  list.className = "multi-select-options";
+  list.setAttribute("role", "group");
+  list.setAttribute("aria-labelledby", `${name}-label`);
+  const custom = document.createElement("input");
+  custom.type = "text";
+  custom.className = "multi-select-custom";
+  custom.placeholder = "Add another option and press Enter";
+  custom.setAttribute("aria-label", "Add another option and press Enter");
+  menu.append(list, custom);
+  field.append(trigger, menu);
+
+  const selectedValues = () => splitListValue(input.value);
+
+  function renderSummary() {
+    const values = selectedValues();
+    summary.textContent = values.length ? values.map(listOptionLabel).join(", ") : window.i18n.t("None selected");
+    summary.classList.toggle("is-empty", !values.length);
+  }
+
+  function render() {
+    const values = selectedValues();
+    list.replaceChildren(...choices.map((value) => {
+      const option = document.createElement("label");
+      option.className = "multi-select-option";
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.value = value;
+      checkbox.checked = values.includes(value);
+      checkbox.disabled = trigger.disabled;
+      const text = document.createElement("span");
+      text.textContent = GAME_LIST_OPTION_LABELS[value] || value;
+      option.append(checkbox, text);
+      return option;
+    }));
+    renderSummary();
+  }
+
+  function setValue(value) {
+    const values = splitListValue(value);
+    for (const item of values) if (!choices.includes(item)) choices.push(item);
+    input.value = values.join(", ");
+    render();
+  }
+
+  function setOpen(open) {
+    menu.hidden = !open || trigger.disabled;
+    trigger.setAttribute("aria-expanded", String(!menu.hidden));
+  }
+
+  list.addEventListener("change", () => {
+    const checked = [...list.querySelectorAll("input:checked")].map((checkbox) => checkbox.value);
+    input.value = choices.filter((value) => checked.includes(value)).join(", ");
+    renderSummary();
+  });
+  custom.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    // Enter would otherwise submit the whole game form.
+    event.preventDefault();
+    const value = custom.value.trim().replaceAll(",", " ");
+    if (!value) return;
+    setValue([...selectedValues(), value]);
+    custom.value = "";
+    gameRecordForm.dispatchEvent(new Event("input"));
+  });
+  trigger.addEventListener("click", () => setOpen(menu.hidden));
+  field.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !menu.hidden) {
+      event.preventDefault();
+      setOpen(false);
+      trigger.focus();
+    }
+  });
+  document.addEventListener("click", (event) => {
+    if (!field.contains(event.target)) setOpen(false);
+  });
+  field.addEventListener("focusout", (event) => {
+    if (event.relatedTarget && !field.contains(event.relatedTarget)) setOpen(false);
+  });
+
+  return {
+    setValue,
+    render,
+    setDisabled(disabled) {
+      trigger.disabled = disabled;
+      custom.disabled = disabled;
+      for (const checkbox of list.querySelectorAll("input")) checkbox.disabled = disabled;
+      if (disabled) setOpen(false);
+    },
+  };
+}
+
+for (const field of gameRecordForm.querySelectorAll("[data-multi-select]")) {
+  multiSelects.set(field.dataset.multiSelect, createMultiSelect(field));
+}
+document.addEventListener("languagechange", () => {
+  for (const multiSelect of multiSelects.values()) multiSelect.render();
+});
+
+// Store links: one URL field per store; the first one is the game's main store link.
+const storeLinksList = document.getElementById("store-links-list");
+const addStoreLinkButton = document.getElementById("add-store-link-button");
+
+function storeLinkRow(value = "") {
+  const row = document.createElement("div");
+  row.className = "store-link-row";
+  const input = document.createElement("input");
+  input.type = "url";
+  input.name = "store_urls";
+  input.value = value;
+  input.placeholder = "https://store.steampowered.com/app/...";
+  input.setAttribute("aria-label", "Store link");
+  const remove = document.createElement("button");
+  remove.type = "button";
+  remove.className = "icon-button store-link-remove";
+  remove.setAttribute("aria-label", "Remove store link");
+  remove.title = "Remove store link";
+  remove.textContent = "×";
+  remove.addEventListener("click", () => {
+    row.remove();
+    if (!storeLinksList.children.length) storeLinksList.append(storeLinkRow());
+    dirtyRecordForms.add(gameRecordForm);
+    storeLinksList.querySelector("input")?.focus();
+  });
+  row.append(input, remove);
+  return row;
+}
+
+function setStoreLinks(urls) {
+  const values = (Array.isArray(urls) ? urls : [urls]).filter(Boolean);
+  storeLinksList.replaceChildren(...(values.length ? values : [""]).map((url) => storeLinkRow(url)));
+}
+
+addStoreLinkButton.addEventListener("click", () => {
+  const row = storeLinkRow();
+  storeLinksList.append(row);
+  dirtyRecordForms.add(gameRecordForm);
+  row.querySelector("input").focus();
+});
+setStoreLinks([]);
+
 function initRichTextEditors() {
   for (const textarea of document.querySelectorAll("textarea[data-rich-text]")) {
     const container = document.createElement("div");
@@ -147,6 +345,14 @@ async function readApiResponse(response) {
 }
 
 function setFormField(form, name, value) {
+  if (form === gameRecordForm && name === "store_urls") {
+    setStoreLinks(value);
+    return;
+  }
+  if (form === gameRecordForm && multiSelects.has(name)) {
+    multiSelects.get(name).setValue(value);
+    return;
+  }
   const field = form.elements.namedItem(name);
   if (field.type === "checkbox") {
     field.checked = Boolean(value);
@@ -160,9 +366,13 @@ function setFormField(form, name, value) {
 
 function setRecordFormMode(form, editButtonId, deleteButtonId, hasRecord, editing, editLabel) {
   dirtyRecordForms.delete(form);
-  for (const field of form.querySelectorAll(".record-fields input, .record-fields textarea, .record-fields select")) {
-    field.disabled = hasRecord && !editing;
+  const locked = hasRecord && !editing;
+  for (const field of form.querySelectorAll(".record-fields input, .record-fields textarea, .record-fields select, .record-fields button")) {
+    field.disabled = locked;
     richTextEditors.get(field.name)?.enable(!field.disabled);
+  }
+  if (form === gameRecordForm) {
+    for (const multiSelect of multiSelects.values()) multiSelect.setDisabled(locked);
   }
   form.querySelector('[type="submit"]').hidden = hasRecord && !editing;
 
@@ -180,6 +390,7 @@ function clearGameForm() {
   setFormField(gameRecordForm, "platforms", "PC");
   setFormField(gameRecordForm, "gamemodes", "all");
   setFormField(gameRecordForm, "editions", "Standard");
+  setFormField(gameRecordForm, "store_urls", []);
   document.getElementById("game-form-title").textContent = "Create game";
   setRecordFormMode(gameRecordForm, "edit-game-button", "delete-game-button", false, true, "Edit game");
 }
@@ -191,7 +402,10 @@ function selectGameRecord(gameId) {
     return;
   }
   for (const [name, value] of Object.entries(game)) {
-    if (name !== "id") {
+    if (name === "store_url") continue;
+    if (name === "store_urls") {
+      setFormField(gameRecordForm, name, value?.length ? value : [game.store_url]);
+    } else if (name !== "id") {
       const field = gameRecordForm.elements.namedItem(name);
       if (name === "category" && value && !Array.from(field.options).some((option) => option.value === value)) {
         const option = document.createElement("option");
@@ -318,6 +532,7 @@ async function loadRecordGames(preferredGameId) {
 
 function gameFormPayload() {
   const values = new FormData(gameRecordForm);
+  const storeUrls = [...new Set(values.getAll("store_urls").map((url) => url.trim()).filter(Boolean))];
   return {
     title: values.get("title").trim(),
     genre: values.get("genre").trim(),
@@ -330,7 +545,8 @@ function gameFormPayload() {
     developer_name: values.get("developer_name") || "",
     publisher_name: values.get("publisher_name") || "",
     website_url: values.get("website_url") || "",
-    store_url: values.get("store_url") || "",
+    store_url: storeUrls[0] || "",
+    store_urls: storeUrls,
     map_url: values.get("map_url") || "",
     trailer_url: values.get("trailer_url") || "",
     screenshots: values.get("screenshots").split(/\r?\n/).map((url) => url.trim()).filter(Boolean),

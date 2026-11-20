@@ -1285,8 +1285,37 @@ dialog::backdrop {
 
   &[data-released="true"] .release-countdown-units { opacity: 0.5; }
 
-  .release-countdown-buy-now { display: inline-flex; margin-top: 12px; }
-  .release-countdown-buy-now[hidden] { display: none; }
+  .release-countdown-stores { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .release-countdown-stores[hidden] { display: none; }
+  .release-countdown-buy-now {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 36px;
+    padding: 0 14px;
+    border: 1px solid var(--accent);
+    border-radius: calc(16px + 8px);
+    background: var(--accent);
+    color: #fff;
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-decoration: none;
+    box-shadow: 2px 4px 6px var(--accent-dark);
+    transition: background 0.2s ease, box-shadow 0.2s ease;
+
+    &:hover, &:focus-visible {
+      background: var(--accent-dark);
+      color: #fff;
+      box-shadow: 2px 4px 6px var(--accent);
+    }
+  }
+  .release-countdown-store-name {
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.22);
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
 }
 
 .details-map-section {
@@ -2371,11 +2400,17 @@ header {
   }
 
   .language-picker-flag {
+    display: block;
+    box-sizing: content-box;
     width: 22px;
     height: 15px;
     flex: 0 0 22px;
     object-fit: cover;
-    border: 1px solid rgba(32, 40, 35, 0.12);
+    border: 0;
+    border-radius: 2px;
+    // An outline that does not shrink the flag and stays visible on light and dark themes,
+    // so mostly white flags (Japan, France, Italy) keep their edges.
+    box-shadow: 0 0 0 1px rgba(127, 127, 127, 0.35);
   }
 
   select {

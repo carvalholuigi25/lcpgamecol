@@ -16,8 +16,7 @@
       <a href="/library">Return to the game library</a>
       <p class="blocked-admin-note">Administrators can still <a href="/admin">sign in to the dashboard</a>.</p>
     </main>
-    <script src="/public/dist/scripts/core/i18n.min.js"></script>
-    <script src="/public/dist/scripts/core/language_flags.min.js?v=3"></script>
+    <script src="/public/dist/scripts/all.min.js" data-modules="core/i18n core/language_flags"></script>
     <script>
       (() => {
         const until = document.getElementById("blocked-until");

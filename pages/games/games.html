@@ -298,7 +298,7 @@
             </div>
             <progress id="details-countdown-progress" max="100" value="0" aria-labelledby="details-countdown-caption"></progress>
             <p class="release-countdown-caption" id="details-countdown-caption"></p>
-            <a class="primary-button release-countdown-buy-now" id="details-buy-now" target="_blank" rel="noopener noreferrer" hidden>Buy now</a>
+            <div class="release-countdown-stores" id="details-buy-now" hidden></div>
           </section>
           <section class="details-media-section" id="details-resources-section" aria-labelledby="details-resources-title" hidden>
             <h3 id="details-resources-title">Helpful game links</h3>
@@ -424,22 +424,8 @@
     </main>
 
     <script type="module" src="/nmodules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script defer src="/public/dist/scripts/core/loading.min.js"></script>
-    <script defer src="/public/dist/scripts/core/i18n.min.js"></script>
-    <script defer src="/public/dist/scripts/core/language_flags.min.js?v=3"></script>
-    <script defer src="/public/dist/scripts/core/preferences.min.js"></script>
-    <script defer src="/public/dist/scripts/core/functions.min.js"></script>
     <script defer src="/nmodules/@microsoft/signalr/dist/browser/signalr.min.js"></script>
-    <script defer src="/public/dist/scripts/realtime/realtime.min.js"></script>
-    <script defer src="/public/dist/scripts/core/sidebar.min.js"></script>
-    <script defer src="/public/dist/scripts/realtime/inbox.min.js"></script>
-    <script defer src="/public/dist/scripts/auth/register.min.js"></script>
-    <script defer src="/public/dist/scripts/auth/two_factor_login.min.js"></script>
-    <script defer src="/public/dist/scripts/auth/login_numpad.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
-    <script defer src="/public/dist/scripts/games/shelf.min.js"></script>
-    <script defer src="/public/dist/scripts/users/xp_badges.min.js"></script>
-    <script defer src="/public/dist/scripts/games/reviews.min.js"></script>
-    <script defer src="/public/dist/scripts/games/games.min.js"></script>
+    <script defer src="/public/dist/scripts/all.min.js" data-modules="core/loading core/i18n core/language_flags core/preferences core/functions realtime/realtime core/sidebar realtime/inbox auth/register auth/two_factor_login auth/login_numpad games/shelf users/xp_badges games/reviews games/games"></script>
   </body>
 </html>

@@ -210,9 +210,9 @@
                 <label>Release year<input name="release_year" type="number" min="1950" max="2200" required /></label>
                 <label>Release date<input name="release_date" type="date" /></label>
                 <label class="field-wide">Description<textarea name="description" rows="5"></textarea></label>
-                <label>Platforms<input name="platforms" placeholder="PC, PlayStation 5" /></label>
-                <label>Game modes<input name="gamemodes" placeholder="Single Player, Online" /></label>
-                <label>Editions<input name="editions" placeholder="Standard, Deluxe" /></label>
+                <div class="multi-select-field" data-multi-select="platforms"><span id="platforms-label">Platforms</span><input name="platforms" type="hidden" /></div>
+                <div class="multi-select-field" data-multi-select="gamemodes"><span id="gamemodes-label">Game modes</span><input name="gamemodes" type="hidden" /></div>
+                <div class="multi-select-field" data-multi-select="editions"><span id="editions-label">Editions</span><input name="editions" type="hidden" /></div>
                 <label>Age rating<select name="esrb" id="game-esrb-rating"></select></label>
                 <label>Player rating<input name="user_rating" type="number" min="0" max="100" step="0.1" /></label>
                 <label>Critic rating<input name="critic_rating" type="number" min="0" max="100" step="0.1" /></label>
@@ -223,9 +223,13 @@
                 <label>Developer name<input name="developer_name" maxlength="200" /></label>
                 <label>Publisher name<input name="publisher_name" maxlength="200" /></label>
                 <label>Website URL<input name="website_url" type="url" /></label>
-                <label>Store URL<input name="store_url" type="url" /></label>
                 <label>Interactive map URL<input name="map_url" type="url" /></label>
                 <label>Trailer URL<input name="trailer_url" type="url" /></label>
+                <div class="field-wide store-links-field" role="group" aria-labelledby="store-links-label">
+                  <span id="store-links-label">Store links</span>
+                  <div class="store-links-list" id="store-links-list"></div>
+                  <button class="secondary-button store-link-add" id="add-store-link-button" type="button">Add store link</button>
+                </div>
                 <label class="field-wide">Trailer gallery<textarea name="trailers" rows="3" placeholder="Add one trailer URL per line (YouTube, Vimeo, or a video file)"></textarea></label>
                 <label class="field-wide">Screenshot gallery<textarea name="screenshots" rows="5" placeholder="Add one screenshot URL per line"></textarea></label>
                 <div class="field-wide rich-text-field"><span id="minimum-requirements-label">Minimum PC system requirements</span><textarea name="minimum_system_requirements" data-rich-text aria-labelledby="minimum-requirements-label" hidden></textarea></div>
@@ -389,19 +393,8 @@
       </section>
       <div id="toast-region" class="toast-region" role="status" aria-live="polite" aria-atomic="true"></div>
     </main>
-    <script src="/public/dist/scripts/core/loading.min.js"></script>
-    <script src="/public/dist/scripts/core/i18n.min.js"></script>
-    <script src="/public/dist/scripts/core/language_flags.min.js?v=3"></script>
-    <script src="/public/dist/scripts/core/preferences.min.js"></script>
-    <script src="/public/dist/scripts/core/sidebar.min.js"></script>
-    <script src="/public/dist/scripts/auth/register.min.js"></script>
-    <script src="/public/dist/scripts/auth/two_factor_login.min.js"></script>
-    <script src="/public/dist/scripts/auth/login_numpad.min.js"></script>
     <script src="/nmodules/@microsoft/signalr/dist/browser/signalr.min.js"></script>
-    <script src="/public/dist/scripts/realtime/realtime.min.js"></script>
-    <script src="/public/dist/scripts/realtime/inbox.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
-    <script src="/public/dist/scripts/core/functions.min.js"></script>
-    <script src="/public/dist/scripts/admin/admin.min.js"></script>
+    <script src="/public/dist/scripts/all.min.js" data-modules="core/loading core/i18n core/language_flags core/preferences core/sidebar auth/register auth/two_factor_login auth/login_numpad realtime/realtime realtime/inbox core/functions admin/admin"></script>
   </body>
 </html>

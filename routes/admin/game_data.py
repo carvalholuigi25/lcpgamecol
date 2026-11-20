@@ -38,7 +38,7 @@ NULL_CELL = r"\N"
 ESCAPED_NULL_CELL = r"\\N"
 GAME_FIELDS = tuple(Game.model_fields)
 IMPORT_FIELDS = set(GameCreate.model_fields)
-LIST_FIELDS = {"screenshots", "trailers"}
+LIST_FIELDS = {"screenshots", "trailers", "store_urls"}
 FORMULA_PREFIXES = "=+-@"
 
 

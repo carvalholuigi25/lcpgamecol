@@ -8,6 +8,14 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Games can have several store links (Steam, GOG, PlayStation Store, and so on).
+  - On the dashboard, the game form has a **Store links** list: one field per store, with **Add store link** and a remove button on each row.
+  - When a released game has store links, its details show a **Buy now** button for each store, labelled with the store name (Steam, GOG, Epic Games Store, Nintendo eShop, and others; unknown stores show their web address).
+  - IGDB imports keep every store link, not only the first one.
+  - New `store_urls` list on games. `store_url` is still the main link and is always the first item of `store_urls`, so API clients that only send `store_url` keep working. Game exports and imports include the list.
+  - Migration `0004_add_game_store_urls` adds the `store_urls` column to `games`; it runs when the app starts. Games saved before it show their existing store URL as their only store link.
+- Hungarian translations for every page, with a Hungarian flag in the **Language** menu. Dates and times use the Hungarian format.
+- Game details show each platform as a chip with a small brand logo. Platforms without a known logo show the name only.
 - The language menu now shows a flag beside the current language and every available language option.
 - Password sign-in panels now offer input-only, numpad, and full letters-and-symbols entry modes. The numpad and on-screen keyboard provide touch-friendly alternatives while preserving normal password input.
 - Favorite games on profiles and in the administrator user details can now be browsed in pages, with page-size choices of 12, 24, or 48 games.
@@ -113,6 +121,13 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- Pages now load a single minified script, `public/dist/scripts/all.min.js`, built from every file in `public/scripts/` by `npm run build-js` (also run by `npm run build`, `npm start`, and the `startw*` watchers, which rebuild it when a script changes). Third-party scripts (SignalR, Bootstrap, and Quill from the CDN) are still loaded on their own.
+  - Each source file is wrapped as a module inside the bundle, so files that declare the same names no longer clash. A page lists the modules it runs, in order, in the script tag's `data-modules` attribute, for example `<script src="/public/dist/scripts/all.min.js" data-modules="core/i18n core/sidebar admin/admin"></script>`.
+  - A source map, `all.min.js.map`, is written next to the bundle.
+  - The per-file `*.min.js` scripts in `public/dist/scripts/<folder>/` are no longer built, and the build removes old ones.
+- On the dashboard, **Platforms**, **Game modes**, and **Editions** are now dropdowns with a checkbox for each choice, instead of free-text fields. Values from IGDB that are not in the list (for example "PC (Microsoft Windows)") appear as extra choices, and **Add another option** accepts a value that is not listed. The values are saved as before (comma-separated).
+- Better language flags: the United States flag has its 13 stripes and 50 stars, Portugal has the armillary sphere and shield, Brazil has its globe, band and stars, Spain has its coat of arms, and Japan's disc has the right size. Flags have rounded corners and a thin outline, so mostly white flags stay visible on light themes, and they are no longer shrunk by their border.
+- On the dashboard, the game export and import controls are hidden together with the records when **Hide records** is used.
 - The sidebar is now on every page for every signed-in user, including the library and releases pages. Notifications, Messages and Feedback are at the top, in a new **Activity** group, instead of in the page header. Administrators also see the dashboard and tools links. The links are built by `sidebar.js`, so pages only include an empty `<aside id="admin-sidebar">`.
 - When the sidebar is shown, the top bar of the administrator, profile and feedback pages no longer repeats its links.
 - `GET /users` now returns the signed-in user's `role` as well as their `username`.
@@ -121,6 +136,7 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- The **Buy now** button in the release countdown was shown as a plain link on the library and releases pages; it is now styled as a button.
 - The administrator top bar no longer overlaps "API" and "Language" on wide screens, and no longer runs off the side of the screen on phones, where the notifications, messages and log out buttons could not be reached.
 - On the library pages, the theme menu no longer spills past the right edge of the page.
 - On narrow screens, the upcoming releases filter now wraps onto several rows instead of squeezing every field into one.

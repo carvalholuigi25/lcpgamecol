@@ -189,3 +189,21 @@ def test_links_map_imported_releases_only(client, viewer_headers, igdb_calls):
     assert response.json() == {"1942": game_id}
     assert client.get("/games/igdb/links?ids=1;DROP", headers=viewer_headers).status_code == 422
     assert client.get("/games/igdb/links?ids=1942", headers={}).status_code == 401
+
+
+def test_imported_game_carries_every_igdb_store_url():
+    game = igdb_imports.game_create_from_igdb(
+        {
+            "name": "Portal 2",
+            "first_release_date": 1303171200,
+            "websites": [
+                {"category": 1, "url": "https://www.thinkwithportals.com/"},
+                {"category": 13, "url": "https://store.steampowered.com/app/620/"},
+                {"category": 17, "url": "//www.gog.com/game/portal_2"},
+                {"category": 13, "url": "https://store.steampowered.com/app/620/"},
+            ],
+        }
+    )
+
+    assert game.store_urls == ["https://store.steampowered.com/app/620/", "https://www.gog.com/game/portal_2"]
+    assert game.store_url == game.store_urls[0]

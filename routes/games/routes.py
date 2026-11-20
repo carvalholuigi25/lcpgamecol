@@ -98,20 +98,24 @@ def _igdb_website_url(game: dict) -> str:
     return url.replace("//", "https://", 1) if url.startswith("//") else url
 
 
+IGDB_STORE_CATEGORIES = {13, 16, 17, 20, 21, 22, 23, 25, 26, 27, 28, 29, 30, 32, 33, 34, 35, 42}
+
+
+def _igdb_store_urls(game: dict) -> list[str]:
+    """Every store link IGDB lists for the game (Steam, GOG, Epic, console stores, ...)."""
+    urls: list[str] = []
+    for entry in game.get("websites") or []:
+        url = entry.get("url")
+        if entry.get("category") not in IGDB_STORE_CATEGORIES or not url:
+            continue
+        url = url.replace("//", "https://", 1) if url.startswith("//") else url
+        if url not in urls:
+            urls.append(url)
+    return urls
+
+
 def _igdb_store_url(game: dict) -> str:
-    store_categories = {13, 16, 17, 20, 21, 22, 23, 25, 26, 27, 28, 29, 30, 32, 33, 34, 35, 42}
-    website = next(
-        (
-            entry
-            for entry in game.get("websites") or []
-            if entry.get("category") in store_categories and entry.get("url")
-        ),
-        None,
-    )
-    if not website:
-        return ""
-    url = website["url"]
-    return url.replace("//", "https://", 1) if url.startswith("//") else url
+    return next(iter(_igdb_store_urls(game)), "")
 
 
 def _igdb_trailers(game: dict) -> list[str]:
@@ -366,6 +370,7 @@ def _fetch_all_games_by_title(title: str, limit: int, hide_nsfw: bool = True) ->
             publisher_name=_igdb_company_names(game, "publisher"),
             website_url=_igdb_website_url(game),
             store_url=_igdb_store_url(game),
+            store_urls=_igdb_store_urls(game),
             trailer_url=_igdb_trailer_url(game),
             trailers=_igdb_trailers(game),
             category=_igdb_category(game),
@@ -655,6 +660,7 @@ def _fetch_all_games_by_date(
             publisher_name=_igdb_company_names(game, "publisher"),
             website_url=_igdb_website_url(game),
             store_url=_igdb_store_url(game),
+            store_urls=_igdb_store_urls(game),
             trailer_url=_igdb_trailer_url(game),
             trailers=_igdb_trailers(game),
             category=_igdb_category(game),
@@ -729,6 +735,7 @@ def _fetch_next_releases(limit: int) -> list[Game]:
             publisher_name=_igdb_company_names(game, "publisher"),
             website_url=_igdb_website_url(game),
             store_url=_igdb_store_url(game),
+            store_urls=_igdb_store_urls(game),
             trailer_url=_igdb_trailer_url(game),
             trailers=_igdb_trailers(game),
             category=_igdb_category(game),
@@ -747,6 +754,7 @@ def game_from_row(row) -> Game:
     game = dict(row)
     game["screenshots"] = json.loads(game.get("screenshots") or "[]")
     game["trailers"] = json.loads(game.get("trailers") or "[]")
+    game["store_urls"] = json.loads(game.get("store_urls") or "[]")
     return Game(**game)
 
 
@@ -754,14 +762,15 @@ def game_database_values(game: GameCreate) -> tuple:
     values = game.model_dump()
     values["screenshots"] = json.dumps(values["screenshots"])
     values["trailers"] = json.dumps(values["trailers"])
+    values["store_urls"] = json.dumps(values["store_urls"])
     return tuple(values.values())
 
 def insert_game(connection, game: GameCreate) -> int:
     """Insert a game without committing and return its new id."""
     cursor = connection.execute(
         """
-        INSERT INTO games (title, genre, release_year, release_date, description, cover_image_url, image_url, screenshot_url, developer_name, publisher_name, website_url, store_url, map_url, trailer_url, screenshots, platforms, gamemodes, editions, user_rating, critic_rating, wishlisted, hoursplayed, esrb, minimum_system_requirements, recommended_system_requirements, category, trailers)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO games (title, genre, release_year, release_date, description, cover_image_url, image_url, screenshot_url, developer_name, publisher_name, website_url, store_url, map_url, trailer_url, screenshots, platforms, gamemodes, editions, user_rating, critic_rating, wishlisted, hoursplayed, esrb, minimum_system_requirements, recommended_system_requirements, category, trailers, store_urls)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         game_database_values(game),
     )
@@ -967,7 +976,7 @@ def update_game(game_id: int, game: GameCreate) -> Game:
                 platforms = ?, gamemodes = ?, editions = ?, user_rating = ?, critic_rating = ?,
                 wishlisted = ?, hoursplayed = ?, esrb = ?,
                 minimum_system_requirements = ?, recommended_system_requirements = ?,
-                category = ?, trailers = ?
+                category = ?, trailers = ?, store_urls = ?
             WHERE id = ?
             """,
             (*game_database_values(game), game_id),

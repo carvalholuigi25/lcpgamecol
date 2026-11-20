@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 
 import backend.auth.auth as auth
 import backend.database.database as database
-from helpers import rate_limiter
+from helpers import bundled_modules, rate_limiter
 from main import app
 
 GAME = {
@@ -71,16 +71,16 @@ def test_custom_page_routes_preserve_games_api_route(client, auth_headers):
     assert library.status_code == 200
     assert 'id="login-form"' in library.text
     assert 'data-password-entry' in library.text
-    assert "/public/dist/scripts/auth/login_numpad.min.js" in library.text
+    assert "auth/login_numpad" in bundled_modules(library.text)
     for control_id in ("first-page", "previous-page", "page-selector", "next-page", "last-page"):
         assert f'id="{control_id}"' in library.text
     assert releases.status_code == 200
     assert 'id="login-form"' in releases.text
     assert 'data-password-entry' in releases.text
-    assert "/public/dist/scripts/auth/login_numpad.min.js" in releases.text
+    assert "auth/login_numpad" in bundled_modules(releases.text)
     assert admin.status_code == 200
     assert 'data-password-entry' in admin.text
-    assert "/public/dist/scripts/auth/login_numpad.min.js" in admin.text
+    assert "auth/login_numpad" in bundled_modules(admin.text)
     login_script = client.get("/public/scripts/auth/login_numpad.js")
     assert login_script.status_code == 200
     assert "Letters & symbols" in login_script.text
@@ -256,8 +256,7 @@ def test_admin_dashboard_page_and_assets_are_served(client):
     assert 'id="theme-selector"' in page.text
     assert 'id="page-loader"' in page.text
     assert 'data-lockout' in page.text
-    assert 'src=\"/public/dist/scripts/core/loading.min.js\"' in page.text
-    assert 'src=\"/public/dist/scripts/core/preferences.min.js\"' in page.text
+    assert {"core/loading", "core/preferences"} <= set(bundled_modules(page.text))
     assert client.get("/public/scripts/admin/admin.js").status_code == 200
     assert client.get("/public/scripts/core/loading.js").status_code == 200
     assert client.get("/public/scripts/core/preferences.js").status_code == 200
@@ -271,8 +270,7 @@ def test_admin_dashboard_page_and_assets_are_served(client):
         assert 'id="theme-selector"' in shelf_page
         assert 'id="page-loader"' in shelf_page
         assert 'data-lockout' in shelf_page
-        assert 'src=\"/public/dist/scripts/core/loading.min.js\"' in shelf_page
-        assert 'src=\"/public/dist/scripts/core/preferences.min.js\"' in shelf_page
+        assert {"core/loading", "core/preferences"} <= set(bundled_modules(shelf_page))
 
 
 @pytest.mark.parametrize("theme", ["sunsetvibes", "cyber-retro", "rgb"])
@@ -291,23 +289,53 @@ def test_portuguese_language_picker_uses_portugal_flag(client):
 
     assert flag.status_code == 200
     assert flag.headers["content-type"].startswith("image/svg+xml")
-    assert "language_flags.min.js" in client.get("/pages/games/games.html").text
+    assert "core/language_flags" in bundled_modules(client.get("/pages/games/games.html").text)
     assert 'pt: "pt"' in client.get("/public/scripts/core/language_flags.js").text
 
 
-def test_pages_load_minified_scripts_built_from_sources():
+def test_pages_load_the_bundle_with_modules_built_from_sources():
     root = Path(__file__).resolve().parent.parent
     sources = {
-        path.relative_to(root / "public" / "scripts").as_posix()
+        path.relative_to(root / "public" / "scripts").as_posix().removesuffix(".js")
         for path in (root / "public" / "scripts").rglob("*.js")
     }
     referenced = set()
     for page in (root / "pages").rglob("*.html"):
         text = page.read_text(encoding="utf-8")
         assert "/public/scripts/" not in text, page.name
-        referenced.update(re.findall(r'/public/dist/scripts/([\w/]+)\.min\.js', text))
-    missing = {name for name in referenced if f"{name}.js" not in sources}
-    assert referenced and not missing
+        # Only the bundle is loaded from dist; per-file .min.js scripts are gone.
+        assert not re.search(r"/public/dist/scripts/(?!all\.min\.js)", text), page.name
+        if "all.min.js" in text:
+            modules = bundled_modules(text)
+            assert len(modules) == len(set(modules)), page.name
+            referenced.update(modules)
+    assert referenced and not referenced - sources
+
+
+def test_bundle_script_wraps_each_source_file_as_a_module():
+    build_script = (Path(__file__).resolve().parent.parent / "scripts" / "minify_js.mjs").read_text(encoding="utf-8")
+    assert 'const bundleName = "all.min.js"' in build_script
+    assert "__lcpDefine(" in build_script
+    assert "document.currentScript" in build_script
+    assert "dataset.modules" in build_script
+
+
+@pytest.mark.parametrize(
+    ("page", "first", "last"),
+    [
+        ("/pages/games/games.html", "core/loading", "games/games"),
+        ("/pages/games/games_releases.html", "core/loading", "games/games_releases"),
+        ("/pages/admin/admin.html", "core/loading", "admin/admin"),
+        ("/pages/users/profile.html", "core/loading", "users/security"),
+        ("/pages/errors/blocked.html", "core/i18n", "core/language_flags"),
+    ],
+)
+def test_pages_run_their_own_modules_after_the_shared_ones(client, page, first, last):
+    modules = bundled_modules(client.get(page).text)
+    assert modules[0] == first and modules[-1] == last
+    # Each page only runs its own page script.
+    page_scripts = {"games/games", "games/games_releases", "admin/admin", "users/profile", "admin/users"}
+    assert len(page_scripts & set(modules)) <= 1
 
 
 def test_hungarian_language_is_available(client):
@@ -1009,3 +1037,91 @@ def test_rate_limit_returns_retry_after_header(client, auth_headers, monkeypatch
         in browser_error.text
     )
     assert 'role="progressbar"' in browser_error.text
+
+def test_game_store_links_round_trip(client, auth_headers):
+    steam = "https://store.steampowered.com/app/620/"
+    gog = "https://www.gog.com/game/portal_2"
+    playstation = "https://store.playstation.com/concept/10000"
+    game = {**GAME, "store_url": steam, "store_urls": [steam, gog, " ", gog]}
+    created = client.post("/games", json=game, headers=auth_headers)
+
+    assert created.status_code == 201
+    assert (created.json()["store_url"], created.json()["store_urls"]) == (steam, [steam, gog])
+    game_id = created.json()["id"]
+
+    updated = client.put(
+        f"/games/{game_id}",
+        json={**game, "store_url": playstation, "store_urls": [steam, playstation]},
+        headers=auth_headers,
+    )
+    assert updated.status_code == 200
+    stored = client.get(f"/games/{game_id}").json()
+    # store_url is the main link, so it always comes first.
+    assert (stored["store_url"], stored["store_urls"]) == (playstation, [playstation, steam])
+
+
+def test_clients_that_only_send_store_url_keep_working(client, auth_headers):
+    steam = "https://store.steampowered.com/app/620/"
+    created = client.post("/games", json={**GAME, "store_url": steam}, headers=auth_headers)
+
+    assert created.status_code == 201
+    assert created.json()["store_urls"] == [steam]
+
+
+def test_games_saved_before_store_links_show_their_store_url(client, auth_headers):
+    steam = "https://store.steampowered.com/app/620/"
+    game_id = client.post("/games", json={**GAME, "store_url": steam}, headers=auth_headers).json()["id"]
+    with database.get_connection() as connection:
+        connection.execute("UPDATE games SET store_urls = NULL WHERE id = ?", (game_id,))
+
+    assert client.get(f"/games/{game_id}").json()["store_urls"] == [steam]
+
+
+def test_admin_game_form_offers_dropdowns_and_store_links(client):
+    page = client.get("/pages/admin/admin.html").text
+    for field in ("platforms", "gamemodes", "editions"):
+        assert f'data-multi-select="{field}"' in page
+        assert f'<input name="{field}" type="hidden" />' in page
+    assert 'id="store-links-list"' in page
+    assert 'id="add-store-link-button"' in page
+    assert 'name="store_url"' not in page
+
+    admin_script = client.get("/public/scripts/admin/admin.js").text
+    assert "store_urls: storeUrls" in admin_script
+    assert 'input.name = "store_urls"' in admin_script
+
+
+def test_admin_dropdowns_offer_every_schema_choice(client):
+    from routes.games.schemas import GameEdition, GameModes, Gameplatforms
+
+    admin_script = client.get("/public/scripts/admin/admin.js").text
+    options = admin_script[admin_script.index("const GAME_LIST_OPTIONS"):admin_script.index("const GAME_LIST_OPTION_LABELS")]
+    for choice in (*Gameplatforms, *GameModes, *GameEdition):
+        assert f'"{choice.value}"' in options, choice
+
+
+def test_shelf_shows_a_buy_button_per_store(client):
+    shelf_script = client.get("/public/scripts/games/shelf.js").text
+    assert "function storeUrlsOf" in shelf_script
+    assert "function renderStoreLinks" in shelf_script
+    for page in ("/pages/games/games.html", "/pages/games/games_releases.html"):
+        assert '<div class="release-countdown-stores" id="details-buy-now" hidden></div>' in client.get(page).text
+
+
+@pytest.mark.parametrize("flag", ["br", "de", "es", "fr", "hu", "it", "jp", "pt", "us"])
+def test_language_flags_are_3_by_2_svgs(client, flag):
+    import xml.etree.ElementTree as ElementTree
+
+    response = client.get(f"/public/images/flags/{flag}.svg")
+    assert response.status_code == 200
+    svg = ElementTree.fromstring(response.text)
+    assert svg.tag == "{http://www.w3.org/2000/svg}svg"
+    assert svg.get("viewBox") == "0 0 30 20"
+
+
+def test_us_flag_has_13_stripes_and_50_stars(client):
+    svg = client.get("/public/images/flags/us.svg").text
+    red_stripes = svg.split('fill="#b22234" d="')[1].split('"')[0]
+    stars = svg.split('fill="#fff" d="')[2].split('"')[0]
+    assert red_stripes.count("M") == 7
+    assert stars.count("M") == 50

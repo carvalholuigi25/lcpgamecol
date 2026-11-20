@@ -209,6 +209,12 @@
           "type": "TEXT",
           "nullable": true,
           "default": null
+        },
+        {
+          "name": "store_urls",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null
         }
       ]
     },

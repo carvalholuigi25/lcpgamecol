@@ -727,13 +727,9 @@ function renderReleaseCountdown(game) {
   );
   const windowMs = COUNTDOWN_WINDOW_DAYS * DAY_MS;
   delete section.dataset.released;
-  const storeUrl = safeWebUrl(game.store_url);
-  buyNow.hidden = !storeUrl || releaseTime > Date.now();
-  if (storeUrl) {
-    buyNow.href = storeUrl.href;
-  } else {
-    buyNow.removeAttribute("href");
-  }
+  const storeUrls = storeUrlsOf(game);
+  renderStoreLinks(buyNow, storeUrls);
+  buyNow.hidden = !storeUrls.length || releaseTime > Date.now();
 
   const tick = () => {
     const remaining = Math.max(0, releaseTime - Date.now());
@@ -758,7 +754,7 @@ function renderReleaseCountdown(game) {
 
     stopReleaseCountdown();
     section.dataset.released = "true";
-    buyNow.hidden = !storeUrl;
+    buyNow.hidden = !storeUrls.length;
     heading.textContent = window.i18n.t("Out now!");
     caption.textContent = window.i18n.t("The game is out now.");
     renderGameResources(game);
@@ -767,6 +763,65 @@ function renderReleaseCountdown(game) {
   };
   tick();
   if (releaseTime > Date.now()) countdownTimer = window.setInterval(tick, 1000);
+}
+
+// Known stores by host name; any other store shows its host name.
+const STORE_NAMES = [
+  ["steampowered.com", "Steam"],
+  ["steamcommunity.com", "Steam"],
+  ["epicgames.com", "Epic Games Store"],
+  ["gog.com", "GOG"],
+  ["playstation.com", "PlayStation Store"],
+  ["xbox.com", "Xbox Store"],
+  ["microsoft.com", "Microsoft Store"],
+  ["nintendo.com", "Nintendo eShop"],
+  ["nintendo.co.uk", "Nintendo eShop"],
+  ["nintendo.co.jp", "Nintendo eShop"],
+  ["humblebundle.com", "Humble Store"],
+  ["itch.io", "itch.io"],
+  ["apple.com", "App Store"],
+  ["play.google.com", "Google Play"],
+  ["ea.com", "EA app"],
+  ["ubisoft.com", "Ubisoft Store"],
+  ["battle.net", "Battle.net"],
+  ["blizzard.com", "Battle.net"],
+  ["amazon.com", "Amazon"],
+  ["meta.com", "Meta Quest Store"],
+  ["oculus.com", "Meta Quest Store"],
+];
+
+function storeNameOf(url) {
+  const host = url.hostname.replace(/^www\./, "");
+  const known = STORE_NAMES.find(([domain]) => host === domain || host.endsWith(`.${domain}`));
+  return known ? known[1] : host;
+}
+
+// Every safe store link of a game; store_url (the main one) comes first.
+function storeUrlsOf(game) {
+  const links = [];
+  for (const value of [game.store_url, ...(Array.isArray(game.store_urls) ? game.store_urls : [])]) {
+    const url = safeWebUrl(value);
+    if (url && !links.some((link) => link.href === url.href)) links.push(url);
+  }
+  return links;
+}
+
+function renderStoreLinks(container, urls) {
+  container.replaceChildren(...urls.map((url) => {
+    const link = document.createElement("a");
+    link.className = "release-countdown-buy-now";
+    link.href = url.href;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    const label = document.createElement("span");
+    label.textContent = window.i18n.t("Buy now");
+    const store = document.createElement("small");
+    store.className = "release-countdown-store-name";
+    store.textContent = storeNameOf(url);
+    store.setAttribute("translate", "no");
+    link.append(label, store);
+    return link;
+  }));
 }
 
 function isReleasedGame(game) {
