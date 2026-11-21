@@ -25,3 +25,10 @@ uploads/
 tests/reports/
 .venv-wsl/
 public/dist/
+mobile/dist/
+mobile/.expo/
+mobile/.env
+mobile/*.env
+mobile/node_modules/
+mobile/coverage/
+mobile/package-lock.json

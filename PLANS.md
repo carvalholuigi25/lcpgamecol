@@ -77,7 +77,7 @@ Add tests in `tests/` for each change before the client relies on it.
 
 #### Phase 1 — Project setup
 
-- [ ] `npx create-expo-app mobile --template` (TypeScript, Expo Router).
+- [x] `npx create-expo-app mobile --template` (TypeScript, Expo Router). :white_check_mark:
 - [ ] ESLint, Prettier, strict `tsconfig`, path aliases.
 - [ ] API client: base URL from `app.config.ts` (`EXPO_PUBLIC_API_URL`), auth header, one retry after a `401` through `/auth/refresh`, typed errors.
 - [ ] Theme tokens ported from the SCSS (light, dark, follow system); seasonal themes later.
