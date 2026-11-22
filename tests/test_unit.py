@@ -248,12 +248,12 @@ def test_require_admin_forbids_viewer():
 # --- auth: refresh tokens --------------------------------------------------------
 
 
-def test_refresh_token_round_trip():
+def test_refresh_token_round_trip(temp_db):
     token = auth.create_refresh_token("alice")
 
     claims = jwt.decode(token, auth.JWT_SECRET, algorithms=[auth.JWT_ALGORITHM])
     assert "role" not in claims
-    assert auth.get_current_user_from_refresh_token(token) == "alice"
+    assert auth.decode_refresh_token(token)["sub"] == "alice"
 
 
 @pytest.mark.parametrize(
@@ -263,6 +263,7 @@ def test_refresh_token_round_trip():
         pytest.param("not-a-jwt", id="garbage"),
         pytest.param(make_token(sub="alice", type="access", role="admin"), id="access-type"),
         pytest.param(make_token(sub="alice"), id="missing-type"),
+        pytest.param(make_token(sub="alice", type="refresh"), id="missing-jti-and-family"),
         pytest.param(
             make_token(sub="alice", type="refresh", exp=datetime.now(UTC) - timedelta(seconds=1)),
             id="expired",
@@ -270,15 +271,13 @@ def test_refresh_token_round_trip():
     ],
 )
 def test_refresh_token_rejected(token):
-    assert_unauthorized(
-        auth.get_current_user_from_refresh_token, token, detail="Invalid refresh token"
-    )
+    assert_unauthorized(auth.decode_refresh_token, token, detail="Invalid refresh token")
 
 
 def test_access_token_cannot_be_used_as_refresh_token():
     token = auth.create_access_token("alice", auth.ROLE_ADMIN)
 
-    assert_unauthorized(auth.get_current_user_from_refresh_token, token)
+    assert_unauthorized(auth.decode_refresh_token, token)
 
 
 # --- database --------------------------------------------------------------------
@@ -605,7 +604,15 @@ def test_search_games_without_filters_returns_requested_page(temp_db):
 @pytest.mark.parametrize(
     "env, expected",
     [
-        (None, ["http://localhost:3000", "http://127.0.0.1:3000"]),
+        (
+            None,
+            [
+                "http://localhost:3000",
+                "http://127.0.0.1:3000",
+                "http://localhost:8081",
+                "http://127.0.0.1:8081",
+            ],
+        ),
         (" https://a.com , ,https://b.com,", ["https://a.com", "https://b.com"]),
         ("", []),
     ],

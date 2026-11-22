@@ -215,6 +215,19 @@ def initialize_database() -> None:
                 sessions_valid_after INTEGER NOT NULL DEFAULT 0
             );
 
+            -- One row per refresh token. Rotated tokens keep their row (used_at) so a
+            -- reused token is recognised and its whole sign-in (family_id) revoked.
+            CREATE TABLE IF NOT EXISTS refresh_tokens (
+                jti TEXT PRIMARY KEY,
+                username TEXT NOT NULL COLLATE NOCASE,
+                family_id TEXT NOT NULL,
+                expires_at INTEGER NOT NULL,
+                used_at INTEGER NULL,
+                revoked_at INTEGER NULL
+            );
+            CREATE INDEX IF NOT EXISTS refresh_tokens_by_family ON refresh_tokens (family_id);
+            CREATE INDEX IF NOT EXISTS refresh_tokens_by_user ON refresh_tokens (username);
+
             -- Only a SHA-256 of each reset token is stored.
             CREATE TABLE IF NOT EXISTS password_resets (
                 token_hash TEXT PRIMARY KEY,

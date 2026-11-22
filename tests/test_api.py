@@ -1,3 +1,4 @@
+import json
 import re
 from pathlib import Path
 
@@ -8,6 +9,8 @@ import backend.auth.auth as auth
 import backend.database.database as database
 from helpers import bundled_modules, rate_limiter
 from main import app
+
+LOCALES_DIRECTORY = Path(__file__).resolve().parent.parent / "locales"
 
 GAME = {
     "title": "Portal 2",
@@ -343,9 +346,22 @@ def test_hungarian_language_is_available(client):
     assert 'hu: "hu"' in client.get("/public/scripts/core/language_flags.js").text
     i18n_script = client.get("/public/scripts/core/i18n.js").text
     assert 'hu: "Magyar"' in i18n_script
-    assert '"Sign in": "Bejelentkezés"' in i18n_script
+    hungarian = json.loads((LOCALES_DIRECTORY / "hu.json").read_text(encoding="utf-8"))
+    assert hungarian["Sign in"] == "Bejelentkezés"
     for page in ("/pages/games/games.html", "/pages/admin/admin.html", "/pages/users/profile.html"):
         assert '<option value="hu">Magyar</option>' in client.get(page).text
+
+
+def test_shared_locale_files_are_flat_string_dictionaries():
+    # locales/<lang>.json feed both the web bundle and the mobile app (mobile/src/i18n).
+    languages = {path.stem for path in LOCALES_DIRECTORY.glob("*.json")}
+    assert {"en", "pt", "de", "fr", "it", "es", "ja", "hu"} <= languages
+    for language in languages:
+        messages = json.loads((LOCALES_DIRECTORY / f"{language}.json").read_text(encoding="utf-8"))
+        assert isinstance(messages, dict)
+        assert all(isinstance(key, str) and isinstance(value, str) for key, value in messages.items())
+        if language != "en":
+            assert len(messages) > 1000
 
 
 def test_game_details_show_platform_logos(client):

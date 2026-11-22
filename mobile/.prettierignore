@@ -1,0 +1,5 @@
+node_modules/
+.expo/
+dist/
+src/api/schema.d.ts
+package-lock.json

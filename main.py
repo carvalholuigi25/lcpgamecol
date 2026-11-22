@@ -21,19 +21,19 @@ from starlette.responses import FileResponse, HTMLResponse, PlainTextResponse
 from backend.access.middleware import AccessControlMiddleware
 from backend.auth import oauth, two_factor
 from backend.auth.auth import (
-    AUTH_COOKIE_NAME,
     AUTH_COOKIE_SECURE,
+    REFRESH_COOKIE_NAME,
     Principal,
-    TOKEN_EXPIRE_SECONDS,
     authenticate,
-    create_access_token,
+    clear_auth_cookies,
     get_current_user,
-    get_current_user_from_refresh_token,
-    get_role_for_username,
     get_trusted_origins,
     issue_session,
+    refresh_session,
+    refresh_token_from_request,
     register_user,
     require_admin,
+    revoke_refresh_token,
 )
 from backend.auth.rate_limit import RateLimitMiddleware
 from backend.auth.routes import router as account_router
@@ -68,6 +68,23 @@ def _get_cors_origins() -> list[str]:
 class RegistrationRequest(BaseModel):
     username: str = Field(min_length=1, max_length=64)
     password: str = Field(min_length=1, max_length=256)
+
+
+class TokenPair(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str
+
+
+class LogoutRequest(BaseModel):
+    """API clients send their refresh token so this sign-in ends on the server too."""
+
+    refresh_token: str | None = Field(default=None, max_length=4096)
+
+
+class ClientConfig(BaseModel):
+    api_version: str
+    asset_base_url: str
 
 
 class SecurityPolicyMiddleware(BaseHTTPMiddleware):
@@ -276,31 +293,40 @@ def register(body: RegistrationRequest, request: Request) -> dict[str, str]:
 @app.post("/auth/refresh", tags=["authentication"])
 def refresh(
     response: Response,
-    username: str = Depends(get_current_user_from_refresh_token),
-) -> dict[str, str]:
-    token = create_access_token(username, get_role_for_username(username))
-    response.set_cookie(
-        key=AUTH_COOKIE_NAME,
-        value=token,
-        max_age=TOKEN_EXPIRE_SECONDS,
-        httponly=True,
-        secure=AUTH_COOKIE_SECURE,
-        samesite="lax",
-    )
-    return {"access_token": token, "token_type": "bearer"}
+    token: str | None = Depends(refresh_token_from_request),
+) -> TokenPair:
+    """Exchange a refresh token for a new access token and a new refresh token.
+
+    Each refresh token works once; reusing a spent one ends that sign-in. API clients
+    send it as a Bearer token, the web build through its HttpOnly cookie.
+    """
+    return TokenPair(**refresh_session(response, token))
 
 
 @app.post("/auth/logout", status_code=204, tags=["authentication"])
 def logout(
     response: Response,
-    _username: str = Depends(get_current_user),
+    request: Request,
+    body: LogoutRequest | None = None,
+    username: str = Depends(get_current_user),
 ) -> None:
-    response.delete_cookie(
-        key=AUTH_COOKIE_NAME,
-        secure=AUTH_COOKIE_SECURE,
-        httponly=True,
-        samesite="lax",
+    refresh_token = (body.refresh_token if body else None) or request.cookies.get(
+        REFRESH_COOKIE_NAME
     )
+    revoke_refresh_token(refresh_token, username)
+    clear_auth_cookies(response)
+
+
+@app.get("/client/config", tags=["client"])
+def read_client_config(request: Request) -> ClientConfig:
+    """Settings for API clients such as the mobile app.
+
+    Covers, avatars and uploads may be stored as paths (/admin/uploads/...); clients
+    resolve them against asset_base_url.
+    """
+    # Defaults to the address the client used, which also works for phones on the LAN.
+    base_url = os.getenv("ASSET_BASE_URL") or str(request.base_url)
+    return ClientConfig(api_version=app.version, asset_base_url=base_url.rstrip("/"))
 
 
 @app.get("/")

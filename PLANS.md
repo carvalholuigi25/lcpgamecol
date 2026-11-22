@@ -71,18 +71,18 @@ Add tests in `tests/` for each change before the client relies on it.
 
 #### Phase 0 — Groundwork (backend)
 
-- [ ] Backend changes 1–3 and 6 above, with tests.
-- [ ] Add a script that exports `openapi.json` so the client can generate types without a running server.
-- [ ] Extract the dictionaries from `public/scripts/i18n.js` into `locales/<lang>.json`, and have the existing web pages load the same files, so both clients share one source of strings.
+- [x] Backend changes 1–3 and 6 above, with tests (`tests/test_refresh_tokens.py`). The refresh cookie is scoped to `/auth` rather than `/auth/refresh`, so `/auth/logout` can revoke it too; image paths resolve against `asset_base_url` from `GET /client/config`.
+- [x] Add a script that exports `openapi.json` so the client can generate types without a running server (`scripts/export_openapi.py`, `npm run openapi`).
+- [x] Extract the dictionaries from `public/scripts/i18n.js` into `locales/<lang>.json`, and have the existing web pages load the same files, so both clients share one source of strings. `scripts/minify_js.mjs` inlines them into the bundle so translations stay synchronous.
 
 #### Phase 1 — Project setup
 
-- [x] `npx create-expo-app mobile --template` (TypeScript, Expo Router). :white_check_mark:
-- [ ] ESLint, Prettier, strict `tsconfig`, path aliases.
-- [ ] API client: base URL from `app.config.ts` (`EXPO_PUBLIC_API_URL`), auth header, one retry after a `401` through `/auth/refresh`, typed errors.
-- [ ] Theme tokens ported from the SCSS (light, dark, follow system); seasonal themes later.
-- [ ] i18n wired to the shared locale files, with the device language as the default.
-- [ ] CI job: type check, lint, and Jest on every push to `dev`.
+- [x] `npx create-expo-app mobile --template` (TypeScript), then converted to Expo Router (`src/app/`).
+- [x] ESLint, Prettier, strict `tsconfig`, path aliases.
+- [x] API client: base URL from `app.config.ts` (`EXPO_PUBLIC_API_URL`), auth header, one retry after a `401` through `/auth/refresh`, typed errors.
+- [x] Theme tokens ported from the SCSS (light, dark, follow system); seasonal themes later.
+- [x] i18n wired to the shared locale files, with the device language as the default.
+- [x] CI job: type check, lint, and Jest on every push to `dev` (`.github/workflows/mobile.yml`).
 
 #### Phase 2 — Sign-in
 

@@ -23,6 +23,9 @@ REFRESH_TOKEN_EXPIRE_SECONDS = int(
     os.getenv("REFRESH_TOKEN_EXPIRE_SECONDS", "604800")
 )
 AUTH_COOKIE_NAME = os.getenv("AUTH_COOKIE_NAME", "access_token")
+REFRESH_COOKIE_NAME = os.getenv("REFRESH_COOKIE_NAME", "refresh_token")
+# Sent only to /auth/... so /auth/refresh and /auth/logout can read it; pages never see it.
+REFRESH_COOKIE_PATH = "/auth"
 AUTH_COOKIE_SECURE = os.getenv("AUTH_COOKIE_SECURE", "false").lower() == "true"
 # Without a configured secret, sign with a random per-process key rather than a
 # well-known one; tokens then stop working whenever the app restarts.
@@ -105,7 +108,11 @@ class Principal:
 
 
 def _create_token(
-    username: str, token_type: str, expires_in: int, role: str | None = None
+    username: str,
+    token_type: str,
+    expires_in: int,
+    role: str | None = None,
+    extra: dict | None = None,
 ) -> str:
     claims = {
         "iat": time.time(),
@@ -116,6 +123,8 @@ def _create_token(
     }
     if role is not None:
         claims["role"] = role
+    if extra:
+        claims.update(extra)
     return jwt.encode(claims, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
 
@@ -123,24 +132,72 @@ def create_access_token(username: str, role: str) -> str:
     return _create_token(username, "access", TOKEN_EXPIRE_SECONDS, role=role)
 
 
-def create_refresh_token(username: str) -> str:
-    return _create_token(username, "refresh", REFRESH_TOKEN_EXPIRE_SECONDS)
+def _new_refresh_token(connection: sqlite3.Connection, username: str, family_id: str) -> str:
+    token = _create_token(
+        username, "refresh", REFRESH_TOKEN_EXPIRE_SECONDS, extra={"fam": family_id}
+    )
+    claims = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+    connection.execute(
+        "INSERT INTO refresh_tokens (jti, username, family_id, expires_at) VALUES (?, ?, ?, ?)",
+        (claims["jti"], username, family_id, int(claims["exp"])),
+    )
+    return token
 
 
-def issue_session(response, principal: Principal) -> dict[str, str]:
-    """Set the auth cookie on a response and return the token pair for API clients."""
-    token = create_access_token(principal.username, principal.role)
+def create_refresh_token(username: str, family_id: str | None = None) -> str:
+    """Issue a refresh token and record its ID, so it can be rotated and revoked.
+
+    All tokens of one sign-in share a family ID; reusing a rotated token revokes the family.
+    """
+    with closing(database.get_connection()) as connection:
+        token = _new_refresh_token(
+            connection, username, family_id or secrets.token_urlsafe(12)
+        )
+        connection.commit()
+    return token
+
+
+def _set_auth_cookies(response, access_token: str, refresh_token: str) -> None:
     response.set_cookie(
         key=AUTH_COOKIE_NAME,
-        value=token,
+        value=access_token,
         max_age=TOKEN_EXPIRE_SECONDS,
         httponly=True,
         secure=AUTH_COOKIE_SECURE,
         samesite="lax",
     )
+    response.set_cookie(
+        key=REFRESH_COOKIE_NAME,
+        value=refresh_token,
+        max_age=REFRESH_TOKEN_EXPIRE_SECONDS,
+        path=REFRESH_COOKIE_PATH,
+        httponly=True,
+        secure=AUTH_COOKIE_SECURE,
+        samesite="strict",
+    )
+
+
+def clear_auth_cookies(response) -> None:
+    response.delete_cookie(
+        key=AUTH_COOKIE_NAME, secure=AUTH_COOKIE_SECURE, httponly=True, samesite="lax"
+    )
+    response.delete_cookie(
+        key=REFRESH_COOKIE_NAME,
+        path=REFRESH_COOKIE_PATH,
+        secure=AUTH_COOKIE_SECURE,
+        httponly=True,
+        samesite="strict",
+    )
+
+
+def issue_session(response, principal: Principal) -> dict[str, str]:
+    """Set the auth cookies on a response and return the token pair for API clients."""
+    token = create_access_token(principal.username, principal.role)
+    refresh_token = create_refresh_token(principal.username)
+    _set_auth_cookies(response, token, refresh_token)
     return {
         "access_token": token,
-        "refresh_token": create_refresh_token(principal.username),
+        "refresh_token": refresh_token,
         "token_type": "bearer",  # a token type, not a secret  # nosec B105
     }
 
@@ -168,6 +225,10 @@ def revoke_sessions(username: str) -> None:
             ON CONFLICT (username) DO UPDATE SET sessions_valid_after = excluded.sessions_valid_after
             """,
             (username, time.time()),
+        )
+        connection.execute(
+            "UPDATE refresh_tokens SET revoked_at = ? WHERE username = ? AND revoked_at IS NULL",
+            (int(time.time()), username),
         )
         connection.commit()
 
@@ -343,7 +404,9 @@ def get_trusted_origins() -> list[str]:
     return [
         origin.strip()
         for origin in os.getenv(
-            "CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000"
+            "CORS_ORIGINS",
+            # Port 8081 is the Expo web dev server (mobile/).
+            "http://localhost:3000,http://127.0.0.1:3000,http://localhost:8081,http://127.0.0.1:8081",
         ).split(",")
         if origin.strip()
     ]
@@ -456,28 +519,121 @@ def require_permission(permission: str):
     return dependency
 
 
-def get_current_user_from_refresh_token(
-    token: str | None = _refresh_token_dependency,
-) -> str:
-    credentials_exception = HTTPException(
+def _refresh_exception() -> HTTPException:
+    return HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Invalid refresh token",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    if token is None:
-        raise credentials_exception
 
+
+def decode_refresh_token(token: str | None) -> dict:
+    """Check a refresh token's signature, type and expiry, and return its claims.
+
+    This does not look at the database; rotate_refresh_token() also checks that the
+    token has not been used or revoked.
+    """
+    if token is None:
+        raise _refresh_exception()
     try:
         claims = jwt.decode(
             token,
             JWT_SECRET,
             algorithms=[JWT_ALGORITHM],
-            options={"require": ["sub", "exp", "type"]},
+            options={"require": ["sub", "exp", "type", "jti", "fam"]},
         )
         if claims["type"] != "refresh" or not isinstance(claims["sub"], str):
-            raise credentials_exception
+            raise _refresh_exception()
+        if not isinstance(claims["jti"], str) or not isinstance(claims["fam"], str):
+            raise _refresh_exception()
         if _issued_before_revocation(claims):
-            raise credentials_exception
-        return claims["sub"]
+            raise _refresh_exception()
+        return claims
     except (InvalidTokenError, KeyError, TypeError):
-        raise credentials_exception from None
+        raise _refresh_exception() from None
+
+
+def refresh_token_from_request(
+    bearer_token: str | None = _refresh_token_dependency,
+    request: Request = None,
+) -> str | None:
+    """API clients send the refresh token as a Bearer token; the web build sends its cookie."""
+    if bearer_token:
+        return bearer_token
+    token = request.cookies.get(REFRESH_COOKIE_NAME) if request else None
+    if token and not _is_trusted_origin(request):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cross-site request blocked",
+        )
+    return token
+
+
+def rotate_refresh_token(token: str | None) -> tuple[str, str]:
+    """Spend a refresh token and return (username, its replacement).
+
+    A refresh token works once. Presenting one that was already rotated or revoked
+    means it may have been copied, so the whole sign-in (its family) is revoked.
+    """
+    claims = decode_refresh_token(token)
+    now = int(time.time())
+    with closing(database.get_connection()) as connection:
+        row = connection.execute(
+            "SELECT username FROM refresh_tokens WHERE jti = ? AND family_id = ?",
+            (claims["jti"], claims["fam"]),
+        ).fetchone()
+        spent = connection.execute(
+            """
+            UPDATE refresh_tokens SET used_at = ?
+            WHERE jti = ? AND family_id = ? AND used_at IS NULL AND revoked_at IS NULL
+            """,
+            (now, claims["jti"], claims["fam"]),
+        ).rowcount
+        if spent != 1:
+            if row is not None:
+                logger.warning(
+                    "A rotated or revoked refresh token was presented; ending that sign-in."
+                )
+                connection.execute(
+                    "UPDATE refresh_tokens SET revoked_at = ? WHERE family_id = ? AND revoked_at IS NULL",
+                    (now, claims["fam"]),
+                )
+                connection.commit()
+            raise _refresh_exception()
+
+        connection.execute("DELETE FROM refresh_tokens WHERE expires_at < ?", (now,))
+        username = row[0]
+        replacement = _new_refresh_token(connection, username, claims["fam"])
+        connection.commit()
+    return username, replacement
+
+
+def revoke_refresh_token(token: str | None, username: str) -> None:
+    """End one sign-in (the family of this refresh token) if it belongs to the user.
+
+    Invalid or foreign tokens are ignored, so signing out always succeeds.
+    """
+    try:
+        claims = decode_refresh_token(token)
+    except HTTPException:
+        return
+    if claims["sub"].lower() != username.lower():
+        return
+    with closing(database.get_connection()) as connection:
+        connection.execute(
+            "UPDATE refresh_tokens SET revoked_at = ? WHERE family_id = ? AND revoked_at IS NULL",
+            (int(time.time()), claims["fam"]),
+        )
+        connection.commit()
+
+
+def refresh_session(response, token: str | None) -> dict[str, str]:
+    """Rotate a refresh token, set fresh cookies, and return the new token pair."""
+    username, refresh_token = rotate_refresh_token(token)
+    access_token = create_access_token(username, get_role_for_username(username))
+    _set_auth_cookies(response, access_token, refresh_token)
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer",  # a token type, not a secret  # nosec B105
+    }

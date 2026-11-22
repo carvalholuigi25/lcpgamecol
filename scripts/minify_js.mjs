@@ -18,6 +18,9 @@
 // When a module runs, its top-level functions, classes and variables are exposed on
 // `window` as live getters/setters, so other scripts and inline handlers keep seeing them
 // exactly as they did when every file was loaded with its own <script> tag.
+//
+// The translations in locales/<lang>.json (shared with the mobile app) are inlined at the
+// start of the bundle as window.__lcpLocales; core/i18n reads them from there.
 import { readdir, readFile, writeFile, mkdir, rm, rmdir, watch } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -25,6 +28,7 @@ import { minify } from "terser";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sourceDir = path.join(root, "public", "scripts");
+const localesDir = path.join(root, "locales");
 const outputDir = path.join(root, "public", "dist", "scripts");
 const bundleName = "all.min.js";
 const bundlePath = path.join(outputDir, bundleName);
@@ -137,6 +141,21 @@ async function wrapModule(source) {
   return { name, relative, code, wrapped };
 }
 
+// { pt: {...}, de: {...}, ... } from locales/*.json. English is the source text, so en.json is empty.
+async function readLocales() {
+  const files = (await readdir(localesDir)).filter((name) => name.endsWith(".json")).sort();
+  const locales = {};
+  for (const file of files) {
+    const language = file.replace(/\.json$/, "");
+    try {
+      locales[language] = JSON.parse(await readFile(path.join(localesDir, file), "utf8"));
+    } catch (error) {
+      throw new Error(`locales/${file}: ${error.message}`);
+    }
+  }
+  return locales;
+}
+
 async function removeOldOutputs(dir = outputDir) {
   let entries;
   try {
@@ -174,7 +193,9 @@ async function buildBundle() {
     return false;
   }
 
-  const inputs = { "bundle-loader.js": loaderHead };
+  const locales = await readLocales();
+  const localesScript = `window.__lcpLocales = ${JSON.stringify(locales)};\n`;
+  const inputs = { "bundle-loader.js": loaderHead, "locales.js": localesScript };
   for (const module of modules) inputs[module.relative] = module.wrapped;
   inputs["bundle-runner.js"] = loaderTail;
 
@@ -187,7 +208,10 @@ async function buildBundle() {
   await writeFile(`${bundlePath}.map`, result.map);
   await removeOldOutputs();
 
-  const before = modules.reduce((total, module) => total + Buffer.byteLength(module.code), 0);
+  const before = modules.reduce(
+    (total, module) => total + Buffer.byteLength(module.code),
+    Buffer.byteLength(localesScript),
+  );
   const after = Buffer.byteLength(result.code);
   for (const module of modules) console.log(`  ${module.name}`);
   console.log(`\n${modules.length} scripts bundled into ${path.relative(root, bundlePath).replaceAll("\\", "/")}: ${before} -> ${after} bytes (-${Math.round((1 - after / before) * 100)}%).`);
@@ -204,20 +228,23 @@ async function safeBuild() {
 }
 
 async function watchScripts() {
-  console.log(`Watching ${path.relative(root, sourceDir)} for changes...`);
+  console.log(`Watching ${path.relative(root, sourceDir)} and ${path.relative(root, localesDir)} for changes...`);
   let timer = null;
   let building = Promise.resolve();
-  for await (const { filename } of watch(sourceDir, { recursive: true })) {
-    if (!filename?.endsWith(".js")) continue;
-    // Editors often write a file several times in a row; rebuild once they settle.
-    clearTimeout(timer);
-    timer = setTimeout(() => {
-      building = building.then(() => {
-        process.exitCode = 0;
-        return safeBuild();
-      });
-    }, 150);
-  }
+  const rebuildOn = async (dir, extension) => {
+    for await (const { filename } of watch(dir, { recursive: true })) {
+      if (!filename?.endsWith(extension)) continue;
+      // Editors often write a file several times in a row; rebuild once they settle.
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        building = building.then(() => {
+          process.exitCode = 0;
+          return safeBuild();
+        });
+      }, 150);
+    }
+  };
+  await Promise.all([rebuildOn(sourceDir, ".js"), rebuildOn(localesDir, ".json")]);
 }
 
 await safeBuild();
