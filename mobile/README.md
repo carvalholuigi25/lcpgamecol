@@ -22,14 +22,14 @@ npm run format    # Prettier
 
 ## Layout
 
-| Path | What |
-| --- | --- |
-| `src/app/` | Expo Router screens (every file is a route) |
-| `src/api/` | `fetch` client: auth header, one retry through `/auth/refresh` after a 401, typed errors |
-| `src/api/schema.d.ts` | Generated from `../openapi.json`; do not edit |
-| `src/auth/` | Token storage: `expo-secure-store` on native, HttpOnly cookies on the web |
-| `src/i18n/` | i18next over the shared `../locales/<lang>.json` (also used by the web pages) |
-| `src/theme/` | Color, spacing and type tokens ported from the SCSS; light, dark, follow system |
+| Path                  | What                                                                                     |
+| --------------------- | ---------------------------------------------------------------------------------------- |
+| `src/app/`            | Expo Router screens (every file is a route)                                              |
+| `src/api/`            | `fetch` client: auth header, one retry through `/auth/refresh` after a 401, typed errors |
+| `src/api/schema.d.ts` | Generated from `../openapi.json`; do not edit                                            |
+| `src/auth/`           | Token storage: `expo-secure-store` on native, HttpOnly cookies on the web                |
+| `src/i18n/`           | i18next over the shared `../locales/<lang>.json` (also used by the web pages)            |
+| `src/theme/`          | Color, spacing and type tokens ported from the SCSS; light, dark, follow system          |
 
 ## API types
 
