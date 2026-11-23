@@ -16,6 +16,12 @@ sample_data.txt
 config.env
 .env
 *.env
+*.env.local
+*.env.development
+*.env.test
+*.env.production
+*.env.staging
+*.log
 *.css
 *.css.map
 styles/css/*.css
