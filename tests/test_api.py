@@ -90,6 +90,7 @@ def test_custom_page_routes_preserve_games_api_route(client, auth_headers):
     assert "function togglePasswordMaskCharacter()" in login_script.text
     assert 'passwordMaskCharacter === "*" ? "-" : "*"' in login_script.text
     assert 'maskToggle.dataset.passwordAction = "toggle-mask"' in login_script.text
+    assert "passwordMask.style.color = passwordMaskColor" in login_script.text
     # The trailer player is fetched on demand by shelf.js, not loaded by the pages.
     shelf_script = client.get("/public/scripts/games/shelf.js").text
     for page in (library, releases):

@@ -1144,9 +1144,8 @@ td a {
 }
 
 .password-entry-field--custom-mask input {
-  color: transparent !important;
-  caret-color: var(--ink);
-  -webkit-text-fill-color: transparent;
+  caret-color: inherit;
+  -webkit-text-fill-color: inherit;
 }
 
 .password-entry-field--custom-mask .password-entry-mask {

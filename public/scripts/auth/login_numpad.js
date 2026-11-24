@@ -2,7 +2,12 @@ for (const form of document.querySelectorAll('form#login-form')) {
   const password = form.querySelector('input[data-password-entry][name="password"][type="password"]');
   if (!password) continue;
 
-  let passwordMaskCharacter = "-";
+  let passwordMaskCharacter = "*";
+  let passwordMaskColor = window.getComputedStyle(password).color;
+  const originalPasswordLengthConstraints = {
+    minlength: password.getAttribute("minlength"),
+    maxlength: password.getAttribute("maxlength"),
+  };
   const passwordField = document.createElement("span");
   passwordField.className = "password-entry-field";
   password.before(passwordField);
@@ -64,7 +69,8 @@ for (const form of document.querySelectorAll('form#login-form')) {
   maskToggle.dataset.passwordAction = "toggle-mask";
   maskToggle.textContent = `Mask: ${passwordMaskCharacter}`;
   maskToggle.setAttribute("aria-label", `Toggle password mask character (currently ${passwordMaskCharacter})`);
-  maskToggle.setAttribute("aria-pressed", "false");
+  maskToggle.setAttribute("aria-pressed", String(passwordMaskCharacter === "-"));
+  maskToggle.setAttribute("hidden", "true");
   keypad.append(maskToggle);
   controls.append(keypad);
 
@@ -88,7 +94,7 @@ for (const form of document.querySelectorAll('form#login-form')) {
     passwordMask.style.letterSpacing = inputStyle.letterSpacing;
     passwordMask.style.lineHeight = inputStyle.lineHeight;
     passwordMask.style.padding = inputStyle.padding;
-    passwordMask.style.color = inputStyle.color;
+    passwordMask.style.color = passwordMaskColor;
     maskToggle.textContent = `Mask: ${passwordMaskCharacter}`;
     maskToggle.setAttribute(
       "aria-label",
@@ -204,21 +210,25 @@ for (const form of document.querySelectorAll('form#login-form')) {
     keypad.hidden = !useKeypad;
     keyboard.hidden = !useKeyboard;
     controls.classList.toggle("is-keyboard", useKeyboard);
-    passwordField.classList.toggle("password-entry-field--custom-mask", useKeypad);
+    passwordField.classList.remove("password-entry-field--custom-mask");
     if (useKeyboard) {
       shifted = false;
       showingSymbols = false;
       renderKeyboard();
     }
-    if (useKeypad && !password.classList.contains("password-numpad")) {
+    if (useKeypad) {
       password.classList.add("password-numpad");
       password.setAttribute("minlength", "0");
       password.setAttribute("maxlength", "4");
-    } else if (useKeyboard && password.classList.contains("password-numpad")) {
+    } else if (password.classList.contains("password-numpad")) {
       password.classList.remove("password-numpad");
-      password.removeAttribute("minlength");
-      password.removeAttribute("maxlength");
+      for (const [attribute, value] of Object.entries(originalPasswordLengthConstraints)) {
+        if (value === null) password.removeAttribute(attribute);
+        else password.setAttribute(attribute, value);
+      }
     }
+    passwordMaskColor = window.getComputedStyle(password).color;
+    passwordField.classList.toggle("password-entry-field--custom-mask", useKeypad);
     renderPasswordMask();
     password.inputMode = useKeypad || useKeyboard ? "none" : "text";
   });
