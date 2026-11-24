@@ -38,3 +38,4 @@ mobile/*.env
 mobile/node_modules/
 mobile/coverage/
 mobile/package-lock.json
+concepts/

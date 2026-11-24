@@ -2,6 +2,17 @@ for (const form of document.querySelectorAll('form#login-form')) {
   const password = form.querySelector('input[data-password-entry][name="password"][type="password"]');
   if (!password) continue;
 
+  let passwordMaskCharacter = "-";
+  const passwordField = document.createElement("span");
+  passwordField.className = "password-entry-field";
+  password.before(passwordField);
+  passwordField.append(password);
+
+  const passwordMask = document.createElement("span");
+  passwordMask.className = "password-entry-mask";
+  passwordMask.setAttribute("aria-hidden", "true");
+  passwordField.append(passwordMask);
+
   const controls = document.createElement("div");
   controls.className = "password-entry-controls";
 
@@ -11,12 +22,16 @@ for (const form of document.querySelectorAll('form#login-form')) {
 
   const mode = document.createElement("select");
   mode.setAttribute("aria-label", "Password entry");
+  mode.name = "password-entry-mode";
+  mode.classList.add("password-entry-mode-select");
+
   for (const [value, label] of [["input", "Input only"], ["numpad", "Numpad"]]) {
     const option = document.createElement("option");
     option.value = value;
     option.textContent = label;
     mode.append(option);
   }
+
   const keyboardOption = document.createElement("option");
   keyboardOption.value = "letters-symbols";
   keyboardOption.textContent = "Letters & symbols";
@@ -43,6 +58,14 @@ for (const form of document.querySelectorAll('form#login-form')) {
     if (key === "clear") button.setAttribute("aria-label", "Clear password");
     keypad.append(button);
   }
+
+  const maskToggle = document.createElement("button");
+  maskToggle.type = "button";
+  maskToggle.dataset.passwordAction = "toggle-mask";
+  maskToggle.textContent = `Mask: ${passwordMaskCharacter}`;
+  maskToggle.setAttribute("aria-label", `Toggle password mask character (currently ${passwordMaskCharacter})`);
+  maskToggle.setAttribute("aria-pressed", "false");
+  keypad.append(maskToggle);
   controls.append(keypad);
 
   const keyboard = document.createElement("div");
@@ -53,10 +76,31 @@ for (const form of document.querySelectorAll('form#login-form')) {
   controls.append(keyboard);
 
   const passwordLabel = password.closest("label");
-  (passwordLabel || password).after(controls);
+  (passwordLabel || passwordField).after(controls);
 
   let shifted = false;
   let showingSymbols = false;
+
+  function renderPasswordMask() {
+    passwordMask.textContent = passwordMaskCharacter.repeat(password.value.length);
+    const inputStyle = window.getComputedStyle(password);
+    passwordMask.style.font = inputStyle.font;
+    passwordMask.style.letterSpacing = inputStyle.letterSpacing;
+    passwordMask.style.lineHeight = inputStyle.lineHeight;
+    passwordMask.style.padding = inputStyle.padding;
+    passwordMask.style.color = inputStyle.color;
+    maskToggle.textContent = `Mask: ${passwordMaskCharacter}`;
+    maskToggle.setAttribute(
+      "aria-label",
+      `Toggle password mask character (currently ${passwordMaskCharacter})`,
+    );
+    maskToggle.setAttribute("aria-pressed", String(passwordMaskCharacter === "-"));
+  }
+
+  function togglePasswordMaskCharacter() {
+    passwordMaskCharacter = passwordMaskCharacter === "*" ? "-" : "*";
+    renderPasswordMask();
+  }
 
   function makeKeyboardButton(label, key, action) {
     const button = document.createElement("button");
@@ -131,6 +175,9 @@ for (const form of document.querySelectorAll('form#login-form')) {
       password.value = "";
     } else if (action === "delete") {
       password.value = password.value.slice(0, -1);
+    } else if (action === "toggle-mask") {
+      togglePasswordMaskCharacter();
+      return;
     } else if (action === "space") {
       updatePassword(" ");
       return;
@@ -157,17 +204,29 @@ for (const form of document.querySelectorAll('form#login-form')) {
     keypad.hidden = !useKeypad;
     keyboard.hidden = !useKeyboard;
     controls.classList.toggle("is-keyboard", useKeyboard);
+    passwordField.classList.toggle("password-entry-field--custom-mask", useKeypad);
     if (useKeyboard) {
       shifted = false;
       showingSymbols = false;
       renderKeyboard();
     }
+    if (useKeypad && !password.classList.contains("password-numpad")) {
+      password.classList.add("password-numpad");
+      password.setAttribute("minlength", "0");
+      password.setAttribute("maxlength", "4");
+    } else if (useKeyboard && password.classList.contains("password-numpad")) {
+      password.classList.remove("password-numpad");
+      password.removeAttribute("minlength");
+      password.removeAttribute("maxlength");
+    }
+    renderPasswordMask();
     password.inputMode = useKeypad || useKeyboard ? "none" : "text";
   });
 
   password.addEventListener("keydown", (event) => {
     if (mode.value !== "input" && event.key !== "Tab") event.preventDefault();
   });
+  password.addEventListener("input", renderPasswordMask);
   for (const eventName of ["paste", "drop"]) {
     password.addEventListener(eventName, (event) => {
       if (mode.value !== "input") event.preventDefault();

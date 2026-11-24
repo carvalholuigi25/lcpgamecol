@@ -203,6 +203,51 @@ form {
   }
 }
 
+.password-numpad {
+  background: #86a282 !important;
+  color: #000 !important;
+  font-weight: bold;
+  font-size: 1rem;
+  letter-spacing: 1rem;
+  line-height: 1rem;
+  margin: auto auto;
+  text-align: center !important;
+
+  &:autofill {
+    background: #86a282 !important;
+    color: #000 !important;
+  }
+}
+
+.password-entry-field {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+
+.password-entry-mask {
+  display: none;
+  position: absolute;
+  inset: 0;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  pointer-events: none;
+  white-space: pre;
+}
+
+.password-entry-field--custom-mask {
+  input {
+    color: transparent !important;
+    caret-color: var(--ink);
+    -webkit-text-fill-color: transparent;
+  }
+
+  .password-entry-mask {
+    display: flex;
+  }
+}
+
 .password-entry-controls {
   display: grid;
   gap: 8px;

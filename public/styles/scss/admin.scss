@@ -1125,6 +1125,34 @@ td a {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
+
+.password-entry-field {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+
+.password-entry-mask {
+  display: none;
+  position: absolute;
+  inset: 0;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  pointer-events: none;
+  white-space: pre;
+}
+
+.password-entry-field--custom-mask input {
+  color: transparent !important;
+  caret-color: var(--ink);
+  -webkit-text-fill-color: transparent;
+}
+
+.password-entry-field--custom-mask .password-entry-mask {
+  display: flex;
+}
+
 .password-entry-keypad[hidden] {
   display: none;
 }
