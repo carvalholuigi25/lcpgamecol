@@ -24,7 +24,9 @@ npm run format    # Prettier
 
 | Path                  | What                                                                                     |
 | --------------------- | ---------------------------------------------------------------------------------------- |
-| `src/app/`            | Expo Router screens (every file is a route)                                              |
+| `src/app/`            | Expo Router screens (every file is a route): `/` splash → `(tabs)` home/search/settings  |
+| `src/components/`     | Shared UI (`Chip`, `Loading`, `makeStyles`) — keep non-route code out of `src/app/`      |
+| `src/features/`       | Feature modules (themes, languages, games, collections)                                  |
 | `src/api/`            | `fetch` client: auth header, one retry through `/auth/refresh` after a 401, typed errors |
 | `src/api/schema.d.ts` | Generated from `../openapi.json`; do not edit                                            |
 | `src/auth/`           | Token storage: `expo-secure-store` on native, HttpOnly cookies on the web                |

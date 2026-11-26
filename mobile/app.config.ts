@@ -32,6 +32,18 @@ const config: ExpoConfig = {
     'expo-router',
     ['expo-localization', { supportedLocales: ['en', 'pt', 'de', 'fr', 'it', 'es', 'ja', 'hu'] }],
     'expo-secure-store',
+    // Native splash shown before JS loads; matches the in-app splash (src/app/index.tsx)
+    // and the theme background tokens (src/theme/tokens.ts).
+    [
+      'expo-splash-screen',
+      {
+        image: './assets/splash-icon.png',
+        imageWidth: 128,
+        resizeMode: 'contain',
+        backgroundColor: '#f4f5ef',
+        dark: { image: './assets/splash-icon.png', backgroundColor: '#151d1c' },
+      },
+    ],
   ],
   experiments: {
     typedRoutes: true,

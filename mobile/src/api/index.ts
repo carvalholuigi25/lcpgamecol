@@ -22,13 +22,20 @@ export const api = createApiClient({
   onSessionExpired: () => sessionListeners.forEach((listener) => listener()),
 });
 
+let configuredAssetBaseUrl: string = API_URL;
+
+/** Remember the asset base URL from GET /client/config (loaded by the splash screen). */
+export function setAssetBaseUrl(url: string | null | undefined): void {
+  configuredAssetBaseUrl = url?.trim() || API_URL;
+}
+
 /**
  * Covers, avatars and uploads may be stored as paths such as /admin/uploads/<id>.
  * Resolve them against the asset base URL from GET /client/config.
  */
 export function resolveAssetUrl(
   value: string | null | undefined,
-  assetBaseUrl: string = API_URL,
+  assetBaseUrl: string = configuredAssetBaseUrl,
 ): string | null {
   if (!value) return null;
   if (/^https?:\/\//i.test(value)) return value;
