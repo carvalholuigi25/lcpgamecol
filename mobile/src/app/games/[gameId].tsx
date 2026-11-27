@@ -68,14 +68,23 @@ function GameDetails({ game }: { game: Game }) {
   ];
 
   return (
-    <ScrollView style={shared.screen} contentInsetAdjustmentBehavior="automatic">
+    <ScrollView
+      style={shared.screen}
+      contentContainerStyle={styles.content}
+      contentInsetAdjustmentBehavior="automatic"
+    >
       {hero ? (
         <Image source={hero} style={styles.hero} contentFit="cover" transition={200} />
       ) : null}
 
-      <View style={[shared.container, styles.header, hero ? styles.headerOverlap : null]}>
+      <View style={[shared.container, styles.header]}>
         {cover ? (
-          <Image source={cover} style={styles.cover} contentFit="cover" transition={200} />
+          <Image
+            source={cover}
+            style={[styles.cover, hero ? styles.coverOverlap : null]}
+            contentFit="cover"
+            transition={200}
+          />
         ) : null}
         <View style={styles.headerText}>
           <Text style={shared.heading} accessibilityRole="header">
@@ -178,10 +187,14 @@ function Badge({ label, styles }: { label: string; styles: ReturnType<typeof mak
 
 function makeDetailStyles({ colors, spacing, radius, typography }: Theme) {
   return StyleSheet.create({
-    hero: { width: '100%', aspectRatio: 16 / 9, backgroundColor: colors.surface },
-    header: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.md },
-    headerOverlap: { marginTop: -spacing.xxl * 2 },
-    headerText: { flex: 1, gap: spacing.sm },
+    // Readable column on tablets / web; the hero is capped so it never fills the screen.
+    content: { width: '100%', maxWidth: 760, alignSelf: 'center', paddingBottom: spacing.xl },
+    hero: { width: '100%', aspectRatio: 16 / 9, maxHeight: 360, backgroundColor: colors.surface },
+    // Only the cover overlaps the hero; the title stays below it on the screen background
+    // (it used to be pulled up over the image, where it was unreadable).
+    header: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md, paddingBottom: 0 },
+    coverOverlap: { marginTop: -spacing.xxl * 2 },
+    headerText: { flex: 1, minWidth: 0, gap: spacing.sm },
     cover: {
       width: 96,
       height: 132,

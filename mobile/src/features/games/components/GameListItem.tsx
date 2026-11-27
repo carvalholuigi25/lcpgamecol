@@ -21,42 +21,48 @@ function GameListItemBase({ game }: { game: Game }) {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={game.title}
-        style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+        // `Link asChild` merges styles by spreading objects, so a style *function* (or array)
+        // would be dropped: keep the outer style static and apply pressed feedback inside.
+        style={styles.pressable}
       >
-        {cover ? (
-          <Image
-            source={cover}
-            style={styles.cover}
-            contentFit="cover"
-            transition={150}
-            recyclingKey={String(game.id)}
-            accessibilityIgnoresInvertColors
-          />
-        ) : (
-          <View style={[styles.cover, styles.coverFallback]}>
-            <Text style={styles.coverInitial}>{game.title.charAt(0).toUpperCase()}</Text>
+        {({ pressed }) => (
+          <View style={[styles.row, pressed && styles.pressed]}>
+            {cover ? (
+              <Image
+                source={cover}
+                style={styles.cover}
+                contentFit="cover"
+                transition={150}
+                recyclingKey={String(game.id)}
+                accessibilityIgnoresInvertColors
+              />
+            ) : (
+              <View style={[styles.cover, styles.coverFallback]}>
+                <Text style={styles.coverInitial}>{game.title.charAt(0).toUpperCase()}</Text>
+              </View>
+            )}
+            <View style={styles.text}>
+              <Text style={styles.title} numberOfLines={2}>
+                {game.title}
+              </Text>
+              {subtitle ? (
+                <Text style={styles.muted} numberOfLines={1}>
+                  {subtitle}
+                </Text>
+              ) : null}
+              {game.developer_name ? (
+                <Text style={styles.muted} numberOfLines={1}>
+                  {game.developer_name}
+                </Text>
+              ) : null}
+            </View>
+            {rating ? (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>★ {rating}</Text>
+              </View>
+            ) : null}
           </View>
         )}
-        <View style={styles.text}>
-          <Text style={styles.title} numberOfLines={2}>
-            {game.title}
-          </Text>
-          {subtitle ? (
-            <Text style={styles.muted} numberOfLines={1}>
-              {subtitle}
-            </Text>
-          ) : null}
-          {game.developer_name ? (
-            <Text style={styles.muted} numberOfLines={1}>
-              {game.developer_name}
-            </Text>
-          ) : null}
-        </View>
-        {rating ? (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>★ {rating}</Text>
-          </View>
-        ) : null}
       </Pressable>
     </Link>
   );
@@ -67,6 +73,7 @@ export const GameListItem = memo(GameListItemBase);
 
 function makeStyles({ colors, spacing, radius, typography }: Theme) {
   return StyleSheet.create({
+    pressable: { width: '100%' },
     row: {
       height: GAME_ROW_HEIGHT,
       flexDirection: 'row',

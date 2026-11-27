@@ -198,3 +198,14 @@ export async function loadUserProfile(
     limited: true,
   };
 }
+
+type SearchableUser = { username: string; display_name: string | null; email?: string | null };
+
+/** Case-insensitive match on username, display name or email; a blank query matches all. */
+export function filterUsers<T extends SearchableUser>(users: T[], query: string): T[] {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return users;
+  return users.filter((u) =>
+    [u.username, u.display_name, u.email].some((v) => v?.toLowerCase().includes(needle)),
+  );
+}

@@ -8,7 +8,6 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  useWindowDimensions,
   View,
   type ListRenderItem,
 } from 'react-native';
@@ -26,12 +25,20 @@ const MAX_COLUMNS = 6;
 const keyExtractor = (game: Game) => String(game.id);
 const renderRow: ListRenderItem<Game> = ({ item }) => <GameListItem game={item} />;
 
+/** Vertical space between grid rows (FlatList ignores `rowGap` across its row cells). */
+function GridRowSpacer() {
+  const { spacing } = useTheme();
+  return <View style={{ height: spacing.md }} />;
+}
+
 export default function GamesScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const shared = makeStyles(theme);
   const styles = makeScreenStyles(theme);
-  const { width } = useWindowDimensions();
+  // Measure the list area itself (not the window): split views, web scrollbars and
+  // rotation all change the space actually available to the grid.
+  const [width, setWidth] = useState(0);
 
   const [layout, setLayout] = useState<Layout>('grid');
   const [sortIndex, setSortIndex] = useState(0);
@@ -43,14 +50,16 @@ export default function GamesScreen() {
   const { items, total, status, error, refreshing, loadingMore, hasMore } = games;
   const { refresh, retry, loadMore } = games;
 
-  // Responsive grid: as many ≥150px columns as fit (2…6).
+  // Responsive grid: as many ≥150px columns as fit (2…6). Floor the card width so
+  // rounding never pushes the last column past the gutter.
   const gutter = theme.spacing.lg;
   const gap = theme.spacing.md;
+  const inner = Math.max(0, width - gutter * 2);
   const columns = Math.min(
     MAX_COLUMNS,
-    Math.max(2, Math.floor((width - gutter * 2 + gap) / (GRID_MIN_CARD + gap))),
+    Math.max(2, Math.floor((inner + gap) / (GRID_MIN_CARD + gap))),
   );
-  const cardWidth = (width - gutter * 2 - gap * (columns - 1)) / columns;
+  const cardWidth = Math.floor((inner - gap * (columns - 1)) / columns);
 
   const renderCard = useCallback<ListRenderItem<Game>>(
     ({ item }) => <GameCard game={item} width={cardWidth} />,
@@ -122,14 +131,17 @@ export default function GamesScreen() {
     };
     body =
       layout === 'grid' ? (
-        <FlatList
-          key={`grid-${columns}`}
-          {...common}
-          numColumns={columns}
-          renderItem={renderCard}
-          columnWrapperStyle={{ gap }}
-          contentContainerStyle={{ paddingHorizontal: gutter, paddingTop: gap, rowGap: gap }}
-        />
+        width === 0 ? null : (
+          <FlatList
+            key={`grid-${columns}`}
+            {...common}
+            numColumns={columns}
+            renderItem={renderCard}
+            columnWrapperStyle={{ gap }}
+            contentContainerStyle={{ paddingHorizontal: gutter, paddingVertical: gap }}
+            ItemSeparatorComponent={GridRowSpacer}
+          />
+        )
       ) : (
         <FlatList
           key="list"
@@ -198,7 +210,9 @@ export default function GamesScreen() {
         </ScrollView>
         {countLabel ? <Text style={[shared.muted, styles.count]}>{countLabel}</Text> : null}
       </View>
-      {body}
+      <View style={styles.body} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
+        {body}
+      </View>
     </View>
   );
 }
@@ -252,5 +266,6 @@ function makeScreenStyles({ colors, spacing, radius, typography }: Theme) {
       marginLeft: spacing.lg + 56 + spacing.md,
     },
     footer: { paddingVertical: spacing.xl },
+    body: { flex: 1 },
   });
 }

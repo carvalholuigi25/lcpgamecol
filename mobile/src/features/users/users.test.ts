@@ -1,6 +1,12 @@
 import { api, ApiError } from '@/api';
 
-import { initials, loadUserProfile, type AdminUser, type LeaderboardEntry } from './services';
+import {
+  filterUsers,
+  initials,
+  loadUserProfile,
+  type AdminUser,
+  type LeaderboardEntry,
+} from './services';
 
 const getSpy = jest.spyOn(api, 'get');
 beforeEach(() => getSpy.mockReset());
@@ -100,5 +106,20 @@ describe('loadUserProfile', () => {
     getSpy.mockResolvedValue([]);
     await expect(loadUserProfile('ghost', viewer)).rejects.toMatchObject({ status: 404 });
     await expect(loadUserProfile('ghost', viewer)).rejects.toBeInstanceOf(ApiError);
+  });
+});
+
+describe('filterUsers', () => {
+  const users = [
+    { username: 'ana', display_name: 'Ana Silva', email: 'ana@example.com' },
+    { username: 'luigi', display_name: null, email: null },
+  ];
+
+  it('matches username, display name or email, ignoring case and blanks', () => {
+    expect(filterUsers(users, '  ')).toBe(users);
+    expect(filterUsers(users, 'SILVA')).toEqual([users[0]]);
+    expect(filterUsers(users, 'example')).toEqual([users[0]]);
+    expect(filterUsers(users, 'lui')).toEqual([users[1]]);
+    expect(filterUsers(users, 'zzz')).toEqual([]);
   });
 });

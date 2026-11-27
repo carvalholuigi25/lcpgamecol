@@ -40,24 +40,26 @@ function UserRowBase({
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={name}
-        style={({ pressed }) => [
-          styles.row,
-          highlighted && styles.highlighted,
-          pressed && styles.pressed,
-        ]}
+        // `Link asChild` merges styles by spreading objects, so a style *function* (or array)
+        // would be dropped: keep the outer style static and apply pressed feedback inside.
+        style={styles.pressable}
       >
-        {leading}
-        <Avatar uri={resolveAssetUrl(avatarUrl)} label={initials(name)} />
-        <View style={styles.text}>
-          <Text style={styles.name} numberOfLines={1}>
-            {name}
-          </Text>
-          <Text style={styles.muted} numberOfLines={1}>
-            @{username}
-            {detail ? ` · ${detail}` : ''}
-          </Text>
-        </View>
-        {trailing ? <View style={styles.trailing}>{trailing}</View> : null}
+        {({ pressed }) => (
+          <View style={[styles.row, highlighted && styles.highlighted, pressed && styles.pressed]}>
+            {leading}
+            <Avatar uri={resolveAssetUrl(avatarUrl)} label={initials(name)} />
+            <View style={styles.text}>
+              <Text style={styles.name} numberOfLines={1}>
+                {name}
+              </Text>
+              <Text style={styles.muted} numberOfLines={1}>
+                @{username}
+                {detail ? ` · ${detail}` : ''}
+              </Text>
+            </View>
+            {trailing ? <View style={styles.trailing}>{trailing}</View> : null}
+          </View>
+        )}
       </Pressable>
     </Link>
   );
@@ -67,6 +69,7 @@ export const UserRow = memo(UserRowBase);
 
 function makeStyles({ colors, spacing, typography }: Theme) {
   return StyleSheet.create({
+    pressable: { width: '100%' },
     row: {
       flexDirection: 'row',
       alignItems: 'center',

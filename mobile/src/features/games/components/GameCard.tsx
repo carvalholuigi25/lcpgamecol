@@ -20,35 +20,41 @@ function GameCardBase({ game, width }: { game: Game; width: number }) {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={game.title}
-        style={({ pressed }) => [styles.card, { width }, pressed && styles.pressed]}
+        // `Link asChild` merges styles by spreading objects, so a style *function* (or array)
+        // would be dropped: keep a flat object here and apply pressed feedback inside.
+        style={{ width }}
       >
-        <View style={styles.coverBox}>
-          {cover ? (
-            <Image
-              source={cover}
-              style={StyleSheet.absoluteFill}
-              contentFit="cover"
-              transition={150}
-              recyclingKey={String(game.id)}
-              accessibilityIgnoresInvertColors
-            />
-          ) : (
-            <Text style={styles.initial}>{game.title.charAt(0).toUpperCase()}</Text>
-          )}
-          {rating ? (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>★ {rating}</Text>
+        {({ pressed }) => (
+          <View style={[styles.card, pressed && styles.pressed]}>
+            <View style={styles.coverBox}>
+              {cover ? (
+                <Image
+                  source={cover}
+                  style={StyleSheet.absoluteFill}
+                  contentFit="cover"
+                  transition={150}
+                  recyclingKey={String(game.id)}
+                  accessibilityIgnoresInvertColors
+                />
+              ) : (
+                <Text style={styles.initial}>{game.title.charAt(0).toUpperCase()}</Text>
+              )}
+              {rating ? (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>★ {rating}</Text>
+                </View>
+              ) : null}
             </View>
-          ) : null}
-        </View>
-        <Text style={styles.title} numberOfLines={2}>
-          {game.title}
-        </Text>
-        {meta ? (
-          <Text style={styles.meta} numberOfLines={1}>
-            {meta}
-          </Text>
-        ) : null}
+            <Text style={styles.title} numberOfLines={2}>
+              {game.title}
+            </Text>
+            {meta ? (
+              <Text style={styles.meta} numberOfLines={1}>
+                {meta}
+              </Text>
+            ) : null}
+          </View>
+        )}
       </Pressable>
     </Link>
   );

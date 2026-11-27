@@ -8,6 +8,7 @@ import { Button, Loading, makeStyles, Pill } from '@/components';
 import {
   fetchAdminUsers,
   fetchLeaderboard,
+  filterUsers,
   isAdmin,
   ROLE_ADMIN,
   sameUser,
@@ -46,13 +47,7 @@ function AdminUsers() {
     fetchAdminUsers,
   );
 
-  const users = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    if (!needle || !data) return data ?? [];
-    return data.filter((u) =>
-      [u.username, u.display_name, u.email].some((v) => v?.toLowerCase().includes(needle)),
-    );
-  }, [data, query]);
+  const users = useMemo(() => filterUsers(data ?? [], query), [data, query]);
 
   if (loading) return <Loading label={t('Loading…')} />;
   if (!data) return <ErrorState message={error} onRetry={retry} />;
