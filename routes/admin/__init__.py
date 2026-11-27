@@ -3,10 +3,10 @@ from contextlib import closing
 
 from fastapi import APIRouter, Depends
 
-from backend.auth.auth import require_admin
+from backend.auth.auth import Principal, require_admin
 from backend.database.database import get_connection
 
-router = APIRouter(dependencies=[Depends(require_admin)])
+router = APIRouter()
 
 
 def _split_values(value: str | None) -> list[str]:
@@ -14,7 +14,7 @@ def _split_values(value: str | None) -> list[str]:
 
 
 @router.get("/admin/dashboard", tags=["admin"])
-def get_dashboard_summary() -> dict:
+def get_dashboard_summary(_principal: Principal = Depends(require_admin)) -> dict:
     with closing(get_connection()) as connection:
         games = connection.execute(
             """
@@ -84,11 +84,13 @@ def get_dashboard_summary() -> dict:
 from routes.admin.access_control import router as access_control_router  # noqa: E402
 from routes.admin.development import router as development_router  # noqa: E402
 from routes.admin.game_data import router as game_data_router  # noqa: E402
+from routes.admin.permissions import router as permissions_router  # noqa: E402
 from routes.admin.uploads import router as uploads_router  # noqa: E402
 from routes.admin.users import router as users_router  # noqa: E402
 
 router.include_router(access_control_router)
 router.include_router(development_router)
 router.include_router(game_data_router)
+router.include_router(permissions_router)
 router.include_router(uploads_router)
 router.include_router(users_router)

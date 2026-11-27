@@ -37,7 +37,7 @@
             <select id="language-selector" aria-label="Language">
               <option value="en">English</option><option value="pt">Português</option>
               <option value="de">Deutsch</option><option value="fr">Français</option>
-              <option value="it">Italiano</option><option value="es">Español</option><option value="ja">日本語</option>
+              <option value="it">Italiano</option><option value="es">Español</option><option value="ja">日本語</option><option value="hu">Magyar</option>
             </select>
           </label>
           <span id="account-name" class="account-name"></span>
@@ -135,13 +135,7 @@
       </section>
       <div id="toast-region" class="toast-region" role="status" aria-live="polite" aria-atomic="true"></div>
     </main>
-    <script src="/public/scripts/loading.js"></script>
-    <script src="/public/scripts/i18n.js"></script>
-    <script src="/public/scripts/preferences.js"></script>
-    <script src="/public/scripts/sidebar.js"></script>
     <script src="/nmodules/@microsoft/signalr/dist/browser/signalr.min.js"></script>
-    <script src="/public/scripts/realtime.js"></script>
-    <script src="/public/scripts/inbox.js"></script>
-    <script src="/public/scripts/feedback.js"></script>
+    <script src="/public/dist/scripts/all.min.js" data-modules="core/loading core/i18n core/language_flags core/preferences core/sidebar realtime/realtime realtime/inbox users/feedback"></script>
   </body>
 </html>

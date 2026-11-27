@@ -1,10 +1,16 @@
+import json
+import re
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 
 import backend.auth.auth as auth
 import backend.database.database as database
-from helpers import rate_limiter
+from helpers import bundled_modules, rate_limiter
 from main import app
+
+LOCALES_DIRECTORY = Path(__file__).resolve().parent.parent / "locales"
 
 GAME = {
     "title": "Portal 2",
@@ -67,17 +73,32 @@ def test_custom_page_routes_preserve_games_api_route(client, auth_headers):
 
     assert library.status_code == 200
     assert 'id="login-form"' in library.text
+    assert 'data-password-entry' in library.text
+    assert "auth/login_numpad" in bundled_modules(library.text)
     for control_id in ("first-page", "previous-page", "page-selector", "next-page", "last-page"):
         assert f'id="{control_id}"' in library.text
     assert releases.status_code == 200
     assert 'id="login-form"' in releases.text
+    assert 'data-password-entry' in releases.text
+    assert "auth/login_numpad" in bundled_modules(releases.text)
+    assert admin.status_code == 200
+    assert 'data-password-entry' in admin.text
+    assert "auth/login_numpad" in bundled_modules(admin.text)
+    login_script = client.get("/public/scripts/auth/login_numpad.js")
+    assert login_script.status_code == 200
+    assert "Letters & symbols" in login_script.text
+    assert "function togglePasswordMaskCharacter()" in login_script.text
+    assert 'passwordMaskCharacter === "*" ? "-" : "*"' in login_script.text
+    assert 'maskToggle.dataset.passwordAction = "toggle-mask"' in login_script.text
+    assert "passwordMask.style.color = passwordMaskColor" in login_script.text
     # The trailer player is fetched on demand by shelf.js, not loaded by the pages.
-    shelf_script = client.get("/public/scripts/shelf.js").text
+    shelf_script = client.get("/public/scripts/games/shelf.js").text
     for page in (library, releases):
         assert "/nmodules/@videojs/cdn/video.js" not in page.text
         assert 'id="details-trailer-section"' in page.text
         assert 'id="details-screenshots-section"' in page.text
         assert 'id="details-requirements-warning"' in page.text
+        assert 'id="details-resources-section"' in page.text
     for asset in (
         "/nmodules/@videojs/cdn/global.css",
         "/nmodules/@videojs/cdn/video.css",
@@ -242,11 +263,10 @@ def test_admin_dashboard_page_and_assets_are_served(client):
     assert 'id="theme-selector"' in page.text
     assert 'id="page-loader"' in page.text
     assert 'data-lockout' in page.text
-    assert 'src="/public/scripts/loading.js"' in page.text
-    assert 'src="/public/scripts/preferences.js"' in page.text
-    assert client.get("/public/scripts/admin.js").status_code == 200
-    assert client.get("/public/scripts/loading.js").status_code == 200
-    assert client.get("/public/scripts/preferences.js").status_code == 200
+    assert {"core/loading", "core/preferences"} <= set(bundled_modules(page.text))
+    assert client.get("/public/scripts/admin/admin.js").status_code == 200
+    assert client.get("/public/scripts/core/loading.js").status_code == 200
+    assert client.get("/public/scripts/core/preferences.js").status_code == 200
     assert client.get("/public/styles/css/admin.css").status_code == 200
     games_page = client.get("/pages/games/games.html").text
     releases_page = client.get("/pages/games/games_releases.html").text
@@ -257,8 +277,7 @@ def test_admin_dashboard_page_and_assets_are_served(client):
         assert 'id="theme-selector"' in shelf_page
         assert 'id="page-loader"' in shelf_page
         assert 'data-lockout' in shelf_page
-        assert 'src="/public/scripts/loading.js"' in shelf_page
-        assert 'src="/public/scripts/preferences.js"' in shelf_page
+        assert {"core/loading", "core/preferences"} <= set(bundled_modules(shelf_page))
 
 
 @pytest.mark.parametrize("theme", ["sunsetvibes", "cyber-retro", "rgb"])
@@ -267,9 +286,101 @@ def test_site_pages_offer_the_api_docs_themes(client, theme):
     for path in pages:
         assert f'<option value="{theme}">' in client.get(path).text
 
-    assert f'"{theme}"' in client.get("/public/scripts/preferences.js").text
+    assert f'"{theme}"' in client.get("/public/scripts/core/preferences.js").text
     for stylesheet in ("/public/styles/css/games.css", "/public/styles/css/admin.css"):
         assert f"body[data-theme={theme}]" in client.get(stylesheet).text
+
+
+def test_portuguese_language_picker_uses_portugal_flag(client):
+    flag = client.get("/public/images/flags/pt.svg")
+
+    assert flag.status_code == 200
+    assert flag.headers["content-type"].startswith("image/svg+xml")
+    assert "core/language_flags" in bundled_modules(client.get("/pages/games/games.html").text)
+    assert 'pt: "pt"' in client.get("/public/scripts/core/language_flags.js").text
+
+
+def test_pages_load_the_bundle_with_modules_built_from_sources():
+    root = Path(__file__).resolve().parent.parent
+    sources = {
+        path.relative_to(root / "public" / "scripts").as_posix().removesuffix(".js")
+        for path in (root / "public" / "scripts").rglob("*.js")
+    }
+    referenced = set()
+    for page in (root / "pages").rglob("*.html"):
+        text = page.read_text(encoding="utf-8")
+        assert "/public/scripts/" not in text, page.name
+        # Only the bundle is loaded from dist; per-file .min.js scripts are gone.
+        assert not re.search(r"/public/dist/scripts/(?!all\.min\.js)", text), page.name
+        if "all.min.js" in text:
+            modules = bundled_modules(text)
+            assert len(modules) == len(set(modules)), page.name
+            referenced.update(modules)
+    assert referenced and not referenced - sources
+
+
+def test_bundle_script_wraps_each_source_file_as_a_module():
+    build_script = (Path(__file__).resolve().parent.parent / "scripts" / "minify_js.mjs").read_text(encoding="utf-8")
+    assert 'const bundleName = "all.min.js"' in build_script
+    assert "__lcpDefine(" in build_script
+    assert "document.currentScript" in build_script
+    assert "dataset.modules" in build_script
+
+
+@pytest.mark.parametrize(
+    ("page", "first", "last"),
+    [
+        ("/pages/games/games.html", "core/loading", "games/games"),
+        ("/pages/games/games_releases.html", "core/loading", "games/games_releases"),
+        ("/pages/admin/admin.html", "core/loading", "admin/admin"),
+        ("/pages/users/profile.html", "core/loading", "users/security"),
+        ("/pages/errors/blocked.html", "core/i18n", "core/language_flags"),
+    ],
+)
+def test_pages_run_their_own_modules_after_the_shared_ones(client, page, first, last):
+    modules = bundled_modules(client.get(page).text)
+    assert modules[0] == first and modules[-1] == last
+    # Each page only runs its own page script.
+    page_scripts = {"games/games", "games/games_releases", "admin/admin", "users/profile", "admin/users"}
+    assert len(page_scripts & set(modules)) <= 1
+
+
+def test_hungarian_language_is_available(client):
+    assert client.get("/public/images/flags/hu.svg").status_code == 200
+    assert 'hu: "hu"' in client.get("/public/scripts/core/language_flags.js").text
+    i18n_script = client.get("/public/scripts/core/i18n.js").text
+    assert 'hu: "Magyar"' in i18n_script
+    hungarian = json.loads((LOCALES_DIRECTORY / "hu.json").read_text(encoding="utf-8"))
+    assert hungarian["Sign in"] == "Bejelentkezés"
+    for page in ("/pages/games/games.html", "/pages/admin/admin.html", "/pages/users/profile.html"):
+        assert '<option value="hu">Magyar</option>' in client.get(page).text
+
+
+def test_shared_locale_files_are_flat_string_dictionaries():
+    # locales/<lang>.json feed both the web bundle and the mobile app (mobile/src/i18n).
+    languages = {path.stem for path in LOCALES_DIRECTORY.glob("*.json")}
+    assert {"en", "pt", "de", "fr", "it", "es", "ja", "hu"} <= languages
+    for language in languages:
+        messages = json.loads((LOCALES_DIRECTORY / f"{language}.json").read_text(encoding="utf-8"))
+        assert isinstance(messages, dict)
+        assert all(isinstance(key, str) and isinstance(value, str) for key, value in messages.items())
+        if language != "en":
+            assert len(messages) > 1000
+
+
+def test_game_details_show_platform_logos(client):
+    shelf_script = client.get("/public/scripts/games/shelf.js").text
+    assert "function platformDetail" in shelf_script
+    assert "bi-playstation" in shelf_script
+    assert 'bootstrap-icons.min.css' in client.get("/pages/games/games.html").text
+
+
+def test_admin_game_transfer_hides_with_records(client):
+    page = client.get("/pages/admin/admin.html").text
+    section_start = page.index('id="game-data-transfer-section"')
+    assert section_start < page.index('id="export-games-button"') < page.index('id="records-content"')
+    admin_script = client.get("/public/scripts/admin/admin.js").text
+    assert admin_script.count('getElementById("game-data-transfer-section")') == 2
 
 
 def test_admin_dashboard_page_settings_are_available(client):
@@ -459,6 +570,8 @@ def test_game_developer_publisher_website_trailer_and_screenshots_round_trip(
         "developer_name": "Valve",
         "publisher_name": "Valve",
         "website_url": "https://www.thinkwithportals.com/",
+        "store_url": "https://store.steampowered.com/app/400/Portal/",
+        "map_url": "https://example.com/portal-map",
         "trailer_url": "https://www.youtube.com/watch?v=abc123",
         "screenshots": [
             "https://cdn.example.com/portal-1.jpg",
@@ -489,6 +602,8 @@ def test_game_developer_publisher_website_trailer_and_screenshots_round_trip(
     assert updated.json()["developer_name"] == "Valve Corporation"
     assert updated.json()["publisher_name"] == game["publisher_name"]
     assert updated.json()["website_url"] == game["website_url"]
+    assert updated.json()["store_url"] == game["store_url"]
+    assert updated.json()["map_url"] == game["map_url"]
     assert updated.json()["trailer_url"] == game["trailer_url"]
     assert updated.json()["screenshots"] == updated_game["screenshots"]
 
@@ -571,7 +686,14 @@ def test_reset_autoincrement_keeps_existing_ids_safe(client, auth_headers):
     assert next_achievement["achievement_id"] == achievement["achievement_id"]
 
 
-def test_external_search_uses_query_parameter(client, auth_headers, monkeypatch):
+@pytest.mark.parametrize(
+    "params,expected_where",
+    [
+        ({"query": "Portal"}, 'where name ~ *"Portal"* & themes != (42);'),
+        ({"query": "Portal", "hide_nsfw": "false"}, 'where name ~ *"Portal"*;'),
+    ],
+)
+def test_external_search_uses_query_parameter(client, auth_headers, monkeypatch, params, expected_where):
     import routes.games.routes as games_routes
 
     class FakeResponse:
@@ -599,16 +721,16 @@ def test_external_search_uses_query_parameter(client, auth_headers, monkeypatch)
                     },
                 )()
             assert url == "https://api.igdb.com/v4/games"
-            assert 'where name ~ "Portal";' in kwargs["content"]
+            assert expected_where in kwargs["content"]
+            assert "limit 500;" in kwargs["content"]
+            assert "sort first_release_date" not in kwargs["content"]
             return FakeResponse()
 
     monkeypatch.setenv("IGDB_CLIENT_ID", "client-id")
     monkeypatch.setenv("IGDB_CLIENT_SECRET", "client-secret")
     monkeypatch.setattr(games_routes.httpx, "Client", lambda **kwargs: FakeClient())
 
-    response = client.get(
-        "/games/external-search?query=Portal&limit=1", headers=auth_headers
-    )
+    response = client.get("/games/external-search", params=params, headers=auth_headers)
 
     assert response.status_code == 200
     assert response.json()[0]["title"] == "Portal"
@@ -935,3 +1057,91 @@ def test_rate_limit_returns_retry_after_header(client, auth_headers, monkeypatch
         in browser_error.text
     )
     assert 'role="progressbar"' in browser_error.text
+
+def test_game_store_links_round_trip(client, auth_headers):
+    steam = "https://store.steampowered.com/app/620/"
+    gog = "https://www.gog.com/game/portal_2"
+    playstation = "https://store.playstation.com/concept/10000"
+    game = {**GAME, "store_url": steam, "store_urls": [steam, gog, " ", gog]}
+    created = client.post("/games", json=game, headers=auth_headers)
+
+    assert created.status_code == 201
+    assert (created.json()["store_url"], created.json()["store_urls"]) == (steam, [steam, gog])
+    game_id = created.json()["id"]
+
+    updated = client.put(
+        f"/games/{game_id}",
+        json={**game, "store_url": playstation, "store_urls": [steam, playstation]},
+        headers=auth_headers,
+    )
+    assert updated.status_code == 200
+    stored = client.get(f"/games/{game_id}").json()
+    # store_url is the main link, so it always comes first.
+    assert (stored["store_url"], stored["store_urls"]) == (playstation, [playstation, steam])
+
+
+def test_clients_that_only_send_store_url_keep_working(client, auth_headers):
+    steam = "https://store.steampowered.com/app/620/"
+    created = client.post("/games", json={**GAME, "store_url": steam}, headers=auth_headers)
+
+    assert created.status_code == 201
+    assert created.json()["store_urls"] == [steam]
+
+
+def test_games_saved_before_store_links_show_their_store_url(client, auth_headers):
+    steam = "https://store.steampowered.com/app/620/"
+    game_id = client.post("/games", json={**GAME, "store_url": steam}, headers=auth_headers).json()["id"]
+    with database.get_connection() as connection:
+        connection.execute("UPDATE games SET store_urls = NULL WHERE id = ?", (game_id,))
+
+    assert client.get(f"/games/{game_id}").json()["store_urls"] == [steam]
+
+
+def test_admin_game_form_offers_dropdowns_and_store_links(client):
+    page = client.get("/pages/admin/admin.html").text
+    for field in ("platforms", "gamemodes", "editions"):
+        assert f'data-multi-select="{field}"' in page
+        assert f'<input name="{field}" type="hidden" />' in page
+    assert 'id="store-links-list"' in page
+    assert 'id="add-store-link-button"' in page
+    assert 'name="store_url"' not in page
+
+    admin_script = client.get("/public/scripts/admin/admin.js").text
+    assert "store_urls: storeUrls" in admin_script
+    assert 'input.name = "store_urls"' in admin_script
+
+
+def test_admin_dropdowns_offer_every_schema_choice(client):
+    from routes.games.schemas import GameEdition, GameModes, Gameplatforms
+
+    admin_script = client.get("/public/scripts/admin/admin.js").text
+    options = admin_script[admin_script.index("const GAME_LIST_OPTIONS"):admin_script.index("const GAME_LIST_OPTION_LABELS")]
+    for choice in (*Gameplatforms, *GameModes, *GameEdition):
+        assert f'"{choice.value}"' in options, choice
+
+
+def test_shelf_shows_a_buy_button_per_store(client):
+    shelf_script = client.get("/public/scripts/games/shelf.js").text
+    assert "function storeUrlsOf" in shelf_script
+    assert "function renderStoreLinks" in shelf_script
+    for page in ("/pages/games/games.html", "/pages/games/games_releases.html"):
+        assert '<div class="release-countdown-stores" id="details-buy-now" hidden></div>' in client.get(page).text
+
+
+@pytest.mark.parametrize("flag", ["br", "de", "es", "fr", "hu", "it", "jp", "pt", "us"])
+def test_language_flags_are_3_by_2_svgs(client, flag):
+    import xml.etree.ElementTree as ElementTree
+
+    response = client.get(f"/public/images/flags/{flag}.svg")
+    assert response.status_code == 200
+    svg = ElementTree.fromstring(response.text)
+    assert svg.tag == "{http://www.w3.org/2000/svg}svg"
+    assert svg.get("viewBox") == "0 0 30 20"
+
+
+def test_us_flag_has_13_stripes_and_50_stars(client):
+    svg = client.get("/public/images/flags/us.svg").text
+    red_stripes = svg.split('fill="#b22234" d="')[1].split('"')[0]
+    stars = svg.split('fill="#fff" d="')[2].split('"')[0]
+    assert red_stripes.count("M") == 7
+    assert stars.count("M") == 50

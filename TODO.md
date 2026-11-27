@@ -42,11 +42,30 @@ Planned work and known gaps. Move items to `CHANGELOG.md` when they ship.
 
 - [ ] Filter the library on the server (genre, age rating, category, platform). Today the dropdowns only filter and list the 12 games on the current page.
 - [ ] Let administrators edit a game inside the details dialog, without opening the dashboard.
+- [ ] Let administrators name a store link themselves. Today the name on the **Buy now** button comes from the link's web address.
 - [ ] Offer an "Undo" right after a game is deleted.
 
 ## Quality
 
 - [ ] Find and fix the `Unexpected token 'export'` error logged when the library loads (one of the scripts loaded from `/nmodules` is an ES module but is loaded as a classic script).
 - [ ] Add placeholder images for seed achievements whose icons return 404.
-- [ ] Add browser tests for the library and dashboard (Playwright).
+- [ ] Add browser tests for the library, releases, and dashboard (Playwright), including countdown completion, purchase links, map embeds, and review unlocking.
 - [ ] Add a check that fails when a UI string has no translation.
+- [ ] Version the script bundle URL (for example `all.min.js?v=<hash>`) so browsers fetch a new build right away. Today `/public` files are cached for an hour (`STATIC_CACHE_MAX_AGE`), so a new bundle can take up to an hour to reach a browser.
+- [ ] Keep the dashboard's platform, game mode, and edition choices in one place. Today `admin.js` repeats the `Gameplatforms`, `GameModes`, and `GameEdition` enums (a test checks they match); an endpoint could serve them instead.
+
+
+## Other
+
+- [x] Add the language hungary
+- [x] Add small and responsive logos for platform in game details (if unavaliable, hide it)
+- [x] In admin page, when the records is hidden by clicked showed records button, hide export / import games stuff.
+- [x] Merge all minified scripts (except the CDN ones) into `all.min.js` and use it on every page.
+- [x] Fix and improve the language flag images (Portugal, United States, and others).
+- [x] Add multiple store links when adding or editing a game on the dashboard.
+- [x] Turn the platforms, game modes, and editions fields into dropdowns with options.
+- [ ] Change the format of checkbox from square to circle.
+- [ ] Add replies to comments section.
+- [ ] Add more favorite-games page-size choices (5, 10, 15, 20, 25, 50, 100, all); currently offers 12, 24, or 48.
+- [ ] Modify pagination links names content to replace name with their respective icons (& move the name to the attribute title)
+- [ ] Build a Cross-platform app in React Native by following PLANS.md

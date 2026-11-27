@@ -18,6 +18,8 @@ GAME = {
     "description": "A puzzle game with multiple lines.\nSecond line.",
     "screenshots": ["https://example.com/screen.png"],
     "trailers": ["https://example.com/trailer.mp4"],
+    "store_url": "https://store.steampowered.com/app/620/",
+    "store_urls": ["https://store.steampowered.com/app/620/", "https://www.gog.com/game/portal_2"],
     "wishlisted": True,
     "hoursplayed": 12.5,
     "esrb": "e10",
@@ -47,6 +49,9 @@ def test_admin_page_exposes_all_transfer_formats(client):
     assert response.status_code == 200
     for file_format in ("json", "xml", "csv", "markdown", "pdf"):
         assert f'<option value="{file_format}">' in response.text
+    assert '<select name="category" id="game-category">' in response.text
+    assert '<option value="Remaster">Remaster</option>' in response.text
+    assert 'name="category" list=' not in response.text
 
 
 @pytest.fixture()
@@ -89,6 +94,8 @@ def test_exported_game_data_round_trips(client, admin_headers, file_format):
     assert copy["title"] == GAME["title"]
     assert copy["platforms"] == GAME["platforms"]
     assert copy["screenshots"] == GAME["screenshots"]
+    assert copy["store_url"] == GAME["store_url"]
+    assert copy["store_urls"] == GAME["store_urls"]
     assert copy["wishlisted"] is True
 
     if file_format == "csv":

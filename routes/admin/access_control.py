@@ -6,7 +6,11 @@ from starlette.concurrency import run_in_threadpool
 from backend.access import rules
 from backend.auth.auth import Principal, require_admin
 
-router = APIRouter(prefix="/admin/access-control", tags=["admin"])
+router = APIRouter(
+    prefix="/admin/access-control",
+    tags=["admin"],
+    dependencies=[Depends(require_admin)],
+)
 
 
 @router.get("")

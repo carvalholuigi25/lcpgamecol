@@ -1,0 +1,53 @@
+name: Mobile
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - "mobile/**"
+      - "locales/**"
+      - "openapi.json"
+      - ".github/workflows/mobile.yml"
+  pull_request:
+    paths:
+      - "mobile/**"
+      - "locales/**"
+      - "openapi.json"
+      - ".github/workflows/mobile.yml"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      # mobile/package-lock.json is git-ignored, so `npm ci` is not possible. Commit the
+      # lock file and switch to `npm ci` (with `cache: npm`) for reproducible installs.
+      - run: npm install --no-audit --no-fund
+
+      - name: API types match openapi.json
+        run: |
+          npm run api:types
+          git diff --exit-code -- src/api/schema.d.ts || {
+            echo "::error::src/api/schema.d.ts is out of date. Run 'python scripts/export_openapi.py' and 'npm run api:types' in mobile/."
+            exit 1
+          }
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Format
+        run: npm run format:check
+
+      - name: Unit tests
+        run: npx jest --ci

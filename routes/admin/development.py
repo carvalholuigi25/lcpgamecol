@@ -6,7 +6,11 @@ from pydantic import BaseModel
 from backend.auth import two_factor
 from backend.auth.auth import Principal, require_admin
 
-router = APIRouter(prefix="/admin/development", tags=["admin"])
+router = APIRouter(
+    prefix="/admin/development",
+    tags=["admin"],
+    dependencies=[Depends(require_admin)],
+)
 
 
 class DevBypassUpdate(BaseModel):

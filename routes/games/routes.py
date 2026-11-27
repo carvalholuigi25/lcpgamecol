@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import time
 from contextlib import closing
 from datetime import UTC
@@ -9,7 +10,7 @@ from typing import Annotated
 import httpx2 as httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from backend.auth.auth import require_admin
+from backend.auth.auth import require_admin, require_permission
 from backend.database.database import get_autoincrement, get_connection, reset_autoincrement
 from backend.realtime.hub import hub
 from routes.games.schemas import (
@@ -95,6 +96,26 @@ def _igdb_website_url(game: dict) -> str:
         return ""
     url = website["url"]
     return url.replace("//", "https://", 1) if url.startswith("//") else url
+
+
+IGDB_STORE_CATEGORIES = {13, 16, 17, 20, 21, 22, 23, 25, 26, 27, 28, 29, 30, 32, 33, 34, 35, 42}
+
+
+def _igdb_store_urls(game: dict) -> list[str]:
+    """Every store link IGDB lists for the game (Steam, GOG, Epic, console stores, ...)."""
+    urls: list[str] = []
+    for entry in game.get("websites") or []:
+        url = entry.get("url")
+        if entry.get("category") not in IGDB_STORE_CATEGORIES or not url:
+            continue
+        url = url.replace("//", "https://", 1) if url.startswith("//") else url
+        if url not in urls:
+            urls.append(url)
+    return urls
+
+
+def _igdb_store_url(game: dict) -> str:
+    return next(iter(_igdb_store_urls(game)), "")
 
 
 def _igdb_trailers(game: dict) -> list[str]:
@@ -279,9 +300,10 @@ def _fetch_ext_artworks_games(game_ids: list[int], limit: int = 10) -> list[dict
     return artworks
 
 
-def _fetch_all_games_by_title(title: str, limit: int) -> list[Game]:
+def _fetch_all_games_by_title(title: str, limit: int, hide_nsfw: bool = True) -> list[Game]:
     # Docs: https://api-docs.igdb.com/#getting-started
-    title = title.strip()
+    # Collapse runs of whitespace so "  final   fantasy " matches "Final Fantasy".
+    title = " ".join(title.split())
     if not title:
         raise HTTPException(status_code=400, detail="A game title is required")
 
@@ -293,14 +315,17 @@ def _fetch_all_games_by_title(title: str, limit: int) -> list[Game]:
             detail="IGDB credentials are not configured",
         )
 
-    igdb_title = json.dumps(title)
+    # ensure_ascii=False keeps accented titles ("Pokémon") as UTF-8: IGDB does not decode \u escapes.
+    igdb_title = json.dumps(title, ensure_ascii=False)
+    where_clause = f"where name ~ *{igdb_title}*"
+    if hide_nsfw:
+        where_clause += " & themes != (42)"
     query = (
         "fields name,first_release_date,summary,game_modes.id,game_modes.name,cover.url,screenshots.url,websites.category,websites.url,videos.video_id,game_type.type,"
         "involved_companies.developer,involved_companies.publisher,involved_companies.company.name,"
         f"{IGDB_AGE_RATING_FIELDS},genres.name,"
         "platforms.name,rating,aggregated_rating; "
-        f"where name ~ {igdb_title}; "
-        "sort first_release_date asc; "
+        f"{where_clause}; "
         f"limit {limit};"
     )
     try:
@@ -322,17 +347,20 @@ def _fetch_all_games_by_title(title: str, limit: int) -> list[Game]:
             detail="Unable to fetch all releases by title from IGDB",
         ) from error
 
-    return [
-        Game(
+    mapped_games = []
+    for game in games:
+        release_timestamp = game.get("first_release_date")
+        release_date = (
+            ndt.fromtimestamp(release_timestamp, tz=UTC).date()
+            if release_timestamp is not None
+            else None
+        )
+        mapped_games.append(Game(
             id=game["id"],
             title=game.get("name", "Untitled game"),
             genre=", ".join(genre["name"] for genre in game.get("genres", [])),
-            release_year=ndt.fromtimestamp(
-                game["first_release_date"], tz=UTC
-            ).year,
-            release_date=ndt.fromtimestamp(
-                game["first_release_date"], tz=UTC
-            ).date().isoformat(),
+            release_year=release_date.year if release_date else 0,
+            release_date=release_date.isoformat() if release_date else None,
             description=game.get("summary", ""),
             gamemodes=", ".join(mode["name"] for mode in game.get("game_modes", [])),
             cover_image_url=_igdb_cover_url(game.get("cover")),
@@ -341,6 +369,8 @@ def _fetch_all_games_by_title(title: str, limit: int) -> list[Game]:
             developer_name=_igdb_company_names(game, "developer"),
             publisher_name=_igdb_company_names(game, "publisher"),
             website_url=_igdb_website_url(game),
+            store_url=_igdb_store_url(game),
+            store_urls=_igdb_store_urls(game),
             trailer_url=_igdb_trailer_url(game),
             trailers=_igdb_trailers(game),
             category=_igdb_category(game),
@@ -351,9 +381,25 @@ def _fetch_all_games_by_title(title: str, limit: int) -> list[Game]:
             user_rating=game.get("rating", 0),
             critic_rating=game.get("aggregated_rating", 0),
             esrb=_igdb_esrb_rating(game.get("age_ratings")),
-        )
-        for game in games
-    ]
+        ))
+    # IGDB returns substring matches in no useful order; put the closest titles first.
+    mapped_games.sort(key=lambda game: _title_match_rank(game.title, title))
+    return mapped_games
+
+
+def _title_match_rank(candidate: str, query: str) -> tuple[int, int, str]:
+    """Sort key for title search results: exact, prefix, word-prefix, then any match."""
+    name = candidate.casefold()
+    needle = query.casefold()
+    if name == needle:
+        rank = 0
+    elif name.startswith(needle):
+        rank = 1
+    elif re.search(rf"(?<!\w){re.escape(needle)}", name):
+        rank = 2
+    else:
+        rank = 3
+    return rank, len(name), name
 
 def _fetch_all_platforms(limit: int) -> list[GamePlatform]:
     # Docs: https://api-docs.igdb.com/#getting-started
@@ -540,6 +586,7 @@ def _fetch_all_games_by_date(
     skip: int,
     sort: ReleaseSort = ReleaseSort.RELEASE_DATE,
     order: SortOrder | None = None,
+    hide_nsfw: bool = True,
 ) -> GameReleasePage:
     # Docs: https://api-docs.igdb.com/#getting-started
     client_id = os.environ.get("IGDB_CLIENT_ID") or os.getenv("IGDB_CLIENT_ID")
@@ -553,7 +600,10 @@ def _fetch_all_games_by_date(
 
     tzinfo = UTC
     parsed_date = int(ndt(year, month, day, 0, 0, 0, tzinfo=tzinfo).timestamp())
-    where_clause = f"where first_release_date >= {parsed_date}; "
+    where_clause = f"where first_release_date >= {parsed_date}"
+    if hide_nsfw:
+        where_clause += " & themes != (42)"
+    where_clause += "; "
     query = (
         "fields name,first_release_date,summary,game_modes.id,game_modes.name,cover.url,screenshots.url,websites.category,websites.url,videos.video_id,game_type.type,"
         "involved_companies.developer,involved_companies.publisher,involved_companies.company.name,"
@@ -609,6 +659,8 @@ def _fetch_all_games_by_date(
             developer_name=_igdb_company_names(game, "developer"),
             publisher_name=_igdb_company_names(game, "publisher"),
             website_url=_igdb_website_url(game),
+            store_url=_igdb_store_url(game),
+            store_urls=_igdb_store_urls(game),
             trailer_url=_igdb_trailer_url(game),
             trailers=_igdb_trailers(game),
             category=_igdb_category(game),
@@ -682,6 +734,8 @@ def _fetch_next_releases(limit: int) -> list[Game]:
             developer_name=_igdb_company_names(game, "developer"),
             publisher_name=_igdb_company_names(game, "publisher"),
             website_url=_igdb_website_url(game),
+            store_url=_igdb_store_url(game),
+            store_urls=_igdb_store_urls(game),
             trailer_url=_igdb_trailer_url(game),
             trailers=_igdb_trailers(game),
             category=_igdb_category(game),
@@ -700,6 +754,7 @@ def game_from_row(row) -> Game:
     game = dict(row)
     game["screenshots"] = json.loads(game.get("screenshots") or "[]")
     game["trailers"] = json.loads(game.get("trailers") or "[]")
+    game["store_urls"] = json.loads(game.get("store_urls") or "[]")
     return Game(**game)
 
 
@@ -707,14 +762,15 @@ def game_database_values(game: GameCreate) -> tuple:
     values = game.model_dump()
     values["screenshots"] = json.dumps(values["screenshots"])
     values["trailers"] = json.dumps(values["trailers"])
+    values["store_urls"] = json.dumps(values["store_urls"])
     return tuple(values.values())
 
 def insert_game(connection, game: GameCreate) -> int:
     """Insert a game without committing and return its new id."""
     cursor = connection.execute(
         """
-        INSERT INTO games (title, genre, release_year, release_date, description, cover_image_url, image_url, screenshot_url, developer_name, publisher_name, website_url, trailer_url, screenshots, platforms, gamemodes, editions, user_rating, critic_rating, wishlisted, hoursplayed, esrb, minimum_system_requirements, recommended_system_requirements, category, trailers)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO games (title, genre, release_year, release_date, description, cover_image_url, image_url, screenshot_url, developer_name, publisher_name, website_url, store_url, map_url, trailer_url, screenshots, platforms, gamemodes, editions, user_rating, critic_rating, wishlisted, hoursplayed, esrb, minimum_system_requirements, recommended_system_requirements, category, trailers, store_urls)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         game_database_values(game),
     )
@@ -725,7 +781,7 @@ def insert_game(connection, game: GameCreate) -> int:
     response_model=Game,
     status_code=201,
     tags=["games"],
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_permission("games.create"))],
 )
 def create_game(game: GameCreate) -> Game:
     with closing(get_connection()) as connection:
@@ -777,8 +833,9 @@ def list_all_releases(
     limit: int = Query(10, ge=1, le=100),
     sort: ReleaseSort = ReleaseSort.RELEASE_DATE,
     order: Annotated[SortOrder | None, Query(description="Defaults to the natural order of the sort")] = None,
+    hide_nsfw: bool = True,
 ) -> list[Game]:
-    return _fetch_all_games_by_date(year, month, day, limit, skip, sort, order)
+    return _fetch_all_games_by_date(year, month, day, limit, skip, sort, order, hide_nsfw)
 
 @router.get("/games/title", response_model=list[Game], tags=["games"])
 def list_all_releases_by_title(
@@ -849,9 +906,10 @@ def search_games(
 @router.get("/games/external-search", response_model=list[Game], tags=["games"])
 def search_external_games(
     query: str = Query(..., min_length=1, max_length=200),
-    limit: int = Query(10, ge=1, le=100),
+    limit: int = Query(500, ge=1, le=500),
+    hide_nsfw: bool = True,
 ) -> list[Game]:
-    return _fetch_all_games_by_title(query, limit)
+    return _fetch_all_games_by_title(query, limit, hide_nsfw)
 
 @router.get("/games/platforms", response_model=list[GamePlatform], tags=["games"])
 def fetch_platforms_games(
@@ -904,7 +962,7 @@ def get_game(game_id: int) -> Game:
     "/games/{game_id}",
     response_model=Game,
     tags=["games"],
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_permission("games.edit"))],
 )
 def update_game(game_id: int, game: GameCreate) -> Game:
     with closing(get_connection()) as connection:
@@ -913,11 +971,12 @@ def update_game(game_id: int, game: GameCreate) -> Game:
             UPDATE games
             SET title = ?, genre = ?, release_year = ?, release_date = ?,
                 description = ?, cover_image_url = ?, image_url = ?, screenshot_url = ?,
-                developer_name = ?, publisher_name = ?, website_url = ?, trailer_url = ?, screenshots = ?,
+                developer_name = ?, publisher_name = ?, website_url = ?, store_url = ?, map_url = ?,
+                trailer_url = ?, screenshots = ?,
                 platforms = ?, gamemodes = ?, editions = ?, user_rating = ?, critic_rating = ?,
                 wishlisted = ?, hoursplayed = ?, esrb = ?,
                 minimum_system_requirements = ?, recommended_system_requirements = ?,
-                category = ?, trailers = ?
+                category = ?, trailers = ?, store_urls = ?
             WHERE id = ?
             """,
             (*game_database_values(game), game_id),
@@ -949,7 +1008,7 @@ def delete_all_games() -> None:
     "/games/{game_id}",
     status_code=204,
     tags=["games"],
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_permission("games.delete"))],
 )
 def delete_game(game_id: int) -> None:
     with closing(get_connection()) as connection:

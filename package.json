@@ -6,12 +6,31 @@
   "scripts": {
     "build-css": "sass public/styles/scss:public/styles/css --no-source-map --style=compressed",
     "build-css-w": "sass --watch public/styles/scss:public/styles/css --style=compressed",
-    "start": "npm run build-css && .\\.venv\\Scripts\\activate.bat && python -m uvicorn main:app --reload --env-file config.env",
+    "build-js": "node scripts/minify_js.mjs",
+    "build-js-w": "node scripts/minify_js.mjs --watch",
+    "build": "npm run build-css && npm run build-js",
+    "start": "npm run build && .\\.venv\\Scripts\\activate.bat && python -m uvicorn main:app --reload --env-file config.env",
     "startapp": ".\\.venv\\Scripts\\activate.bat && python -m uvicorn main:app --reload --env-file config.env",
+    "cert": ".\\.venv\\Scripts\\python.exe scripts\\generate_dev_certificate.py",
+    "certlinux": "bash scripts/activate.sh python scripts/generate_dev_certificate.py",
+    "starthttps": "npm run build && .\\.venv\\Scripts\\activate.bat && python -m uvicorn main:app --reload --env-file config.env --ssl-certfile certs/localhost.pem --ssl-keyfile certs/localhost-key.pem",
+    "starthttpslinux": "npm run build && bash scripts/activate.sh python -m uvicorn main:app --reload --env-file config.env --ssl-certfile certs/localhost.pem --ssl-keyfile certs/localhost-key.pem",
     "startapplinux": "bash scripts/activate.sh python -m uvicorn main:app --reload --env-file config.env",
-    "startw": "conc \"npm:build-css-w\" \"npm:startapp\"",
-    "startwlinux": "conc \"npm:build-css-w\" \"npm:startapplinux\"",
+    "startw": "conc \"npm:build-css-w\" \"npm:build-js-w\" \"npm:startapp\"",
+    "startwlinux": "conc \"npm:build-css-w\" \"npm:build-js-w\" \"npm:startapplinux\"",
+    "startwhttps": "conc \"npm:build-css-w\" \"npm:build-js-w\" \"npm:starthttps\"",
+    "startwhttpslinux": "conc \"npm:build-css-w\" \"npm:build-js-w\" \"npm:starthttpslinux\"",
     "test": "python -m pytest",
+    "openapi": "python scripts/export_openapi.py",
+    "openapi-check": "python scripts/export_openapi.py --check",
+    "mobile": "npm --prefix mobile run start",
+    "mobile:web": "npm --prefix mobile run web",
+    "mobile:check": "npm --prefix mobile run check",
+    "mobile:api-types": "python scripts/export_openapi.py && npm --prefix mobile run api:types",
+    "mobile:android": "npm --prefix mobile run android",
+    "mobile:ios": "npm --prefix mobile run ios",
+    "mobile:all": "conc \"npm:startw\" \"npm:mobile:android\"",
+    "mobile:allhs": "conc \"npm:startwhttps\" \"npm:mobile:android\"",
     "db:make": "python -m backend.database.migrate make",
     "db:migrate": "python -m backend.database.migrate migrate",
     "db:check": "python -m backend.database.migrate check",
@@ -45,17 +64,24 @@
   },
   "devDependencies": {
     "lighthouse": "^13.5.0",
-    "sass": "^1.77.8"
+    "quill": "^2.0.2",
+    "sass": "^1.77.8",
+    "terser": "^5.51.3"
   },
   "dependencies": {
     "@microsoft/signalr": "^8.0.7",
+    "@react-navigation/native": "^7.5.2",
+    "@react-navigation/native-stack": "^7.21.1",
     "@videojs/cdn": "10.3.0",
     "@videojs/youtube-video": "10.3.0",
     "bootstrap": "6.0.0-alpha.1",
-    "bootstrap-icons": "^1.13.1",
+    "bootstrap-icons": "^1.13.2",
     "concurrently": "^10.0.5",
     "js-cookie": "^3.0.8",
     "lightgallery": "^2.8.3",
     "video.js": "10.3.0"
+  },
+  "allowScripts": {
+    "@parcel/watcher@2.6.0": true
   }
 }

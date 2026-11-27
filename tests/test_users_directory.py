@@ -218,4 +218,6 @@ def test_users_page_is_served(client):
 
     assert response.status_code == 200
     assert "Favorite games" in response.text
+    assert 'id="user-page-favorites-limit"' in response.text
+    assert 'id="user-page-favorites-pagination"' in response.text
     assert 'id="user-role-select"' in response.text

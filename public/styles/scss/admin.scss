@@ -1,5 +1,6 @@
 @use "sass:meta";
 @use "seasonal_themes" as seasonal;
+@import "@nmodules/bootstrap-icons/font/bootstrap-icons.css";
 @import url("https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Press+Start+2P&display=swap");
 
 @keyframes loading-spin {
@@ -142,6 +143,8 @@ body {
   background: var(--green);
   color: #fffefa;
   font: 600 1.3rem var(--display);
+  border-radius: 50%;
+  box-shadow: 2px 4px 6px;
 }
 .main-nav {
   display: flex;
@@ -530,6 +533,111 @@ h1 {
 }
 .record-fields textarea {
   resize: vertical;
+}
+// Multi-choice dropdowns (platforms, game modes, editions) and the store links list.
+.record-fields > .multi-select-field,
+.record-fields > .store-links-field {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  color: var(--muted);
+  font: 500 0.61rem var(--mono);
+  text-transform: uppercase;
+}
+.multi-select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: 37px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font: 0.79rem var(--sans);
+  text-align: left;
+  text-transform: none;
+  cursor: pointer;
+  &::after {
+    content: "";
+    flex: 0 0 auto;
+    width: 7px;
+    height: 7px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: translateY(-2px) rotate(45deg);
+    opacity: 0.6;
+  }
+  &[aria-expanded="true"]::after { transform: translateY(2px) rotate(-135deg); }
+  &:focus-visible { outline: 2px solid #9ab5a1; outline-offset: 1px; }
+}
+.multi-select-summary {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  &.is-empty { color: var(--muted); }
+}
+.multi-select-menu {
+  position: absolute;
+  z-index: 20;
+  top: 100%;
+  left: 0;
+  right: 0;
+  display: grid;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+  text-transform: none;
+  &[hidden] { display: none; }
+}
+.multi-select-options {
+  display: grid;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.multi-select-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  color: var(--ink);
+  font: 0.79rem var(--sans);
+  cursor: pointer;
+  &:hover { background: var(--green-soft); }
+}
+.record-fields .multi-select-option input {
+  width: auto;
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--green);
+}
+.store-links-list {
+  display: grid;
+  gap: 6px;
+}
+.store-link-row {
+  display: flex;
+  gap: 6px;
+  input { flex: 1 1 auto; }
+  .store-link-remove {
+    flex: 0 0 auto;
+    width: 37px;
+    height: auto;
+    font: 600 1.1rem var(--sans);
+    line-height: 1;
+  }
+}
+.record-fields .store-link-add {
+  justify-self: start;
+  min-height: 34px;
+  padding: 8px 12px;
+  text-transform: none;
 }
 .record-fields :disabled {
   background: #f3f4ef;
@@ -924,6 +1032,9 @@ td a {
   font: 500 0.72rem var(--mono);
   text-decoration: none;
 }
+.t-left { text-align: left !important; }
+.t-center { text-align: center !important; }
+.t-right { text-align: right !important; }
 .recent-title {
   width: 70%;
   color: var(--ink);
@@ -981,6 +1092,128 @@ td a {
   outline: 2px solid #9ab5a1;
   outline-offset: 1px;
 }
+.password-entry-controls {
+  display: grid;
+  gap: 9px;
+  width: 100%;
+  max-width: 300px;
+  margin-inline: auto;
+}
+.password-entry-controls.is-keyboard {
+  max-width: 540px;
+}
+.password-entry-mode {
+  display: grid;
+  gap: 6px;
+  margin-top: 7px;
+  color: var(--muted);
+  font: 500 0.64rem var(--mono);
+  text-align: left;
+  text-transform: uppercase;
+}
+.password-entry-mode select {
+  width: 100%;
+  height: 43px;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font: 0.9rem var(--sans);
+}
+.password-entry-keypad {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.password-entry-field {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+
+.password-entry-mask {
+  display: none;
+  position: absolute;
+  inset: 0;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  pointer-events: none;
+  white-space: pre;
+}
+
+.password-entry-field--custom-mask input {
+  caret-color: inherit;
+  -webkit-text-fill-color: inherit;
+}
+
+.password-entry-field--custom-mask .password-entry-mask {
+  display: flex;
+}
+
+.password-entry-keypad[hidden] {
+  display: none;
+}
+.password-entry-keypad button {
+  min-height: 48px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 6px;
+  background: var(--green-soft);
+  color: var(--ink);
+  cursor: pointer;
+  font: 500 0.85rem var(--mono);
+}
+.password-entry-keypad button:hover {
+  border-color: var(--green);
+  background: var(--surface);
+}
+.password-entry-keyboard {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+}
+.password-entry-keyboard[hidden] {
+  display: none;
+}
+.password-entry-keyboard-row {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 4px;
+}
+.password-entry-keyboard-row--home {
+  width: 90%;
+  margin-inline: auto;
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+}
+.password-entry-keyboard-row--bottom {
+  grid-template-columns: 1.5fr repeat(7, minmax(0, 1fr)) 1.5fr;
+}
+.password-entry-keyboard-row--actions {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.password-entry-keyboard-row--symbols-actions {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+.password-entry-keyboard-row button {
+  min-width: 0;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 3px;
+  background: var(--green-soft);
+  color: var(--ink);
+  cursor: pointer;
+  font: 500 0.75rem var(--mono);
+}
+.password-entry-keyboard-row button:hover {
+  border-color: var(--green);
+  background: var(--surface);
+}
+.password-entry-keyboard-row [data-password-action="space"] {
+  grid-column: span 2;
+}
 .login-view .primary-button {
   width: 100%;
   margin-top: 13px;
@@ -992,9 +1225,11 @@ td a {
   font-size: 0.78rem;
 }
 
-.metric, .records-panel, .settings-panel, .chart-panel, .recent-table-wrap, .login-view, .toast-region, #toggle-records-button, #theme-selector, .refresh-button, #language-selector, .icon-button, .primary-button, .secondary-button, .danger-button, .record-form > .primary-button, form input, form select, form textarea, .record-list select, .record-fields input, .record-fields textarea, .record-fields select, .login-view input, .setting-option, .setting-field {
+.metric, .records-panel, .settings-panel, .chart-panel, .recent-table-wrap, .login-view, .toast-region, #toggle-records-button, #theme-selector, .refresh-button, #language-selector, .icon-button, .primary-button, .secondary-button, .danger-button, .record-form > .primary-button, form input, form select, form textarea, .record-list select, .record-fields input, .record-fields textarea, .record-fields select, .login-view input, .setting-option, .setting-field, .multi-select-trigger {
   border-radius: calc(8px + 16px);
 }
+.multi-select-menu { border-radius: 18px; }
+.multi-select-option { border-radius: 12px; }
 
 
 .metric, .records-panel, .settings-panel, .chart-panel, .recent-table-wrap, .login-view, .toast-region {
@@ -1200,6 +1435,77 @@ td a {
   text-transform: none;
   white-space: nowrap;
 
+  .language-picker {
+    position: relative;
+  }
+
+  .language-picker-trigger,
+  .language-picker-option {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    border: 0;
+    background: var(--surface);
+    color: var(--ink);
+    font: 0.75rem var(--sans);
+    cursor: pointer;
+  }
+
+  .language-picker-trigger {
+    min-width: 112px;
+    min-height: 34px;
+    padding: 0 8px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+  }
+
+  .language-picker-menu {
+    position: absolute;
+    z-index: 100;
+    top: calc(100% + 6px);
+    right: 0;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    width: 150px !important;
+    padding: 4px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    box-shadow: 0 8px 20px rgba(32, 40, 35, 0.14);
+
+    &[hidden] {
+      display: none !important;
+    }
+  }
+
+  .language-picker-option {
+    width: 100%;
+    min-height: 36px;
+    padding: 7px 9px;
+    border-radius: 6px;
+    text-align: left;
+
+    &:hover,
+    &:focus-visible {
+      background: var(--green-soft);
+    }
+  }
+
+  .language-picker-flag {
+    display: block;
+    box-sizing: content-box;
+    width: 22px;
+    height: 15px;
+    flex: 0 0 22px;
+    object-fit: cover;
+    border: 0;
+    border-radius: 2px;
+    // An outline that does not shrink the flag and stays visible on light and dark themes,
+    // so mostly white flags (Japan, France, Italy) keep their edges.
+    box-shadow: 0 0 0 1px rgba(127, 127, 127, 0.35);
+  }
+
   select {
     max-width: 155px;
     min-height: 34px;
@@ -1207,7 +1513,7 @@ td a {
     border: 1px solid var(--line);
     border-radius: 6px;
     color: var(--ink);
-    background: var(--panel);
+    background: var(--surface);
   }
 }
 
@@ -1383,6 +1689,8 @@ a.feature-card:hover {
   border: 1px solid var(--line);
   border-radius: 24px;
   background: var(--green-soft);
+  place-content: center;
+  place-items: flex-start;
 
   h3 { margin: 0 0 10px; font-size: 0.95rem; }
   ul { display: grid; gap: 7px; margin: 0; padding-left: 18px; color: var(--ink); font-size: 0.8rem; line-height: 1.45; }
@@ -1402,7 +1710,13 @@ a.feature-card:hover {
 }
 
 .tbl-upload-wrap {
-  table-layout: auto;
+  // table-layout: auto;
+  table-layout: fixed;
+  word-wrap: break-word;
+
+  td, th {
+    text-align: center;
+  }
 }
 
 .upload-name {
@@ -1413,18 +1727,63 @@ a.feature-card:hover {
 }
 
 td.upload-actions-cell {
-  display: flex;
-  justify-content: flex-end;
-  gap: 6px;
+  // display: flex;
+  // justify-content: flex-end;
+  // gap: 6px;
+  // white-space: nowrap;
+
+  display: table-cell;
+  padding: 6px;
   white-space: nowrap;
+  place-content: center;
+  place-items: center;
+  text-align: center;
 }
 
 .upload-action {
   display: inline-flex;
   align-items: center;
-  min-height: 32px;
-  border-radius: 12px;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  min-height: 34px;
+  margin: 0 3px;
+  padding: 0;
+  border-radius: 24px;
   text-decoration: none;
+
+  svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.8;
+  }
+}
+
+.sub-upload-actions-btns {
+  display: grid;
+  grid-auto-rows: 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(calc(100% / 3), 1fr));
+  place-content: center;
+  place-items: center;
+  text-align: center;
+  width: auto;
+  max-width: 100%;
+  margin: 0px auto;
+  gap: 0;
+}
+
+@media (max-width: 992px) {
+  .sub-upload-actions-btns {
+    grid-template-columns: repeat(auto-fit, minmax(calc(100% / 2), 1fr));
+
+    *:last-child {
+      grid-column: 1 / 3;
+    }
+  }
 }
 
 @media (max-width: 860px) {
@@ -1949,6 +2308,48 @@ td.upload-actions-cell {
   margin-top: 0;
 }
 
+.favorite-pagination-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 12px;
+
+  label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 0.75rem;
+  }
+
+  select {
+    min-height: 34px;
+    padding: 0 8px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--ink);
+  }
+}
+
+.favorite-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.75rem;
+
+  .secondary-button {
+    min-height: 34px;
+    padding: 6px 10px;
+    font-size: 0.72rem;
+  }
+}
+
 .favorite-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
@@ -2170,6 +2571,12 @@ td.upload-actions-cell {
   .user-page-body { padding: 20px 18px; }
 }
 
+@media (max-width: 480px) {
+  .favorite-pagination-controls { align-items: stretch; }
+  .favorite-pagination-controls > label { justify-content: space-between; }
+  .favorite-pagination { justify-content: space-between; }
+}
+
 body[data-theme="dark"],
 body[data-theme="auto"] {
   color-scheme: dark;
@@ -2185,7 +2592,7 @@ body[data-theme="auto"] {
 
   background-image: radial-gradient(#34413c 0.6px, transparent 0.6px);
   .setting-option, .setting-field { background: #26312e; }
-  .record-list select, .record-fields input, .record-fields textarea, .rich-text-field .ql-container, .record-fields select, .login-view input { background: #18211f; color: var(--ink); }
+  .record-list select, .record-fields input, .record-fields textarea, .rich-text-field .ql-container, .record-fields select, .login-view input, .login-view select { background: #18211f; color: var(--ink); }
   .record-fields :disabled, .rich-text-field .ql-disabled { background: #293330; }
   .chart-gridline { stroke: #3a4944; }
   .completion-ring { background: conic-gradient(var(--green) var(--completion), #3a4944 var(--completion)); }
@@ -2213,7 +2620,7 @@ body[data-theme="glassmorphism"] {
   background-image: radial-gradient(ellipse at 15% 8%, rgba(139, 208, 176, 0.2), transparent 36%), radial-gradient(ellipse at 88% 68%, rgba(239, 162, 125, 0.14), transparent 42%);
   .metric, .chart-panel, .records-panel, .settings-panel, .recent-table-wrap, .login-view, .toast-region { backdrop-filter: blur(18px); }
   .setting-option, .setting-field { background: rgba(18, 41, 36, 0.45); }
-  .record-list select, .record-fields input, .record-fields textarea, .rich-text-field .ql-container, .record-fields select, .login-view input { background: rgba(15, 35, 31, 0.62); color: var(--ink); }
+  .record-list select, .record-fields input, .record-fields textarea, .rich-text-field .ql-container, .record-fields select, .login-view input, .login-view select { background: rgba(15, 35, 31, 0.62); color: var(--ink); }
 }
 
 @media (prefers-color-scheme: light) {
@@ -2231,14 +2638,14 @@ body[data-theme="glassmorphism"] {
 
     background-image: radial-gradient(#d7dfd2 0.6px, transparent 0.6px);
     .setting-option, .setting-field { background: #f9faf7; }
-    .record-list select, .record-fields input, .record-fields textarea, .rich-text-field .ql-container, .record-fields select, .login-view input { background: #fcfcf8; color: var(--ink); }
+    .record-list select, .record-fields input, .record-fields textarea, .rich-text-field .ql-container, .record-fields select, .login-view input, .login-view select { background: #fcfcf8; color: var(--ink); }
   }
 }
 
 // --- Themes shared with the API docs (sunsetvibes, cyber-retro, rgb) ---------
 
 $theme-panels: ".metric, .chart-panel, .records-panel, .settings-panel, .recent-table-wrap, .login-view, .toast-region";
-$theme-fields: ".record-list select, .record-fields input, .record-fields textarea, .rich-text-field .ql-container, .record-fields select, .login-view input";
+$theme-fields: ".record-list select, .record-fields input, .record-fields textarea, .rich-text-field .ql-container, .record-fields select, .login-view input, .login-view select";
 $theme-rgb-spectrum: #ff0040, #ff8a00, #ffe600, #00ff6a, #00d5ff, #3d5bff, #c400ff, #ff0040;
 
 // Light accents need dark text on the filled buttons, which hard-code white text.
@@ -2748,7 +3155,13 @@ body[data-theme="liquid-glass"] {
     label { grid-column: 1 / -1; }
   }
 }
-.game-data-help { margin: 0 0 8px; }
+.game-data-help { 
+  margin: 0 0 8px; 
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  width: auto;
+  max-width: 100%;
+}
 .user-reset-result {
   display: flex;
   gap: 8px;

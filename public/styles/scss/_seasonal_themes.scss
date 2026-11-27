@@ -64,6 +64,20 @@ $themes: (
     glow1: rgba(242, 201, 76, 0.2), glow2: rgba(192, 132, 252, 0.2),
     emoji: ("🎆", "🥂", "✨"),
   ),
+  anniversary: (
+    scheme: dark, background: #19112b, ink: #fff6df, muted: #d3c4a0, line: rgba(246, 202, 92, 0.3),
+    panel: #291d3c, glass: rgba(41, 29, 60, 0.88), field: #100b1b,
+    accent: #f6ca5c, accent-dark: #c3972c, accent2: #ec78ae, on-accent: #21162f,
+    glow1: rgba(246, 202, 92, 0.23), glow2: rgba(236, 120, 174, 0.2),
+    emoji: ("🎂", "🎉", "🎁"),
+  ),
+  cool-modern-gaming: (
+    scheme: dark, background: #080f1d, ink: #e7f2ff, muted: #a7bdd4, line: rgba(68, 214, 255, 0.24),
+    panel: #111d31, glass: rgba(17, 29, 49, 0.9), field: #080f1d,
+    accent: #44d6ff, accent-dark: #1592bd, accent2: #a879ff, on-accent: #07121e,
+    glow1: rgba(68, 214, 255, 0.2), glow2: rgba(168, 121, 255, 0.2),
+    emoji: ("🎮", "⚡", "👾"),
+  ),
 );
 
 @function get($theme, $key) {

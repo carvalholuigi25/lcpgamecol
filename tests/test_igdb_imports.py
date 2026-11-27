@@ -132,10 +132,50 @@ def test_unknown_release_is_not_imported(client, viewer_headers, igdb_calls):
     assert client.post("/games/igdb/7/import", headers=viewer_headers).status_code == 404
 
 
+def test_fetch_igdb_game_requires_credentials(monkeypatch):
+    monkeypatch.delenv("IGDB_CLIENT_ID", raising=False)
+    monkeypatch.delenv("IGDB_CLIENT_SECRET", raising=False)
+
+    with pytest.raises(HTTPException) as error:
+        igdb_imports._fetch_igdb_game(1942)
+
+    assert error.value.status_code == 503
+    assert error.value.detail == "IGDB credentials are not configured"
+
+
+def test_fetch_igdb_game_returns_not_found_for_empty_response(monkeypatch):
+    from unittest.mock import MagicMock
+
+    monkeypatch.setenv("IGDB_CLIENT_ID", "test-client")
+    monkeypatch.setenv("IGDB_CLIENT_SECRET", "test-secret")
+    monkeypatch.setattr(igdb_imports, "_fetch_igdb_token", lambda *_args: "test-token")
+    client = MagicMock()
+    client.__enter__.return_value.post.return_value.json.return_value = []
+    monkeypatch.setattr(igdb_imports.httpx, "Client", lambda **_kwargs: client)
+
+    with pytest.raises(HTTPException) as error:
+        igdb_imports._fetch_igdb_game(1942)
+
+    assert error.value.status_code == 404
+    assert error.value.detail == "That game was not found on IGDB"
+
+
 def test_release_without_a_date_cannot_be_imported():
     with pytest.raises(HTTPException) as error:
         igdb_imports.game_create_from_igdb({"name": "Untitled", "first_release_date": None})
     assert error.value.status_code == 422
+
+
+def test_imported_game_carries_its_igdb_store_url():
+    game = igdb_imports.game_create_from_igdb(
+        {
+            "name": "Portal",
+            "first_release_date": 1191888000,
+            "websites": [{"category": 13, "url": "https://store.steampowered.com/app/400/Portal/"}],
+        }
+    )
+
+    assert game.store_url == "https://store.steampowered.com/app/400/Portal/"
 
 
 def test_invalid_igdb_ids_are_rejected(client, viewer_headers):
@@ -149,3 +189,21 @@ def test_links_map_imported_releases_only(client, viewer_headers, igdb_calls):
     assert response.json() == {"1942": game_id}
     assert client.get("/games/igdb/links?ids=1;DROP", headers=viewer_headers).status_code == 422
     assert client.get("/games/igdb/links?ids=1942", headers={}).status_code == 401
+
+
+def test_imported_game_carries_every_igdb_store_url():
+    game = igdb_imports.game_create_from_igdb(
+        {
+            "name": "Portal 2",
+            "first_release_date": 1303171200,
+            "websites": [
+                {"category": 1, "url": "https://www.thinkwithportals.com/"},
+                {"category": 13, "url": "https://store.steampowered.com/app/620/"},
+                {"category": 17, "url": "//www.gog.com/game/portal_2"},
+                {"category": 13, "url": "https://store.steampowered.com/app/620/"},
+            ],
+        }
+    )
+
+    assert game.store_urls == ["https://store.steampowered.com/app/620/", "https://www.gog.com/game/portal_2"]
+    assert game.store_url == game.store_urls[0]

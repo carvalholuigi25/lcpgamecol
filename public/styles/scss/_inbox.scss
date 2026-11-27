@@ -220,6 +220,8 @@ dialog.inbox-dialog {
   cursor: pointer;
 
   &[aria-selected="true"] {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
     border-bottom-color: var(--inbox-accent);
     color: var(--inbox-accent);
   }
@@ -417,7 +419,7 @@ dialog.inbox-dialog {
   dialog.inbox-dialog {
     width: 100%;
     max-height: calc(100dvh - 12px);
-    margin-bottom: 0;
+    margin-bottom: auto;
     border-radius: 14px 14px 0 0;
   }
 }

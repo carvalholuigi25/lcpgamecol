@@ -12,6 +12,7 @@
     <link href="/nmodules/bootstrap-icons/font/bootstrap-icons.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" />
     <link href="/public/styles/css/games.css" rel="stylesheet" />
+    <link href="/public/styles/css/new-features.css" rel="stylesheet" />
   </head>
   <body data-shelf-state="pending">
     <div id="page-loader" class="page-loader" role="status" aria-live="polite">
@@ -31,7 +32,7 @@
             <time id="live-clock" class="live-clock"></time>
           </div>
 
-          <div class="row">
+          <div class="row" data-release-control>
             <div class="col-6">
               <div class="language-control">
                 <label class="lbl-language-control" for="language-selector">Language
@@ -43,6 +44,7 @@
                     <option value="it">Italiano</option>
                     <option value="es">Español</option>
                     <option value="ja">日本語</option>
+                    <option value="hu">Magyar</option>
                   </select>
                 </label>
               </div>
@@ -58,6 +60,7 @@
                     <option value="liquid-glass">Liquid glass</option>
                     <option value="sunsetvibes">Sunset Vibes</option>
                     <option value="cyber-retro">Cyber Retro Gaming</option>
+                    <option value="cool-modern-gaming">Cool Modern Gaming</option>
                     <option value="rgb">RGB</option>
                   </select>
                 </label>
@@ -109,6 +112,7 @@
               id="password"
               name="password"
               type="password"
+              data-password-entry
               autocomplete="current-password"
               required
           /></label>
@@ -176,7 +180,7 @@
           />
         </div>
         <form id="release-filter" class="release-filter mt-3 row">
-          <div class="row">
+          <div class="row" data-release-control>
             <div class="col">
               <label class="form-label">
                 Year
@@ -218,13 +222,13 @@
               </label>
             </div>
           </div>
-          <div class="row">
-            <div class="col">
-              <button class="btn-load-releases" type="submit">Load releases</button>
-            </div>
-          </div>
-        </form>
-        <div class="filter-bar mt-3" role="group" aria-label="Filters">
+          <div class="filter-bar mt-3" role="group" aria-label="Filters">
+            <details id="platform-switch" class="platform-switch filter-switch">
+              <summary aria-label="Filter by platform">
+                <span class="platform-switch-label">All platforms</span>
+              </summary>
+              <div class="platform-switch-menu" role="group" aria-label="Filter by platform"></div>
+            </details>
             <details id="genre-switch" class="platform-switch filter-switch">
               <summary aria-label="Filter by genre">
                 <span class="platform-switch-label">All genres</span>
@@ -243,8 +247,24 @@
               </summary>
               <div class="platform-switch-menu" role="group" aria-label="Filter by category"></div>
             </details>
+            <label class="filter-toggle">
+              <input id="search-all-titles" type="checkbox" role="switch" />
+              <i class="bi bi-globe2" aria-hidden="true"></i>
+              <span class="filter-toggle-text">Search all game titles (case-insensitive)</span>
+            </label>
+            <label class="filter-toggle">
+              <input id="hide-nsfw" type="checkbox" role="switch" checked />
+              <i class="bi bi-eye-slash" aria-hidden="true"></i>
+              <span class="filter-toggle-text">Hide NSFW games</span>
+            </label>
             <button id="clear-filters" class="link-button clear-filters" type="button" hidden>Clear filters</button>
-        </div>
+          </div>
+          <div class="row">
+            <div class="col">
+              <button class="btn-load-releases" type="submit">Load releases</button>
+            </div>
+          </div>
+        </form>
         <div id="mgames" class="mt-3">
           <div id="games" class="grid"></div>
           <div id="games-empty" class="games-empty" hidden>
@@ -319,6 +339,11 @@
             </div>
             <progress id="details-countdown-progress" max="100" value="0" aria-labelledby="details-countdown-caption"></progress>
             <p class="release-countdown-caption" id="details-countdown-caption"></p>
+            <div class="release-countdown-stores" id="details-buy-now" hidden></div>
+          </section>
+          <section class="details-media-section" id="details-resources-section" aria-labelledby="details-resources-title" hidden>
+            <h3 id="details-resources-title">Helpful game links</h3>
+            <nav class="d-flex flex-wrap gap-2 details-resource-links" id="details-resource-links" aria-labelledby="details-resources-title"></nav>
           </section>
           <div class="details-actions" id="details-actions" role="group" aria-label="Game actions" hidden>
             <button class="details-action" type="button" data-list-action="wishlist" aria-pressed="false" aria-label="Add to wishlist" title="Add to wishlist">
@@ -345,6 +370,11 @@
           <section class="details-media-section" id="details-screenshots-section" hidden>
             <h3>Screenshots</h3>
             <div class="details-screenshot-gallery" id="details-screenshot-gallery"></div>
+          </section>
+          <section class="details-media-section details-map-section" id="details-map-section" aria-labelledby="details-map-title" hidden>
+            <h3 id="details-map-title">Interactive game map</h3>
+            <div class="details-map-frame" id="details-map-frame"></div>
+            <a class="btn btn-outline-primary btn-sm" id="details-map-link" target="_blank" rel="noopener noreferrer">Open interactive map</a>
           </section>
           <p
             class="details-requirements-warning"
@@ -435,20 +465,8 @@
     </main>
 
     <script type="module" src="/nmodules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script defer src="/public/scripts/loading.js"></script>
-    <script defer src="/public/scripts/i18n.js"></script>
-    <script defer src="/public/scripts/preferences.js"></script>
-    <script defer src="/public/scripts/functions.js"></script>
     <script defer src="/nmodules/@microsoft/signalr/dist/browser/signalr.min.js"></script>
-    <script defer src="/public/scripts/realtime.js"></script>
-    <script defer src="/public/scripts/sidebar.js"></script>
-    <script defer src="/public/scripts/inbox.js"></script>
-    <script defer src="/public/scripts/register.js"></script>
-    <script defer src="/public/scripts/two_factor_login.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
-    <script defer src="/public/scripts/shelf.js"></script>
-    <script defer src="/public/scripts/xp_badges.js"></script>
-    <script defer src="/public/scripts/reviews.js"></script>
-    <script defer src="/public/scripts/games_releases.js"></script>
+    <script defer src="/public/dist/scripts/all.min.js" data-modules="core/loading core/i18n core/language_flags core/preferences core/functions realtime/realtime core/sidebar realtime/inbox auth/register auth/two_factor_login auth/login_numpad games/shelf users/xp_badges games/reviews games/games_releases"></script>
   </body>
 </html>

@@ -8,6 +8,18 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Games can have several store links (Steam, GOG, PlayStation Store, and so on).
+  - On the dashboard, the game form has a **Store links** list: one field per store, with **Add store link** and a remove button on each row.
+  - When a released game has store links, its details show a **Buy now** button for each store, labelled with the store name (Steam, GOG, Epic Games Store, Nintendo eShop, and others; unknown stores show their web address).
+  - IGDB imports keep every store link, not only the first one.
+  - New `store_urls` list on games. `store_url` is still the main link and is always the first item of `store_urls`, so API clients that only send `store_url` keep working. Game exports and imports include the list.
+  - Migration `0004_add_game_store_urls` adds the `store_urls` column to `games`; it runs when the app starts. Games saved before it show their existing store URL as their only store link.
+- Hungarian translations for every page, with a Hungarian flag in the **Language** menu. Dates and times use the Hungarian format.
+- Game details show each platform as a chip with a small brand logo. Platforms without a known logo show the name only.
+- The language menu now shows a flag beside the current language and every available language option.
+- Password sign-in panels now offer input-only, numpad, and full letters-and-symbols entry modes. The numpad and on-screen keyboard provide touch-friendly alternatives while preserving normal password input.
+- Favorite games on profiles and in the administrator user details can now be browsed in pages, with page-size choices of 12, 24, or 48 games.
+- Added an AI disclosure to the README explaining that AI coding tools assist the project while changes are reviewed, tested, and approved by the human maintainer.
 - **Genre**, **Age rating** and **Category** filters on the library and upcoming releases pages, next to the **Platform** filter on the library. Each one is a dropdown with a checkbox for every value in the games on screen; pick several to see games matching any of them. Filters combine with each other and with the search box, and **Clear filters** resets them all.
   - Games have a new **category** (the IGDB game type: Main Game, DLC, Expansion, Remake, Remaster...). It is filled in when a game is imported from IGDB and can be set on the dashboard.
   - Age ratings now show their full name (for example "PEGI 16" or "CERO B (Ages 12+)") instead of "Not set" for ratings outside ESRB.
@@ -17,6 +29,7 @@ All notable changes to this project are documented here. The format follows
   - Reviews and comments show their author's badge (new `author_rank` field), and the user directory shows each user's badge and XP (new `xp` and `rank` fields).
   - `GET /users/me/xp` and the leaderboard now include `rank_key`, and each rank in `ranks` has a `key`.
 - Migration `0001_add_game_category_trailers` adds the `category` and `trailers` columns to `games`; it runs when the app starts.
+- Migration `0003_add_game_store_and_map_urls` adds optional store and interactive-map URLs to `games`; it runs when the app starts.
 - Seasonal themes: **Spring**, **Summer**, **Fall**, **Winter**, **Halloween**, **Easter**, **Christmas**, and **New Year's Eve**, in the **Theme** menu of every page, each with slowly falling decorations (still when the system asks for reduced motion). **Seasonal (auto)** picks one by date: Halloween from 17 October to 1 November, Easter from Palm Sunday to Easter Monday, Christmas from 1 to 26 December, New Year's Eve from 27 December to 1 January, and otherwise the season.
 - Reviews and comments are written in a rich text editor (Quill): bold, italic, underline, strike-through, lists, quotes, and links.
   - The server keeps only that formatting and drops everything else, including scripts and unsafe links. Links open in a new tab.
@@ -30,10 +43,11 @@ All notable changes to this project are documented here. The format follows
   - Held and hidden posts don't count in the review count or average, and earn their XP only once approved.
   - New endpoints: `POST /games/{game_id}/reviews/{review_id}/report`, `POST /games/{game_id}/comments/{comment_id}/report`, `GET`/`PUT /admin/moderation/settings`, `GET /admin/moderation/queue`, and `POST /admin/moderation/{kind}/{id}/approve`, `/hide`, and `/remove`. Reviews and comments now include `status` and `reported` (and `open_reports` for administrators).
   - New event: `moderationChanged`.
-- A countdown in the game details for games that are not out yet, on the library and releases pages: days, hours, minutes and seconds to the release date, and a bar that fills over the final year before launch.
+- A countdown in the game details for games that are not out yet, on the library and releases pages: days, hours, minutes and seconds to the release date, and a bar that fills over the final year before launch. When the countdown ends, the details show **Buy now** when a store URL is available and unlock reviews. The API also locks reviews until release. Store URLs are imported from IGDB when available and can be edited by administrators.
+- Released game details show an interactive map when a map URL is set, with a link to open it and a search link when no map URL is configured. Administrators can edit the map URL.
 - XP, levels and ranks. Users earn XP for a daily visit, reviews, comments, wishlist and favorite picks, feedback, completing their profile, and turning on two-step sign-in.
   - Each action pays once per game, comment or feedback, so undoing and redoing it never pays twice. Comments pay up to 5 times a day and feedback up to 3. XP is never taken away.
-  - Level L needs 50 × L × (L − 1) XP in total. Ranks go from **Rookie** (level 1) through Explorer, Adventurer, Veteran, Elite and Champion to **Legend** (level 20).
+  - Level L needs 50 × L × (L − 1) XP in total, up to a maximum of level 100. Ranks now extend from **Rookie** (level 1) through **Apex** (level 100), with nine new ranks beyond **Legend**.
   - **My profile** shows the level, rank, progress to the next level, recent XP, how to earn more, and a leaderboard. It updates live (new event `xpChanged`), and reaching a new level sends a notification.
   - New endpoints: `GET /users/me/xp` and `GET /users/xp/leaderboard`.
 - A **Development switches** panel on the dashboard, to skip two-step sign-in for every account while developing. It only works when the server runs with the new setting `APP_ENV=development` (the default is `production`); otherwise turning it on is refused and a saved "on" is ignored. New endpoints: `GET`/`PUT /admin/development/two-factor`.
@@ -107,6 +121,13 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- Pages now load a single minified script, `public/dist/scripts/all.min.js`, built from every file in `public/scripts/` by `npm run build-js` (also run by `npm run build`, `npm start`, and the `startw*` watchers, which rebuild it when a script changes). Third-party scripts (SignalR, Bootstrap, and Quill from the CDN) are still loaded on their own.
+  - Each source file is wrapped as a module inside the bundle, so files that declare the same names no longer clash. A page lists the modules it runs, in order, in the script tag's `data-modules` attribute, for example `<script src="/public/dist/scripts/all.min.js" data-modules="core/i18n core/sidebar admin/admin"></script>`.
+  - A source map, `all.min.js.map`, is written next to the bundle.
+  - The per-file `*.min.js` scripts in `public/dist/scripts/<folder>/` are no longer built, and the build removes old ones.
+- On the dashboard, **Platforms**, **Game modes**, and **Editions** are now dropdowns with a checkbox for each choice, instead of free-text fields. Values from IGDB that are not in the list (for example "PC (Microsoft Windows)") appear as extra choices, and **Add another option** accepts a value that is not listed. The values are saved as before (comma-separated).
+- Better language flags: the United States flag has its 13 stripes and 50 stars, Portugal has the armillary sphere and shield, Brazil has its globe, band and stars, Spain has its coat of arms, and Japan's disc has the right size. Flags have rounded corners and a thin outline, so mostly white flags stay visible on light themes, and they are no longer shrunk by their border.
+- On the dashboard, the game export and import controls are hidden together with the records when **Hide records** is used.
 - The sidebar is now on every page for every signed-in user, including the library and releases pages. Notifications, Messages and Feedback are at the top, in a new **Activity** group, instead of in the page header. Administrators also see the dashboard and tools links. The links are built by `sidebar.js`, so pages only include an empty `<aside id="admin-sidebar">`.
 - When the sidebar is shown, the top bar of the administrator, profile and feedback pages no longer repeats its links.
 - `GET /users` now returns the signed-in user's `role` as well as their `username`.
@@ -115,6 +136,7 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- The **Buy now** button in the release countdown was shown as a plain link on the library and releases pages; it is now styled as a button.
 - The administrator top bar no longer overlaps "API" and "Language" on wide screens, and no longer runs off the side of the screen on phones, where the notifications, messages and log out buttons could not be reached.
 - On the library pages, the theme menu no longer spills past the right edge of the page.
 - On narrow screens, the upcoming releases filter now wraps onto several rows instead of squeezing every field into one.

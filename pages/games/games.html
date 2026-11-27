@@ -12,6 +12,7 @@
     <link href="/nmodules/bootstrap-icons/font/bootstrap-icons.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" />
     <link href="/public/styles/css/games.css" rel="stylesheet" />
+    <link href="/public/styles/css/new-features.css" rel="stylesheet" />
   </head>
   <body data-shelf-state="pending">
     <div id="page-loader" class="page-loader" role="status" aria-live="polite">
@@ -43,6 +44,7 @@
                     <option value="it">Italiano</option>
                     <option value="es">Español</option>
                     <option value="ja">日本語</option>
+                    <option value="hu">Magyar</option>
                   </select>
                 </label>
               </div>
@@ -58,6 +60,7 @@
                     <option value="liquid-glass">Liquid glass</option>
                     <option value="sunsetvibes">Sunset Vibes</option>
                     <option value="cyber-retro">Cyber Retro Gaming</option>
+                    <option value="cool-modern-gaming">Cool Modern Gaming</option>
                     <option value="rgb">RGB</option>
                   </select>
                 </label>
@@ -109,6 +112,7 @@
               id="password"
               name="password"
               type="password"
+              data-password-entry
               autocomplete="current-password"
               required
           /></label>
@@ -294,6 +298,11 @@
             </div>
             <progress id="details-countdown-progress" max="100" value="0" aria-labelledby="details-countdown-caption"></progress>
             <p class="release-countdown-caption" id="details-countdown-caption"></p>
+            <div class="release-countdown-stores" id="details-buy-now" hidden></div>
+          </section>
+          <section class="details-media-section" id="details-resources-section" aria-labelledby="details-resources-title" hidden>
+            <h3 id="details-resources-title">Helpful game links</h3>
+            <nav class="d-flex flex-wrap gap-2 details-resource-links" id="details-resource-links" aria-labelledby="details-resources-title"></nav>
           </section>
           <div class="details-actions" id="details-actions" role="group" aria-label="Game actions" hidden>
             <button class="details-action" type="button" data-list-action="wishlist" aria-pressed="false" aria-label="Add to wishlist" title="Add to wishlist">
@@ -320,6 +329,11 @@
           <section class="details-media-section" id="details-screenshots-section" hidden>
             <h3>Screenshots</h3>
             <div class="details-screenshot-gallery" id="details-screenshot-gallery"></div>
+          </section>
+          <section class="details-media-section details-map-section" id="details-map-section" aria-labelledby="details-map-title" hidden>
+            <h3 id="details-map-title">Interactive game map</h3>
+            <div class="details-map-frame" id="details-map-frame"></div>
+            <a class="btn btn-outline-primary btn-sm" id="details-map-link" target="_blank" rel="noopener noreferrer">Open interactive map</a>
           </section>
           <p
             class="details-requirements-warning"
@@ -410,20 +424,8 @@
     </main>
 
     <script type="module" src="/nmodules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script defer src="/public/scripts/loading.js"></script>
-    <script defer src="/public/scripts/i18n.js"></script>
-    <script defer src="/public/scripts/preferences.js"></script>
-    <script defer src="/public/scripts/functions.js"></script>
     <script defer src="/nmodules/@microsoft/signalr/dist/browser/signalr.min.js"></script>
-    <script defer src="/public/scripts/realtime.js"></script>
-    <script defer src="/public/scripts/sidebar.js"></script>
-    <script defer src="/public/scripts/inbox.js"></script>
-    <script defer src="/public/scripts/register.js"></script>
-    <script defer src="/public/scripts/two_factor_login.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
-    <script defer src="/public/scripts/shelf.js"></script>
-    <script defer src="/public/scripts/xp_badges.js"></script>
-    <script defer src="/public/scripts/reviews.js"></script>
-    <script defer src="/public/scripts/games.js"></script>
+    <script defer src="/public/dist/scripts/all.min.js" data-modules="core/loading core/i18n core/language_flags core/preferences core/functions realtime/realtime core/sidebar realtime/inbox auth/register auth/two_factor_login auth/login_numpad games/shelf users/xp_badges games/reviews games/games"></script>
   </body>
 </html>

@@ -248,12 +248,12 @@ def test_require_admin_forbids_viewer():
 # --- auth: refresh tokens --------------------------------------------------------
 
 
-def test_refresh_token_round_trip():
+def test_refresh_token_round_trip(temp_db):
     token = auth.create_refresh_token("alice")
 
     claims = jwt.decode(token, auth.JWT_SECRET, algorithms=[auth.JWT_ALGORITHM])
     assert "role" not in claims
-    assert auth.get_current_user_from_refresh_token(token) == "alice"
+    assert auth.decode_refresh_token(token)["sub"] == "alice"
 
 
 @pytest.mark.parametrize(
@@ -263,6 +263,7 @@ def test_refresh_token_round_trip():
         pytest.param("not-a-jwt", id="garbage"),
         pytest.param(make_token(sub="alice", type="access", role="admin"), id="access-type"),
         pytest.param(make_token(sub="alice"), id="missing-type"),
+        pytest.param(make_token(sub="alice", type="refresh"), id="missing-jti-and-family"),
         pytest.param(
             make_token(sub="alice", type="refresh", exp=datetime.now(UTC) - timedelta(seconds=1)),
             id="expired",
@@ -270,15 +271,13 @@ def test_refresh_token_round_trip():
     ],
 )
 def test_refresh_token_rejected(token):
-    assert_unauthorized(
-        auth.get_current_user_from_refresh_token, token, detail="Invalid refresh token"
-    )
+    assert_unauthorized(auth.decode_refresh_token, token, detail="Invalid refresh token")
 
 
 def test_access_token_cannot_be_used_as_refresh_token():
     token = auth.create_access_token("alice", auth.ROLE_ADMIN)
 
-    assert_unauthorized(auth.get_current_user_from_refresh_token, token)
+    assert_unauthorized(auth.decode_refresh_token, token)
 
 
 # --- database --------------------------------------------------------------------
@@ -605,7 +604,15 @@ def test_search_games_without_filters_returns_requested_page(temp_db):
 @pytest.mark.parametrize(
     "env, expected",
     [
-        (None, ["http://localhost:3000", "http://127.0.0.1:3000"]),
+        (
+            None,
+            [
+                "http://localhost:3000",
+                "http://127.0.0.1:3000",
+                "http://localhost:8081",
+                "http://127.0.0.1:8081",
+            ],
+        ),
         (" https://a.com , ,https://b.com,", ["https://a.com", "https://b.com"]),
         ("", []),
     ],
@@ -813,7 +820,10 @@ def test_fetch_games_by_title_maps_igdb_fields(fake_igdb):
             {"developer": True, "publisher": False, "company": {"name": "Valve"}},
             {"developer": False, "publisher": True, "company": {"name": "Valve"}},
         ],
-        "websites": [{"category": 1, "url": "https://www.thinkwithportals.com/"}],
+        "websites": [
+            {"category": 1, "url": "https://www.thinkwithportals.com/"},
+            {"category": 13, "url": "https://store.steampowered.com/app/400/Portal/"},
+        ],
         "videos": [{"video_id": "abc123"}, {"name": "No id"}, {"video_id": "def456"}],
         "game_type": {"type": "Main Game"},
     }
@@ -841,6 +851,7 @@ def test_fetch_games_by_title_maps_igdb_fields(fake_igdb):
     assert game.developer_name == "Valve"
     assert game.publisher_name == "Valve"
     assert game.website_url == "https://www.thinkwithportals.com/"
+    assert game.store_url == "https://store.steampowered.com/app/400/Portal/"
     assert game.trailer_url == "https://www.youtube.com/watch?v=abc123"
     assert game.trailers == [
         "https://www.youtube.com/watch?v=abc123",
@@ -861,8 +872,40 @@ def test_fetch_games_by_title_maps_igdb_fields(fake_igdb):
     assert "videos.video_id" in query
     assert "game_type.type" in query
     assert "involved_companies.company.name" in query
-    assert 'where name ~ "Portal \\"2\\""; ' in query  # stripped and JSON-escaped
+    assert 'where name ~ *"Portal \\"2\\""* & themes != (42); ' in query  # stripped and JSON-escaped
+    assert "sort first_release_date" not in query
     assert "limit 3;" in query
+
+
+def test_fetch_games_by_title_ranks_closest_titles_first(fake_igdb):
+    names = ["Portal Knights", "Bridge Constructor Portal", "Portal 2", "Portal", "Teleportal"]
+    fake_igdb({"https://api.igdb.com/v4/games": [{**IGDB_GAME, "id": i, "name": n} for i, n in enumerate(names)]})
+
+    games = games_routes._fetch_all_games_by_title("portal", 10)
+
+    assert [game.title for game in games] == [
+        "Portal", "Portal 2", "Portal Knights", "Bridge Constructor Portal", "Teleportal",
+    ]
+
+
+def test_fetch_games_by_title_keeps_accents_and_collapses_spaces(fake_igdb):
+    client = fake_igdb({"https://api.igdb.com/v4/games": []})
+
+    games_routes._fetch_all_games_by_title("  Pokémon   Legends ", 3)
+
+    query = client.requests[-1][1]["content"]
+    assert 'where name ~ *"Pokémon Legends"*' in query
+
+
+def test_fetch_games_by_title_handles_missing_release_date(fake_igdb):
+    igdb_game = {**IGDB_GAME}
+    del igdb_game["first_release_date"]
+    fake_igdb({"https://api.igdb.com/v4/games": [igdb_game]})
+
+    [game] = games_routes._fetch_all_games_by_title("Portal", 3)
+
+    assert game.release_year == 0
+    assert game.release_date is None
 
 
 @pytest.mark.parametrize(
@@ -1012,6 +1055,7 @@ def test_fetch_games_by_date_returns_page_with_total(fake_igdb):
     (_, games_request), (_, count_request) = client.requests[-2:]
     assert "game_modes.id,game_modes.name" in games_request["content"]
     assert count_request["content"].startswith("where first_release_date >= ")
+    assert "& themes != (42);" in count_request["content"]
     assert count_request["content"] in games_request["content"]
     assert "offset 20; limit 5;" in games_request["content"]
 
@@ -1118,7 +1162,7 @@ def test_fetch_platform_versions_rejects_non_list_response(fake_igdb):
             games_routes.list_all_releases,
             "_fetch_all_games_by_date",
             (2024, 1, 2, 5, 20),
-            (2024, 1, 2, 20, 5, games_routes.ReleaseSort.RELEASE_DATE, None),
+                (2024, 1, 2, 20, 5, games_routes.ReleaseSort.RELEASE_DATE, None, True),
         ),
         (
             games_routes.list_all_releases_by_title,

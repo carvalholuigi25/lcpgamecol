@@ -203,6 +203,157 @@ form {
   }
 }
 
+.password-numpad {
+  background: #86a282 !important;
+  color: #000 !important;
+  font-weight: bold;
+  font-size: 1rem;
+  letter-spacing: 1rem;
+  line-height: 1rem;
+  margin: auto auto;
+  text-align: center !important;
+
+  &:autofill {
+    background: #86a282 !important;
+    color: #000 !important;
+  }
+}
+
+.password-entry-field {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+
+.password-entry-mask {
+  display: none;
+  position: absolute;
+  inset: 0;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  pointer-events: none;
+  white-space: pre;
+}
+
+.password-entry-field--custom-mask {
+  input {
+    color: transparent !important;
+    caret-color: var(--ink);
+    -webkit-text-fill-color: transparent;
+  }
+
+  .password-entry-mask {
+    display: flex;
+  }
+}
+
+.password-entry-controls {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  max-width: 300px;
+  margin-inline: auto;
+}
+
+.password-entry-controls.is-keyboard {
+  max-width: 540px;
+}
+
+.password-entry-mode {
+  display: grid;
+  gap: 6px;
+  text-align: center;
+
+  select {
+    min-height: 42px;
+    width: 100%;
+    padding: 0 12px;
+    border: 1px solid var(--line);
+    border-radius: calc(16px + 8px);
+    color: var(--ink);
+    background: var(--panel);
+    font: 1rem Arial, sans-serif;
+  }
+}
+
+.password-entry-keypad {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+
+  &[hidden] {
+    display: none;
+  }
+
+  button {
+    width: 100%;
+    min-height: 48px;
+    padding: 0 6px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    color: var(--ink);
+    background: var(--panel);
+  }
+
+  button:hover {
+    background: #343844;
+  }
+}
+
+.password-entry-keyboard {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.password-entry-keyboard-row {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 4px;
+
+  &--home {
+    width: 90%;
+    margin-inline: auto;
+    grid-template-columns: repeat(9, minmax(0, 1fr));
+  }
+
+  &--bottom {
+    grid-template-columns: 1.5fr repeat(7, minmax(0, 1fr)) 1.5fr;
+  }
+
+  &--actions {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  &--symbols-actions {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  button {
+    min-width: 0;
+    min-height: 42px;
+    padding: 0 3px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    color: var(--ink);
+    background: var(--panel);
+    font-size: 0.85rem;
+  }
+
+  button:hover {
+    background: #343844;
+  }
+
+  [data-password-action="space"] {
+    grid-column: span 2;
+  }
+}
+
 label {
   display: grid;
   flex: 1 1 15px;
@@ -443,8 +594,7 @@ a.link-button {
   justify-content: center;
   text-align: center;
   gap: 12px;
-  margin-top: 18px;
-  margin-bottom: 18px;
+  margin: 15px auto;
   padding: 6px;
 
   .platform-switch {
@@ -461,6 +611,112 @@ a.link-button {
 
 .clear-filters {
   white-space: nowrap;
+}
+
+// On/off switches in the filter bar ("Search all game titles", "Hide NSFW games"): pills the
+// same height and shape as the filter dropdowns, with the checkbox drawn as a sliding switch.
+.filter-bar .filter-toggle {
+  display: inline-flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 10px;
+  width: auto;
+  min-height: 42px;
+  padding: 0 14px 0 8px;
+  border: 1px solid var(--line);
+  border-radius: calc(16px + 8px);
+  color: var(--ink);
+  background: #11131a;
+  font: 0.95rem Arial, sans-serif;
+  letter-spacing: normal;
+  text-transform: none;
+  text-align: left;
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    border-color: var(--muted);
+  }
+
+  .bi {
+    color: var(--muted);
+    transition: color 0.2s ease;
+  }
+
+  input[type="checkbox"] {
+    position: relative;
+    flex: none;
+    width: 36px;
+    min-height: 0;
+    height: 20px;
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    // Derived from --muted so the off track stays visible on light and dark themes.
+    background: color-mix(in srgb, var(--muted) 25%, transparent);
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+
+    &::before {
+      content: "";
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: transform 0.2s ease, background-color 0.2s ease;
+    }
+
+    &:checked {
+      border-color: var(--accent);
+      background: var(--accent);
+
+      &::before {
+        background: #fff;
+        transform: translateX(16px);
+      }
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+  }
+
+  // An enabled toggle gets the same accent ring as a dropdown with a selection.
+  &:has(input:checked) {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+
+    .bi {
+      color: var(--accent);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &,
+    .bi,
+    input[type="checkbox"],
+    input[type="checkbox"]::before {
+      transition: none;
+    }
+  }
+}
+
+.filter-toggle-text {
+  min-width: 0;
+}
+
+@media (max-width: 576px) {
+  .filter-bar .filter-toggle {
+    flex: 1 1 100%;
+  }
 }
 
 // Option text, then the number of games on the page with that value.
@@ -517,6 +773,23 @@ a.link-button {
   justify-content: space-between;
   align-items: center;
   width: 100%;
+}
+
+.details-resource-links, #details-resource-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: calc(12px / 2);
+  margin-top: 12px;
+  font-size: 0.9rem;
+
+  a {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    border-radius: calc(16px + 8px);
+  }
 }
 
 // Kept on one line: a longer realtime status ("Connecting...") is truncated instead of
@@ -1056,6 +1329,51 @@ dialog::backdrop {
   .release-countdown-caption { margin: 6px 0 0; color: var(--muted); font-size: 0.82rem; }
 
   &[data-released="true"] .release-countdown-units { opacity: 0.5; }
+
+  .release-countdown-stores { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .release-countdown-stores[hidden] { display: none; }
+  .release-countdown-buy-now {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 36px;
+    padding: 0 14px;
+    border: 1px solid var(--accent);
+    border-radius: calc(16px + 8px);
+    background: var(--accent);
+    color: #fff;
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-decoration: none;
+    box-shadow: 2px 4px 6px var(--accent-dark);
+    transition: background 0.2s ease, box-shadow 0.2s ease;
+
+    &:hover, &:focus-visible {
+      background: var(--accent-dark);
+      color: #fff;
+      box-shadow: 2px 4px 6px var(--accent);
+    }
+  }
+  .release-countdown-store-name {
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.22);
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+}
+
+.details-map-section {
+  .details-map-frame { margin-bottom: 12px; }
+
+  .details-map-embed {
+    display: block;
+    width: 100%;
+    min-height: 360px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--panel);
+  }
 }
 
 .details-grid {
@@ -1120,6 +1438,40 @@ dialog::backdrop {
 .details-grid-actions dd {
   margin: 15px 0 0;
   font: 0.95rem / 1.4 Arial, sans-serif;
+}
+
+// Platform names with small brand logos; chips wrap on narrow screens.
+.platform-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.platform-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  max-width: 100%;
+  padding: 2px 8px;
+  border: 1px solid rgba(0, 240, 255, 0.3);
+  border-radius: 999px;
+  font-size: clamp(0.72rem, 0.68rem + 0.25vw, 0.85rem);
+
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.platform-logo {
+  flex: none;
+  font-size: 1.1em;
+  line-height: 1;
+  color: var(--neon-cyan);
 }
 
 .details-grid .valminimumsystemrequirements,
@@ -2035,6 +2387,77 @@ header {
   text-transform: none;
   white-space: nowrap;
 
+  .language-picker {
+    position: relative;
+  }
+
+  .language-picker-trigger,
+  .language-picker-option {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    border: 0;
+    background: var(--panel);
+    color: var(--ink);
+    font: 0.75rem var(--sans);
+    cursor: pointer;
+  }
+
+  .language-picker-trigger {
+    min-width: 112px;
+    min-height: 34px;
+    padding: 0 8px;
+    border: 1px solid var(--line);
+    border-radius: 20px;
+  }
+
+  .language-picker-menu {
+    position: absolute;
+    z-index: 100;
+    top: calc(100% + 6px);
+    right: 0;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    width: 150px !important;
+    padding: 4px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel);
+    box-shadow: 0 8px 20px rgba(32, 40, 35, 0.14);
+
+    &[hidden] {
+      display: none !important;
+    }
+  }
+
+  .language-picker-option {
+    width: 100%;
+    min-height: 36px;
+    padding: 7px 9px;
+    border-radius: 6px;
+    text-align: left;
+
+    &:hover,
+    &:focus-visible {
+      background: var(--green-soft);
+    }
+  }
+
+  .language-picker-flag {
+    display: block;
+    box-sizing: content-box;
+    width: 22px;
+    height: 15px;
+    flex: 0 0 22px;
+    object-fit: cover;
+    border: 0;
+    border-radius: 2px;
+    // An outline that does not shrink the flag and stays visible on light and dark themes,
+    // so mostly white flags (Japan, France, Italy) keep their edges.
+    box-shadow: 0 0 0 1px rgba(127, 127, 127, 0.35);
+  }
+
   select {
     max-width: 155px;
     min-height: 34px;
@@ -2095,7 +2518,7 @@ body[data-theme="white"] {
   --neon-cyan: #087f8c;
   --neon-magenta: #d76c46;
 
-  input, .platform-switch summary, .platform-switch-menu { color: var(--ink); background: #fff; }
+  input, .platform-switch summary, .filter-bar .filter-toggle, .platform-switch-menu { color: var(--ink); background: #fff; }
   .game h2, .details h2 { color: var(--ink); text-shadow: none; }
   .game, .game:hover, .game:focus-within { border-color: var(--line); box-shadow: 0 8px 22px rgba(23, 48, 66, 0.1); }
   dialog { color: var(--ink); background: #fff; border-color: var(--line); box-shadow: 0 18px 50px rgba(23, 48, 66, 0.2); animation: none; }
@@ -2133,7 +2556,7 @@ body[data-theme="glassmorphism"] {
   background-image: radial-gradient(ellipse at 18% 12%, rgba(132, 215, 196, 0.23), transparent 38%), radial-gradient(ellipse at 82% 70%, rgba(237, 156, 117, 0.16), transparent 42%);
   .panel, .game, dialog, .platform-switch-menu { backdrop-filter: blur(18px); }
   .game, dialog { background-color: var(--panel); }
-  input, .platform-switch summary { color: var(--ink); background: rgba(10, 26, 25, 0.55); }
+  input, .platform-switch summary, .filter-bar .filter-toggle { color: var(--ink); background: rgba(10, 26, 25, 0.55); }
 
   .game {
     &:hover, &:focus-within {
@@ -2291,7 +2714,7 @@ body[data-theme="liquid-glass"] {
 
   input,
   select,
-  .platform-switch summary {
+  .platform-switch summary, .filter-bar .filter-toggle {
     color: var(--ink);
     border-color: rgba(255, 255, 255, 0.24);
     background: rgba(255, 255, 255, 0.08);
@@ -2396,7 +2819,7 @@ body[data-theme="liquid-glass"] {
     --neon-cyan: #087f8c;
     --neon-magenta: #d76c46;
 
-    input, .platform-switch summary, .platform-switch-menu { color: var(--ink); background: #fff; }
+    input, .platform-switch summary, .filter-bar .filter-toggle, .platform-switch-menu { color: var(--ink); background: #fff; }
     .game h2, .details h2 { color: var(--ink); text-shadow: none; }
     .game, .game:hover, .game:focus-within { border-color: var(--line); box-shadow: 0 8px 22px rgba(23, 48, 66, 0.1); }
     dialog { color: var(--ink); background: #fff; border-color: var(--line); box-shadow: 0 18px 50px rgba(23, 48, 66, 0.2); animation: none; }
@@ -2485,7 +2908,7 @@ body[data-theme="sunsetvibes"] {
 
   h1 { text-shadow: 0 0 8px rgba(255, 209, 102, 0.8), 0 0 22px rgba(255, 209, 102, 0.35); }
   .panel, .game, dialog, .platform-switch-menu { backdrop-filter: blur(10px); }
-  input, .platform-switch summary, .platform-switch-menu { color: var(--ink); background: rgba(29, 11, 29, 0.6); }
+  input, .platform-switch summary, .filter-bar .filter-toggle, .platform-switch-menu { color: var(--ink); background: rgba(29, 11, 29, 0.6); }
 }
 
 body[data-theme="cyber-retro"] {
@@ -2526,10 +2949,10 @@ body[data-theme="cyber-retro"] {
   }
 
   .eyebrow { color: #3dfcd9; font-family: $theme-pixel-font; font-size: 0.6rem; text-shadow: 0 0 6px rgba(61, 252, 217, 0.7); }
-  .game, dialog, button, input, select, .platform-switch summary, .platform-switch-menu, .game-cover, .game-screenshot { border-radius: 0; }
+  .game, dialog, button, input, select, .platform-switch summary, .filter-bar .filter-toggle, .platform-switch-menu, .game-cover, .game-screenshot { border-radius: 0; }
   .game { box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.6); }
   .game:hover, .game:focus-within { box-shadow: 6px 6px 0 rgba(255, 223, 79, 0.45), 0 0 18px rgba(61, 252, 217, 0.35); }
-  input, .platform-switch summary, .platform-switch-menu { color: var(--ink); background: #0f1b1f; }
+  input, .platform-switch summary, .filter-bar .filter-toggle, .platform-switch-menu { color: var(--ink); background: #0f1b1f; }
 }
 
 body[data-theme="rgb"] {
@@ -2567,7 +2990,7 @@ body[data-theme="rgb"] {
     animation: theme-rgb-text 6s linear infinite;
   }
 
-  input, .platform-switch summary, .platform-switch-menu { color: var(--ink); background: #10121f; }
+  input, .platform-switch summary, .filter-bar .filter-toggle, .platform-switch-menu { color: var(--ink); background: #10121f; }
 
   @media (prefers-reduced-motion: reduce) {
     h1 { animation: none; }
@@ -2597,7 +3020,7 @@ body[data-theme="rgb"] {
     background-image: seasonal.background-image($theme);
     @include seasonal.decoration($theme);
 
-    input, .platform-switch summary, .platform-switch-menu { color: var(--ink); background: seasonal.get($theme, field); }
+    input, .platform-switch summary, .filter-bar .filter-toggle, .platform-switch-menu { color: var(--ink); background: seasonal.get($theme, field); }
     .panel, .game, dialog, .platform-switch-menu { backdrop-filter: blur(8px); }
 
     @if seasonal.get($theme, scheme) == light {

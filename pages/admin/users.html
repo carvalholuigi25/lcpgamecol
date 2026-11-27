@@ -37,7 +37,7 @@
             <select id="language-selector" aria-label="Language">
               <option value="en">English</option><option value="pt">Português</option>
               <option value="de">Deutsch</option><option value="fr">Français</option>
-              <option value="it">Italiano</option><option value="es">Español</option><option value="ja">日本語</option>
+              <option value="it">Italiano</option><option value="es">Español</option><option value="ja">日本語</option><option value="hu">Magyar</option>
             </select>
           </label>
           <span id="account-name" class="account-name"></span>
@@ -165,6 +165,20 @@
               <h3 id="user-favorites-title">Favorite games</h3>
               <span id="user-page-favorites-note" class="chart-note"></span>
             </div>
+            <div id="user-page-favorites-controls" class="favorite-pagination-controls">
+              <label for="user-page-favorites-limit">Games per page
+                <select id="user-page-favorites-limit">
+                  <option value="12">12</option>
+                  <option value="24">24</option>
+                  <option value="48">48</option>
+                </select>
+              </label>
+              <nav id="user-page-favorites-pagination" class="favorite-pagination" aria-label="Favorite games pages">
+                <button id="user-page-favorites-previous" class="secondary-button" type="button">Previous</button>
+                <span id="user-page-favorites-page" aria-live="polite"></span>
+                <button id="user-page-favorites-next" class="secondary-button" type="button">Next</button>
+              </nav>
+            </div>
             <ol id="user-page-favorites" class="favorite-grid"></ol>
             <p id="user-page-favorites-empty" class="empty-note" hidden>No favorite games yet.</p>
           </section>
@@ -193,14 +207,7 @@
       </dialog>
       <div id="toast-region" class="toast-region" role="status" aria-live="polite" aria-atomic="true"></div>
     </main>
-    <script src="/public/scripts/loading.js"></script>
-    <script src="/public/scripts/i18n.js"></script>
-    <script src="/public/scripts/preferences.js"></script>
-    <script src="/public/scripts/sidebar.js"></script>
     <script src="/nmodules/@microsoft/signalr/dist/browser/signalr.min.js"></script>
-    <script src="/public/scripts/realtime.js"></script>
-    <script src="/public/scripts/inbox.js"></script>
-    <script src="/public/scripts/xp_badges.js"></script>
-    <script src="/public/scripts/users.js"></script>
+    <script src="/public/dist/scripts/all.min.js" data-modules="core/loading core/i18n core/language_flags core/preferences core/sidebar realtime/realtime realtime/inbox users/xp_badges admin/users"></script>
   </body>
 </html>

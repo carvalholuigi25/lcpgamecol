@@ -110,5 +110,11 @@ def test_release_route_passes_sort_to_igdb(client, monkeypatch):
     response = client.get("/games/all-releases", params={"year": 2026, "month": 1, "day": 1, "limit": 5, "sort": "hype"})
 
     assert response.status_code == 200
-    assert calls == [(2026, 1, 1, 5, 0, ReleaseSort.HYPE, None)]
+    assert calls == [(2026, 1, 1, 5, 0, ReleaseSort.HYPE, None, True)]
+    response = client.get(
+        "/games/all-releases",
+        params={"year": 2026, "month": 1, "day": 1, "limit": 5, "sort": "hype", "hide_nsfw": "false"},
+    )
+    assert response.status_code == 200
+    assert calls[-1] == (2026, 1, 1, 5, 0, ReleaseSort.HYPE, None, False)
     assert client.get("/games/all-releases", params={"sort": "hours_played"}).status_code == 422
