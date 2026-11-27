@@ -27,6 +27,11 @@ export default function HomeScreen() {
           <Link href="/user" asChild>
             <Chip label={isAdmin(user) ? t('Users') : t('Community')} styles={styles} />
           </Link>
+          {isAdmin(user) ? (
+            <Link href="/admin" asChild>
+              <Chip label={t('Admin')} styles={styles} />
+            </Link>
+          ) : null}
         </View>
       </ScrollView>
     </SafeAreaView>

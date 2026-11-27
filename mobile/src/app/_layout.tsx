@@ -4,6 +4,7 @@ import { I18nextProvider, useTranslation } from 'react-i18next';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { SessionProvider, useSession } from '@/auth';
+import { isAdmin } from '@/features/users';
 import { i18n } from '@/i18n';
 import { ThemeProvider, useTheme } from '@/theme';
 
@@ -13,7 +14,7 @@ const authScreenOptions = { headerShown: false } as const;
 function ThemedStack() {
   const { t } = useTranslation();
   const { colors, scheme } = useTheme();
-  const { status } = useSession();
+  const { status, user } = useSession();
   const signedIn = status === 'signedIn';
   return (
     <>
@@ -42,6 +43,14 @@ function ThemedStack() {
           <Stack.Screen name="games/[gameId]" options={{ title: t('Game details') }} />
           <Stack.Screen name="user/index" options={{ title: t('Users') }} />
           <Stack.Screen name="user/[userId]" options={{ title: t('Profile') }} />
+
+          {/* Administrators only; the API enforces this too. */}
+          <Stack.Protected guard={isAdmin(user)}>
+            <Stack.Screen name="admin/index" options={{ title: t('Admin') }} />
+            <Stack.Screen name="admin/moderation" options={{ title: t('Moderation') }} />
+            <Stack.Screen name="admin/feedback" options={{ title: t('Feedback') }} />
+            <Stack.Screen name="admin/users/[username]" options={{ title: t('Manage account') }} />
+          </Stack.Protected>
         </Stack.Protected>
       </Stack>
     </>

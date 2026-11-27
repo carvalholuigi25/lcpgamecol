@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { Link, Stack, useLocalSearchParams } from 'expo-router';
+import { Link, router, Stack, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -9,6 +9,7 @@ import { Avatar, Button, Loading, makeStyles, Pill } from '@/components';
 import { formatRating } from '@/features/games';
 import {
   initials,
+  isAdmin,
   loadUserProfile,
   ROLE_ADMIN,
   sameUser,
@@ -54,6 +55,7 @@ export default function UserDetailsScreen() {
       <Profile
         profile={data}
         isMe={sameUser(data.username, viewer?.username)}
+        canManage={isAdmin(viewer)}
         refreshing={refreshing}
         onRefresh={refresh}
       />
@@ -64,11 +66,13 @@ export default function UserDetailsScreen() {
 function Profile({
   profile,
   isMe,
+  canManage,
   refreshing,
   onRefresh,
 }: {
   profile: UserProfile;
   isMe: boolean;
+  canManage: boolean;
   refreshing: boolean;
   onRefresh: () => void;
 }) {
@@ -127,6 +131,18 @@ function Profile({
           ) : null}
           {profile.twoFactorEnabled ? <Pill label={t('2FA on')} /> : null}
         </View>
+        {canManage ? (
+          <Button
+            variant="link"
+            label={t('Manage account')}
+            onPress={() =>
+              router.push({
+                pathname: '/admin/users/[username]',
+                params: { username: profile.username },
+              })
+            }
+          />
+        ) : null}
       </View>
 
       <View style={[shared.container, { gap: theme.spacing.lg }]}>
