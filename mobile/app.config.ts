@@ -44,6 +44,7 @@ const config: ExpoConfig = {
         dark: { image: './assets/splash-icon.png', backgroundColor: '#151d1c' },
       },
     ],
+    'expo-image',
   ],
   experiments: {
     typedRoutes: true,
