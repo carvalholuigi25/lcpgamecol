@@ -1,0 +1,6 @@
+# Keep LF line endings in the working copy on every OS (Prettier expects LF).
+* text=auto eol=lf
+
+# Windows scripts need CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf

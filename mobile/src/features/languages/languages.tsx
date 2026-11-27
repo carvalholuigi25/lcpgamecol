@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next';
-import { Text, View } from 'react-native';
+import { Text } from 'react-native';
 import { languageNames, supportedLanguages, type Language } from '@/i18n';
 import { useTheme } from '@/theme';
-import { Chip, makeStyles } from '@/components';
+import { Dropdown, makeStyles } from '@/components';
 
 function LanguagesFeature() {
   const { t, i18n } = useTranslation();
@@ -12,17 +12,15 @@ function LanguagesFeature() {
   return (
     <>
       <Text style={styles.label}>{t('Language')}</Text>
-      <View style={styles.row}>
-        {supportedLanguages.map((language: Language) => (
-          <Chip
-            key={language}
-            label={languageNames[language]}
-            selected={i18n.language === language}
-            onPress={() => void i18n.changeLanguage(language)}
-            styles={styles}
-          />
-        ))}
-      </View>
+      <Dropdown
+        label={t('Language')}
+        value={i18n.language as Language}
+        options={supportedLanguages.map((language: Language) => ({
+          value: language,
+          label: languageNames[language],
+        }))}
+        onChange={(language) => void i18n.changeLanguage(language)}
+      />
     </>
   );
 }

@@ -12,6 +12,7 @@ const config: ExpoConfig = {
   icon: './assets/icon.png',
   // "automatic" lets the app follow the system light/dark setting.
   userInterfaceStyle: 'automatic',
+  owner: 'luiscardev29',
   ios: {
     supportsTablet: true,
   },
@@ -46,11 +47,22 @@ const config: ExpoConfig = {
     ],
     'expo-image',
   ],
+  // Over-the-air updates (expo-updates). Updates published for one app version only reach
+  // builds of that same version. EXPO_PUBLIC_UPDATES_URL is the update server, e.g.
+  // https://u.expo.dev/<eas-project-id>. Without it, updates stay off and the
+  // Settings screen says so.
+  runtimeVersion: { policy: 'appVersion' },
+  ...(process.env.EXPO_PUBLIC_UPDATES_URL
+    ? { updates: { url: process.env.EXPO_PUBLIC_UPDATES_URL, checkAutomatically: 'ON_LOAD' } }
+    : {}),
   experiments: {
     typedRoutes: true,
   },
   extra: {
     apiUrl: process.env.EXPO_PUBLIC_API_URL,
+    eas: {
+      projectId: process.env.PROJECT_ID,
+    },
   },
 };
 

@@ -18,4 +18,4 @@ export function normalizeBaseUrl(url: string | undefined): string {
   return value.replace(/\/+$/, '');
 }
 
-export const API_URL = normalizeBaseUrl(process.env.EXPO_PUBLIC_API_URL);
+export const API_URL = normalizeBaseUrl(DEFAULT_API_URL ?? process.env.EXPO_PUBLIC_API_URL);

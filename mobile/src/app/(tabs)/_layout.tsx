@@ -8,7 +8,14 @@ export default function TabsLayout() {
   const { colors } = useTheme();
 
   return (
-    <NativeTabs tintColor={colors.primary}>
+    <NativeTabs
+      // On iOS 26+ the system draws the bar; it follows the app appearance set in ThemeProvider.
+      backgroundColor={colors.surface}
+      tintColor={colors.primary}
+      iconColor={{ default: colors.muted, selected: colors.primary }}
+      labelStyle={{ default: { color: colors.muted }, selected: { color: colors.primary } }}
+      indicatorColor={colors.primarySoft}
+    >
       <NativeTabs.Trigger name="home">
         <NativeTabs.Trigger.Label>{t('Home')}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="house.fill" md="home" />

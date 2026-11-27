@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useSession } from '@/auth';
 import { Button, makeStyles } from '@/components';
-import { LanguagesFeature, ThemesFeature } from '@/features';
+import { LanguagesFeature, ThemesFeature, UpdatesFeature } from '@/features';
 import { useTheme } from '@/theme';
 
 export default function SettingsScreen() {
@@ -32,6 +32,7 @@ export default function SettingsScreen() {
         <Text style={styles.heading}>{t('Settings')}</Text>
         <ThemesFeature />
         <LanguagesFeature />
+        <UpdatesFeature />
 
         <Text style={styles.label}>{t('Account')}</Text>
         <View style={{ gap: theme.spacing.sm }}>

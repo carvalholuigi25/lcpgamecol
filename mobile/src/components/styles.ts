@@ -6,7 +6,18 @@ import type { Theme } from '@/theme';
 export function makeStyles({ colors, spacing, radius, typography }: Theme) {
   return StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.background },
-    container: { padding: spacing.lg, gap: spacing.md },
+    container: {
+      padding: spacing.lg,
+      gap: spacing.md,
+    },
+    containerHome: {
+      padding: spacing.lg,
+      gap: spacing.md,
+      flex: 1,
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
     centered: {
       flex: 1,
       alignItems: 'center',

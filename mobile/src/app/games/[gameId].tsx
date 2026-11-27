@@ -6,7 +6,16 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { resolveAssetUrl } from '@/api';
 import { Chip, Loading, makeStyles } from '@/components';
-import { formatRating, gameCoverUrl, toNameList, useGame, type Game } from '@/features/games';
+import {
+  formatRating,
+  GameListActions,
+  GameMediaGallery,
+  GameReviews,
+  gameCoverUrl,
+  toNameList,
+  useGame,
+  type Game,
+} from '@/features/games';
 import { useTheme, type Theme } from '@/theme';
 
 export default function GameDetailsScreen() {
@@ -64,7 +73,6 @@ function GameDetails({ game }: { game: Game }) {
   const links: [string, string | null | undefined][] = [
     [t('Website'), game.website_url],
     [t('Store'), game.store_url || game.store_urls?.[0]],
-    [t('Trailer'), game.trailer_url || game.trailers?.[0]],
   ];
 
   return (
@@ -72,6 +80,8 @@ function GameDetails({ game }: { game: Game }) {
       style={shared.screen}
       contentContainerStyle={styles.content}
       contentInsetAdjustmentBehavior="automatic"
+      keyboardShouldPersistTaps="handled"
+      automaticallyAdjustKeyboardInsets
     >
       {hero ? (
         <Image source={hero} style={styles.hero} contentFit="cover" transition={200} />
@@ -101,6 +111,8 @@ function GameDetails({ game }: { game: Game }) {
       </View>
 
       <View style={shared.container}>
+        <GameListActions gameId={game.id} />
+
         {game.description ? <Text style={shared.body}>{game.description}</Text> : null}
 
         <View style={styles.facts}>
@@ -113,6 +125,8 @@ function GameDetails({ game }: { game: Game }) {
               </View>
             ))}
         </View>
+
+        <GameMediaGallery game={game} />
 
         <TagSection title={t('Platforms')} tags={platforms} styles={shared} />
         <TagSection title={t('Game modes')} tags={modes} styles={shared} />
@@ -148,6 +162,8 @@ function GameDetails({ game }: { game: Game }) {
             <Text style={shared.body}>{game.recommended_system_requirements}</Text>
           </>
         ) : null}
+
+        <GameReviews gameId={game.id} />
       </View>
     </ScrollView>
   );

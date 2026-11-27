@@ -1,5 +1,5 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
-import { useColorScheme } from 'react-native';
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Appearance, useColorScheme } from 'react-native';
 
 import { buildTheme, type ColorScheme, type Theme } from './tokens';
 
@@ -31,6 +31,11 @@ export function ThemeProvider({
 }) {
   const system = useColorScheme();
   const [preference, setPreference] = useState<ThemePreference>(initialPreference);
+  // Native UI (tab bar, alerts, keyboards) follows the app-level appearance, not our
+  // context, so mirror the preference there. 'auto' removes the override.
+  useEffect(() => {
+    Appearance.setColorScheme(preference === 'system' ? 'auto' : preference);
+  }, [preference]);
   const value = useMemo(
     () => ({ theme: buildTheme(resolveScheme(preference, system)), preference, setPreference }),
     [preference, system],

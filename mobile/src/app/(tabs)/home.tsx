@@ -16,7 +16,7 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView contentContainerStyle={styles.containerHome}>
         <Text style={styles.heading}>{t('Game Shelf')}</Text>
         <Text style={styles.muted}>{t('Your collection')}</Text>
 
